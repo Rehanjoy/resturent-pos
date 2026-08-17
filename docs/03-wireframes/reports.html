@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Saffron — Reports &amp; Analytics (Wireframe)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#eeeeee; color:#222; font-size:14px; }
+  .shell { display:flex; min-height:100vh; }
+  .navrail { width:72px; background:#d9d9d9; border-right:1px solid #999; display:flex; flex-direction:column; align-items:center; padding:12px 4px; gap:10px; flex-shrink:0; }
+  .navrail .logo-slot { width:40px;height:40px;border:1px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;margin-bottom:8px; text-align:center;}
+  .nav-item { width:64px; display:flex; flex-direction:column; align-items:center; gap:1px; text-decoration:none; color:#222; padding:3px 0; }
+  .nav-item .icon { width:38px; height:38px; border:1px solid #999; background:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; }
+  .nav-item.active .icon { border:2px solid #333; background:#ccc; }
+  .nav-item .lbl { font-size:8.5px; text-align:center; line-height:1.15; margin-top:2px; }
+  .nav-item .roles { font-size:7.5px; color:#777; text-align:center; line-height:1.15; }
+  .nav-item.disabled { opacity:0.4; }
+  .nav-item.logout { margin-top:auto; }
+  .main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .topbar { height:56px; border-bottom:1px solid #999; background:#e4e4e4; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; gap:12px; }
+  .search-box { width:260px; height:32px; border:1px solid #999; background:#fff; display:flex; align-items:center; padding:0 8px; font-size:12px; color:#777;}
+  .identity { display:flex; align-items:center; gap:8px; font-size:12px; white-space:nowrap; }
+  .avatar { width:28px;height:28px;border:1px solid #999;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;}
+  .content { flex:1; padding:20px; overflow:auto; }
+  h1.page-title { font-size:20px; margin:0 0 2px; display:inline-block; }
+  .subtitle{font-size:12px;color:#666;margin:0 0 16px;}
+  .headrow{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+  .btn { border:1px solid #666; background:#e0e0e0; padding:8px 14px; font-size:12px; text-align:center; display:inline-block; }
+  .btn.small{padding:5px 10px;font-size:10.5px;}
+  .btn-group{display:flex;gap:8px;}
+  .filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+  .preset{border:1px solid #999;background:#f4f4f4;padding:6px 12px;font-size:11px;}
+  .preset.active{border:2px solid #333;background:#ddd;font-weight:bold;}
+  .filter-field{border:1px solid #999;background:#fff;padding:6px 10px;font-size:11px;color:#666;}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .tab{border:1px solid #999;background:#f4f4f4;padding:7px 16px;font-size:12px;}
+  .tab.active{border:2px solid #333;background:#ddd;font-weight:bold;}
+  .tab.restricted{border-style:dashed;opacity:0.5;}
+  .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+  .box { border:1px solid #999; background:#fff; }
+  .kpi { padding:14px; }
+  .kpi .lbl { font-size:11px; color:#666; }
+  .kpi .val { font-size:20px; font-weight:bold; margin:4px 0; }
+  .chart-ph { border:1px dashed #999; height:160px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#777; background:#fafafa; margin-bottom:16px;}
+  table.wf-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:20px;}
+  table.wf-table th, table.wf-table td { border:1px solid #ccc; padding:7px 8px; text-align:left; }
+  table.wf-table th { background:#eee; }
+  .note { font-size:11px; color:#555; border-left:3px dashed #999; padding:4px 8px; margin:6px 0; background:#f7f7f7; }
+  .annot-block { border:1px dashed #999; padding:12px 16px; margin-top:26px; font-size:12px; background:#f7f7f7; }
+  .annot-block h3 { margin:14px 0 6px; font-size:13px; }
+  .annot-block h3:first-child{margin-top:0;}
+  .annot-block ul { margin:4px 0; padding-left:18px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="navrail">
+    <div class="logo-slot">LOGO</div>
+    <a class="nav-item" href="dashboard.html"><div class="icon">D</div><div class="lbl">Dashboard</div><div class="roles">O·M·C(v)</div></a>
+    <a class="nav-item" href="new-order.html"><div class="icon">O</div><div class="lbl">Orders</div><div class="roles">O·M·C·S·Chef(v)</div></a>
+    <a class="nav-item" href="table-grid.html"><div class="icon">T</div><div class="lbl">Tables</div><div class="roles">O·M·C(v)·S</div></a>
+    <a class="nav-item" href="kds.html"><div class="icon">K</div><div class="lbl">Kitchen</div><div class="roles">O·M·C(v)·S(v)·Chef</div></a>
+    <a class="nav-item" href="menu-management.html"><div class="icon">M</div><div class="lbl">Menu</div><div class="roles">O·M·C(v)·S(v)·Chef(v)</div></a>
+    <a class="nav-item" href="staff-management.html"><div class="icon">St</div><div class="lbl">Staff</div><div class="roles">O·M(v+add)</div></a>
+    <a class="nav-item active" href="reports.html"><div class="icon">R</div><div class="lbl">Reports</div><div class="roles">O·M·C(sales)</div></a>
+    <div class="nav-item disabled"><div class="icon">Se</div><div class="lbl">Settings</div><div class="roles">O·M(partial)</div></div>
+    <a class="nav-item logout" href="00-sitemap.html"><div class="icon">&#9211;</div><div class="lbl">Logout</div><div class="roles">All</div></a>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="search-box">Search reports...</div>
+      <div class="identity"><div class="avatar">PS</div>Priya Sharma — Owner/Admin</div>
+    </div>
+    <div class="content">
+      <div style="font-size:10px;color:#666;margin-bottom:10px;"><a href="00-sitemap.html" style="color:#555;">&larr; Sitemap</a> · Screen: <b>Reports &amp; Analytics</b> (all tabs, one file)</div>
+      <div class="headrow">
+        <div><h1 class="page-title">Reports &amp; Analytics</h1><p class="subtitle">Range: Last 7 days</p></div>
+        <div class="btn-group">
+          <div class="btn small">Export CSV</div>
+          <div class="btn small">Export Excel</div>
+          <div class="btn small">Export PDF</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="preset">Today</div>
+        <div class="preset">Yesterday</div>
+        <div class="preset active">Last 7 days</div>
+        <div class="preset">This Month</div>
+        <div class="preset">Custom ▾</div>
+        <div class="filter-field">From: 08/12/2026</div>
+        <div class="filter-field">To: 08/18/2026</div>
+        <div class="btn small">Apply</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active">Sales Overview</div>
+        <div class="tab">Revenue by Category</div>
+        <div class="tab">Revenue by Payment Mode</div>
+        <div class="tab">Top Dishes</div>
+        <div class="tab">Staff Performance <span style="font-size:9px;">(O/M only)</span></div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="box kpi"><div class="lbl">Gross Revenue</div><div class="val">₹—,—,———</div></div>
+        <div class="box kpi"><div class="lbl">Net Revenue</div><div class="val">₹—,—,———</div></div>
+        <div class="box kpi"><div class="lbl">Orders</div><div class="val">———</div></div>
+        <div class="box kpi"><div class="lbl">Avg Order Value</div><div class="val">₹———</div></div>
+      </div>
+
+      <div class="chart-ph">[ BAR CHART: Revenue by Hour — 10am to 11pm ]</div>
+
+      <table class="wf-table">
+        <tr><th>Date</th><th>Orders</th><th>Gross</th><th>Discounts</th><th>Tax</th><th>Net</th></tr>
+        <tr><td>Aug 18</td><td>62</td><td>₹48,200</td><td>₹2,100</td><td>₹2,410</td><td>₹44,890</td></tr>
+        <tr><td>Aug 17</td><td>58</td><td>₹45,600</td><td>₹1,800</td><td>₹2,280</td><td>₹42,120</td></tr>
+      </table>
+
+      <div class="note">Other tabs (Revenue by Category, Revenue by Payment Mode, Top Dishes, Staff Performance) reuse this same shell — filter bar + tabs stay fixed, only the chart-placeholder + table below swap. Not redrawn individually here to avoid duplicating the same layout four more times; each tab's specific columns are described in the annotation block below.</div>
+
+      <div class="annot-block">
+        <h3>Roles with access</h3>
+        <ul>
+          <li>Owner/Admin, Manager — full: all 5 tabs, custom range, all export formats.</li>
+          <li>Cashier — sales-only: Sales Overview, Revenue by Category, Revenue by Payment Mode, Top Dishes. <b>Staff Performance tab is hidden</b> (personnel data) — this is the interpretation of "sales only," flagged as a judgment call on the sitemap.</li>
+          <li>Server/Waiter, Chef/Kitchen Staff — no access; nav item hidden entirely.</li>
+        </ul>
+        <h3>Data loaded on entry</h3>
+        <ul>
+          <li><code>GET /reports/sales?range=&groupBy=hour</code> — Sales Overview.</li>
+          <li><code>GET /reports/category?range=</code> — Revenue by Category: horizontal bar-list + table (Category, Revenue, % of total, Orders).</li>
+          <li><code>GET /reports/payment-mode?range=</code> — Revenue by Payment Mode: pie-placeholder + table (Cash/Card/UPI/Split, amount, %).</li>
+          <li><code>GET /reports/top-dishes?range=</code> — ranked table (Rank, Dish, Qty Sold, Revenue) + a "Slow Moving Items" sub-table.</li>
+          <li><code>GET /reports/staff-performance?range=</code> — table (Staff, Orders Handled, Avg Table Turnaround, Discounts Applied). Owner/Manager only.</li>
+        </ul>
+        <h3>Every button's action + destination</h3>
+        <ul>
+          <li>Date preset click — reloads all report data for that range, no navigation.</li>
+          <li>"Apply" (custom range) — same, using the From/To fields.</li>
+          <li>Tab click — swaps the chart + table below, keeping the current date range.</li>
+          <li>Export buttons — trigger a file download of the currently active tab's data; toast "Report exported."</li>
+        </ul>
+        <h3>Empty state</h3>
+        <ul><li>No sales in the selected range: "No sales in this date range. Try a different range." in place of the chart and table.</li></ul>
+        <h3>Error state</h3>
+        <ul><li>Export fails: "Export failed — try again in a moment."</li></ul>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

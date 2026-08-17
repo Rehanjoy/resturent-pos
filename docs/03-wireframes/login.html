@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Saffron — Login (Wireframe)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#eeeeee; color:#222; font-size:14px; }
+  .page { display:flex; flex-direction:column; align-items:center; padding:40px 20px 60px; }
+  .filebar { width:100%; max-width:1000px; font-size:11px; color:#666; margin-bottom:10px; }
+  .filebar a { color:#555; }
+  h1.screen-name { font-size:18px; margin:0 0 4px; }
+  .subtitle { font-size:12px; color:#666; margin:0 0 24px; }
+  .states { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; }
+  .card { width:360px; border:1px solid #999; background:#fff; padding:24px; }
+  .card h2 { font-size:14px; margin:0 0 14px; text-align:center; }
+  .logo-slot { width:56px;height:56px;border:1px solid #888;background:#f4f4f4;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;margin:0 auto 8px; }
+  .wordmark { text-align:center; font-size:16px; font-weight:bold; margin-bottom:2px; }
+  .tagline { text-align:center; font-size:10px; color:#777; margin-bottom:18px; }
+  .toggle-row { display:flex; border:1px solid #999; margin-bottom:18px; }
+  .toggle-row div { flex:1; text-align:center; padding:8px; font-size:11px; border-right:1px solid #999; }
+  .toggle-row div:last-child { border-right:none; }
+  .toggle-row .on { background:#ddd; font-weight:bold; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:11px; color:#555; margin-bottom:4px; }
+  .input { border:1px solid #999; background:#fbfbfb; height:34px; display:flex; align-items:center; padding:0 8px; font-size:12px; color:#999; }
+  .link-line { text-align:right; font-size:11px; color:#555; margin:-4px 0 16px; }
+  .btn { border:2px solid #333; background:#ccc; padding:10px; font-size:13px; font-weight:bold; text-align:center; }
+  .staff-picker { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+  .staff-tile { border:1px solid #999; background:#f7f7f7; padding:8px 4px; text-align:center; font-size:10px; }
+  .staff-tile .av { width:30px;height:30px;border-radius:50%;border:1px solid #999;background:#fff;margin:0 auto 4px; }
+  .staff-tile.sel { border:2px solid #333; background:#e6e6e6; }
+  .pin-dots { display:flex; justify-content:center; gap:10px; margin-bottom:16px; }
+  .dot { width:12px;height:12px;border:1px solid #666;border-radius:50%; }
+  .dot.filled { background:#666; }
+  .keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+  .key { border:1px solid #999; background:#f4f4f4; text-align:center; padding:12px 0; font-size:14px; }
+  .note { font-size:11px; color:#555; border-left:3px dashed #999; padding:4px 8px; margin:8px 0; background:#f7f7f7; }
+  .err { font-size:11px; color:#555; border:1px dashed #666; padding:6px 8px; margin-bottom:10px; background:#f0f0f0; }
+  .annot-block { width:100%; max-width:1000px; border:1px dashed #999; padding:14px 18px; margin-top:34px; font-size:12px; background:#f7f7f7; }
+  .annot-block h3 { margin:14px 0 6px; font-size:13px; }
+  .annot-block h3:first-child { margin-top:0; }
+  .annot-block ul { margin:4px 0; padding-left:18px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="filebar"><a href="00-sitemap.html">&larr; Sitemap</a> · Screen: <b>Login</b> · Roles: All (pre-authentication) · No nav rail (not authenticated yet)</div>
+  <h1 class="screen-name">Login</h1>
+  <p class="subtitle">Two toggle states shown side by side below — same screen, one "Login Method" toggle switches between them.</p>
+
+  <div class="states">
+    <div class="card">
+      <div class="logo-slot">LOGO MARK</div>
+      <div class="wordmark">Saffron</div>
+      <div class="tagline">Restaurant POS &amp; Management</div>
+      <h2>State A — Email + Password (default)</h2>
+      <div class="toggle-row"><div class="on">Password Login</div><div>PIN Quick Login</div></div>
+      <div class="err">Example error state: "Incorrect email or password. Try again."</div>
+      <div class="field"><label>Email</label><div class="input">owner@restaurant.com</div></div>
+      <div class="field"><label>Password</label><div class="input">••••••••</div></div>
+      <div class="link-line">Forgot password? <span style="text-decoration:underline;">(admin-reset only)</span></div>
+      <div class="btn">Log In</div>
+      <div class="note">First-login-ever accounts are redirected straight to a "Set New Password" interstitial after this succeeds (forced reset, PRD §3.1) — not wireframed as a separate screen this round. Owner/Admin/Manager accounts additionally see a 2FA code-entry step here (mandatory 2FA).</div>
+    </div>
+
+    <div class="card">
+      <div class="logo-slot">LOGO MARK</div>
+      <div class="wordmark">Saffron</div>
+      <div class="tagline">Restaurant POS &amp; Management</div>
+      <h2>State B — PIN Quick Login (terminal clock-in)</h2>
+      <div class="toggle-row"><div>Password Login</div><div class="on">PIN Quick Login</div></div>
+      <div style="font-size:11px;color:#555;margin-bottom:6px;">Select your name:</div>
+      <div class="staff-picker">
+        <div class="staff-tile sel"><div class="av"></div>Asha D.</div>
+        <div class="staff-tile"><div class="av"></div>Kabir K.</div>
+        <div class="staff-tile"><div class="av"></div>Neha K.</div>
+        <div class="staff-tile"><div class="av"></div>Rohan M.</div>
+        <div class="staff-tile"><div class="av"></div>Priya S.</div>
+        <div class="staff-tile"><div class="av"></div>+ more</div>
+      </div>
+      <div style="font-size:11px;color:#555;text-align:center;margin-bottom:6px;">Enter PIN</div>
+      <div class="pin-dots"><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div></div>
+      <div class="keypad">
+        <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+        <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+        <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+        <div class="key">⌫</div><div class="key">0</div><div class="key">↵</div>
+      </div>
+      <div class="btn">Log In</div>
+    </div>
+  </div>
+
+  <div class="annot-block">
+    <h3>Roles with access</h3>
+    <ul><li>All roles — this is the only pre-authentication screen. Owner/Admin/Manager get an additional mandatory 2FA step after credentials succeed (PRD §3.1).</li></ul>
+    <h3>Data loaded on entry</h3>
+    <ul>
+      <li>State A: none (public route).</li>
+      <li>State B: <code>GET /staff?active=true</code> scoped to the terminal's configured <code>restaurantId</code>, to populate the staff picker avatars/names.</li>
+    </ul>
+    <h3>Every button's action + destination</h3>
+    <ul>
+      <li><b>Login Method toggle</b> — switches between State A and State B in place, no navigation.</li>
+      <li><b>"Log In" (State A)</b> — <code>POST /auth/login</code> with email/password → on success, sets httpOnly JWT cookies (15 min access / 7 day refresh) and routes to the role-based landing screen (see sitemap §2). Owner/Admin/Manager see a 2FA prompt first.</li>
+      <li><b>Staff tile (State B)</b> — selects staff for PIN entry, no navigation.</li>
+      <li><b>Keypad (State B)</b> — fills PIN dots; "Log In" — <code>POST /auth/pin-login</code> → same routing as State A. Intended for shared POS terminal clock-in, not a full session replacement for back-office roles.</li>
+      <li><b>"Forgot password?"</b> — no self-service flow in MVP (PRD only specifies admin-forced reset on first login); link shown for completeness, destination is "contact your admin" messaging, not a reset-email flow.</li>
+    </ul>
+    <h3>Empty state</h3>
+    <ul><li>State B with zero staff configured yet (fresh install, before Owner completes onboarding) — staff picker shows: "No staff accounts yet. Log in with your admin email and password to get started."</li></ul>
+    <h3>Error states</h3>
+    <ul>
+      <li>Invalid credentials: "Incorrect email or password. Try again." (shown above, inline above the form).</li>
+      <li>Deactivated account: "This account has been deactivated. Contact your admin."</li>
+      <li>Incorrect PIN: "Incorrect PIN. Try again." — after 5 failed attempts, PIN entry locks for that staff tile for 60 seconds (mirrors password-login lockout policy for brute-force protection).</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

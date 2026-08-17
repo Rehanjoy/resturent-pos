@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Saffron — Staff Management (Wireframe)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#eeeeee; color:#222; font-size:14px; }
+  .shell { display:flex; min-height:100vh; }
+  .navrail { width:72px; background:#d9d9d9; border-right:1px solid #999; display:flex; flex-direction:column; align-items:center; padding:12px 4px; gap:10px; flex-shrink:0; }
+  .navrail .logo-slot { width:40px;height:40px;border:1px solid #888;background:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;margin-bottom:8px; text-align:center;}
+  .nav-item { width:64px; display:flex; flex-direction:column; align-items:center; gap:1px; text-decoration:none; color:#222; padding:3px 0; }
+  .nav-item .icon { width:38px; height:38px; border:1px solid #999; background:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; }
+  .nav-item.active .icon { border:2px solid #333; background:#ccc; }
+  .nav-item .lbl { font-size:8.5px; text-align:center; line-height:1.15; margin-top:2px; }
+  .nav-item .roles { font-size:7.5px; color:#777; text-align:center; line-height:1.15; }
+  .nav-item.disabled { opacity:0.4; }
+  .nav-item.logout { margin-top:auto; }
+  .main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .topbar { height:56px; border-bottom:1px solid #999; background:#e4e4e4; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; gap:12px; }
+  .search-box { width:260px; height:32px; border:1px solid #999; background:#fff; display:flex; align-items:center; padding:0 8px; font-size:12px; color:#777;}
+  .identity { display:flex; align-items:center; gap:8px; font-size:12px; white-space:nowrap; }
+  .avatar { width:28px;height:28px;border:1px solid #999;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;}
+  .content { flex:1; padding:20px; overflow:auto; }
+  h1.page-title { font-size:20px; margin:0 0 2px; display:inline-block; }
+  .subtitle{font-size:12px;color:#666;margin:0 0 16px;}
+  .headrow{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+  .btn { border:1px solid #666; background:#e0e0e0; padding:8px 14px; font-size:12px; text-align:center; display:inline-block; }
+  .btn.primary { border:2px solid #333; background:#ccc; font-weight:bold; }
+  .btn.small{padding:5px 10px;font-size:10.5px;}
+  .filter-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .filter-field{border:1px solid #999;background:#fff;padding:6px 10px;font-size:11px;color:#666;}
+  table.wf-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:22px;}
+  table.wf-table th, table.wf-table td { border:1px solid #ccc; padding:7px 8px; text-align:left; vertical-align:middle;}
+  table.wf-table th { background:#eee; }
+  .av{width:28px;height:28px;border:1px solid #999;border-radius:50%;background:#f4f4f4;}
+  .pill{border:1px solid #999;background:#eee;font-size:10px;padding:2px 8px;}
+  .pill.off{border-style:dashed;color:#888;}
+  .form-panel{border:2px solid #333;background:#fff;padding:18px;margin-top:6px;margin-bottom:24px;}
+  .form-panel h2{font-size:15px;margin:0 0 14px;}
+  .form-row{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;}
+  .field{flex:1;min-width:180px;}
+  .field label{display:block;font-size:11px;color:#555;margin-bottom:4px;}
+  .input{border:1px solid #999;background:#fbfbfb;height:32px;display:flex;align-items:center;padding:0 8px;font-size:12px;color:#999;}
+  .note-inline{font-size:10px;color:#777;margin-top:3px;}
+  .checkbox-row{font-size:11px;color:#666;}
+  .sticky-footer{display:flex;gap:8px;border-top:1px solid #999;margin-top:16px;padding-top:14px;}
+  .subsection{margin-top:26px;}
+  .subsection h2{font-size:15px;margin:0 0 10px;}
+  .note { font-size:11px; color:#555; border-left:3px dashed #999; padding:4px 8px; margin:6px 0; background:#f7f7f7; }
+  .annot-block { border:1px dashed #999; padding:12px 16px; margin-top:26px; font-size:12px; background:#f7f7f7; }
+  .annot-block h3 { margin:14px 0 6px; font-size:13px; }
+  .annot-block h3:first-child{margin-top:0;}
+  .annot-block ul { margin:4px 0; padding-left:18px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="navrail">
+    <div class="logo-slot">LOGO</div>
+    <a class="nav-item" href="dashboard.html"><div class="icon">D</div><div class="lbl">Dashboard</div><div class="roles">O·M·C(v)</div></a>
+    <a class="nav-item" href="new-order.html"><div class="icon">O</div><div class="lbl">Orders</div><div class="roles">O·M·C·S·Chef(v)</div></a>
+    <a class="nav-item" href="table-grid.html"><div class="icon">T</div><div class="lbl">Tables</div><div class="roles">O·M·C(v)·S</div></a>
+    <a class="nav-item" href="kds.html"><div class="icon">K</div><div class="lbl">Kitchen</div><div class="roles">O·M·C(v)·S(v)·Chef</div></a>
+    <a class="nav-item" href="menu-management.html"><div class="icon">M</div><div class="lbl">Menu</div><div class="roles">O·M·C(v)·S(v)·Chef(v)</div></a>
+    <a class="nav-item active" href="staff-management.html"><div class="icon">St</div><div class="lbl">Staff</div><div class="roles">O·M(v+add)</div></a>
+    <a class="nav-item" href="reports.html"><div class="icon">R</div><div class="lbl">Reports</div><div class="roles">O·M·C(sales)</div></a>
+    <div class="nav-item disabled"><div class="icon">Se</div><div class="lbl">Settings</div><div class="roles">O·M(partial)</div></div>
+    <a class="nav-item logout" href="00-sitemap.html"><div class="icon">&#9211;</div><div class="lbl">Logout</div><div class="roles">All</div></a>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="search-box">Search staff by name/email...</div>
+      <div class="identity"><div class="avatar">PS</div>Priya Sharma — Owner/Admin</div>
+    </div>
+    <div class="content">
+      <div style="font-size:10px;color:#666;margin-bottom:10px;"><a href="00-sitemap.html" style="color:#555;">&larr; Sitemap</a> · Screen: <b>Staff Management</b> (list + add/edit form + activity log + sessions, one file)</div>
+      <div class="headrow">
+        <div><h1 class="page-title">Staff Management</h1><p class="subtitle">9 staff · 8 active, 1 deactivated</p></div>
+        <div class="btn primary">+ Add Staff</div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-field">Role: All ▾</div>
+        <div class="filter-field">Status: Active ▾</div>
+        <div class="filter-field" style="flex:1;">Search name or email...</div>
+      </div>
+
+      <table class="wf-table">
+        <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
+        <tr><td><div class="av" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div>Asha Devi</td><td>asha@restaurant.com</td><td>Server/Waiter</td><td><span class="pill">Active</span></td><td>Today, 7:58pm</td><td><a href="#form" style="font-size:11px;">Edit</a> · <span style="font-size:11px;">Deactivate</span> · <a href="#activity" style="font-size:11px;">Activity</a></td></tr>
+        <tr><td><div class="av" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div>Kabir Khan</td><td>kabir@restaurant.com</td><td>Chef/Kitchen Staff</td><td><span class="pill">Active</span></td><td>Today, 6:02pm</td><td><a href="#form" style="font-size:11px;">Edit</a> · <span style="font-size:11px;">Deactivate</span> · <a href="#activity" style="font-size:11px;">Activity</a></td></tr>
+        <tr><td><div class="av" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div>Neha Kapoor</td><td>neha@restaurant.com</td><td>Cashier</td><td><span class="pill">Active</span></td><td>Today, 8:10pm</td><td><a href="#form" style="font-size:11px;">Edit</a> · <span style="font-size:11px;">Deactivate</span> · <a href="#activity" style="font-size:11px;">Activity</a></td></tr>
+        <tr><td><div class="av" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div>Rohan Mehta</td><td>rohan@restaurant.com</td><td>Manager</td><td><span class="pill">Active</span></td><td>Today, 5:40pm</td><td><a href="#form" style="font-size:11px;">Edit</a> · <span style="font-size:11px;">Deactivate</span> · <a href="#activity" style="font-size:11px;">Activity</a></td></tr>
+        <tr><td><div class="av" style="display:inline-block;vertical-align:middle;margin-right:6px;"></div>Old Cashier</td><td>old.cashier@restaurant.com</td><td>Cashier</td><td><span class="pill off">Deactivated</span></td><td>14 days ago</td><td><span style="font-size:11px;">Reactivate</span> · <a href="#activity" style="font-size:11px;">Activity</a></td></tr>
+      </table>
+      <div class="note">Manager persona viewing this same screen: "Deactivate" and role-reassignment on <em>existing</em> staff are grayed out with "(Owner/Admin only)" — Manager's RBAC entry is "View/Add", not full Edit.</div>
+
+      <div class="form-panel" id="form">
+        <h2>Add / Edit Staff — Form</h2>
+        <div class="form-row">
+          <div class="field"><label>Full Name</label><div class="input">Asha Devi</div></div>
+          <div class="field"><label>Email</label><div class="input">asha@restaurant.com</div></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Phone</label><div class="input">+91 98xxxxxx10</div></div>
+          <div class="field"><label>Role</label><div class="input">Server/Waiter ▾</div></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>Temp Password</label><div class="input">Auto-generated, emailed on save</div><div class="note-inline">Forced reset on first login — always on, not editable (PRD §3.1).</div></div>
+          <div class="field"><label>PIN (terminal quick login)</label><div class="input">4-digit, auto-generated</div><div class="btn small" style="margin-top:6px;">Regenerate PIN</div></div>
+        </div>
+        <div class="checkbox-row">☑ 2FA required for this role (auto-set for Owner/Admin/Manager, not user-editable)</div>
+        <div class="sticky-footer">
+          <div class="btn primary">Save</div>
+          <div class="btn">Cancel</div>
+        </div>
+      </div>
+
+      <div class="subsection" id="activity">
+        <h2>Activity Log — Asha Devi</h2>
+        <table class="wf-table">
+          <tr><th>Timestamp</th><th>Action</th><th>Details</th></tr>
+          <tr><td>Today, 7:58pm</td><td>Login</td><td>PIN quick-login, Terminal-2</td></tr>
+          <tr><td>Today, 8:05pm</td><td>Order Created</td><td>Table T5, Order #ORD-1042</td></tr>
+          <tr><td>Today, 8:22pm</td><td>Order Edited</td><td>Table T5 — removed 1x item, reason: "guest changed order"</td></tr>
+        </table>
+      </div>
+
+      <div class="subsection">
+        <h2>Active Sessions</h2>
+        <table class="wf-table">
+          <tr><th>Device</th><th>Last Active</th><th>Action</th></tr>
+          <tr><td>Terminal-2 (POS tablet)</td><td>2 min ago</td><td><span class="btn small">Revoke</span></td></tr>
+          <tr><td>Mobile — Chrome Android</td><td>3 days ago</td><td><span class="btn small">Revoke</span></td></tr>
+        </table>
+      </div>
+
+      <div class="annot-block">
+        <h3>Roles with access</h3>
+        <ul>
+          <li>Owner/Admin — full: add, edit, deactivate/reactivate, reassign roles, view activity log, revoke sessions.</li>
+          <li>Manager — view + add only: can see the list and add new staff, cannot edit existing staff details/role or deactivate them (per RBAC "View/Add").</li>
+          <li>Cashier, Server/Waiter, Chef/Kitchen Staff — no access; nav item hidden entirely.</li>
+        </ul>
+        <h3>Data loaded on entry</h3>
+        <ul>
+          <li><code>GET /staff?restaurantId=</code> with filters/pagination.</li>
+          <li><code>GET /auditLogs?staffId=</code> — loaded on "Activity" click.</li>
+          <li><code>GET /sessions?staffId=</code> — active-sessions panel.</li>
+        </ul>
+        <h3>Every button's action + destination</h3>
+        <ul>
+          <li>"+ Add Staff" — opens the Add/Edit Staff form (shown inline here; modal/side-panel in the real build).</li>
+          <li>Row "Edit" — opens the same form, pre-filled (Owner/Admin only — Manager doesn't see this link on existing rows).</li>
+          <li>Row "Deactivate"/"Reactivate" — confirm modal: "Deactivate Asha Devi? They won't be able to log in until reactivated." Owner/Admin only.</li>
+          <li>Row "Activity" — jumps to the Activity Log section for that staff member.</li>
+          <li>"Revoke" (session) — immediately ends that session/logs the device out, confirm before action.</li>
+          <li>"Regenerate PIN" — issues a new 4-digit PIN, old one invalidated immediately.</li>
+          <li>Form "Save" — <code>POST/PUT /staff/:id</code>, returns to list with the new/updated row visible.</li>
+        </ul>
+        <h3>Empty state</h3>
+        <ul><li>No other staff besides the logged-in Owner: "No other staff added yet. Add your first team member." with an "Add Staff" button.</li></ul>
+        <h3>Error state</h3>
+        <ul>
+          <li>Duplicate email: "That email is already in use by another staff account."</li>
+          <li>PIN collision: "That PIN is already in use — try another."</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
