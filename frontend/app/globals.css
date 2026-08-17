@@ -1,0 +1,51 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/*
+ * Brand tokens — copied 1:1 from docs/02-brand-kit.md.
+ * Do not change these values here; update the brand kit doc first, then
+ * mirror the change into this file so the two stay in sync.
+ */
+:root {
+  /* Brand */
+  --color-primary: #e8564a;
+  --color-secondary: #1f7a8c;
+  --color-accent: #f0665a;
+
+  /* Neutrals */
+  --color-bg: #faf7f5;
+  --color-surface: #ffffff;
+  --color-text: #2b2420;
+  --color-text-muted: #6b6058;
+  --color-border: #e5ddd8;
+
+  /* Semantic (also drives KDS ticket urgency: success -> warning -> error) */
+  --color-success: #15803d;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-background: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --color-info: var(--color-info);
+
+  --font-heading: var(--font-poppins);
+  --font-body: var(--font-inter);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-inter), "Segoe UI", sans-serif;
+}
