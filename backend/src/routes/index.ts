@@ -7,6 +7,8 @@ import categoryRoutes from "./category.routes";
 import menuItemRoutes from "./menu-item.routes";
 import orderRoutes from "./order.routes";
 import kitchenRoutes from "./kitchen.routes";
+import invoiceRoutes from "./invoice.routes";
+import paymentRoutes from "./payment.routes";
 
 const router = Router();
 
@@ -18,8 +20,10 @@ router.use("/categories", categoryRoutes);
 router.use("/menu-items", menuItemRoutes);
 router.use("/orders", orderRoutes);
 router.use("/kitchen", kitchenRoutes);
+router.use("/invoices", invoiceRoutes);
+router.use("/payments", paymentRoutes);
 
-// Feature routes (billing, staff, reports, etc.) are added here in later
-// parts of the build.
+// Feature routes (staff, reports, etc.) are added here in later parts of
+// the build.
 
 export default router;

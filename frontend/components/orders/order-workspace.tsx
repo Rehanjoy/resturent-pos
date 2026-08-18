@@ -20,6 +20,7 @@ import { VoidOrderModal } from "./void-order-modal";
 
 const BUILD_ROLES = new Set(["owner", "manager", "cashier", "server"]);
 const VOID_ROLES = new Set(["owner", "manager"]);
+const BILLING_ROLES = new Set(["owner", "manager", "cashier"]);
 const NON_VOIDABLE: OrderStatus[] = ["billed", "closed", "void"];
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -51,6 +52,7 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
 
   const canBuild = !!user && BUILD_ROLES.has(user.role);
   const canVoid = !!user && VOID_ROLES.has(user.role);
+  const canBill = !!user && BILLING_ROLES.has(user.role);
 
   const [orderId, setOrderId] = useState<string | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
@@ -210,6 +212,15 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
               className="rounded-md border border-success px-4 py-2 text-button text-success disabled:opacity-60"
             >
               {serveMutation.isPending ? "Serving…" : `Serve Ready Items (${readyCount})`}
+            </button>
+          )}
+          {canBill && order?.status === "served" && (
+            <button
+              type="button"
+              onClick={() => router.push(`/admin/billing/${order.id}`)}
+              className="rounded-md bg-accent px-4 py-2 text-button text-white"
+            >
+              Settle Bill
             </button>
           )}
           {canVoid && isVoidable && (
