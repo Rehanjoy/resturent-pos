@@ -92,14 +92,20 @@ export function OrdersOverview() {
     refetchInterval: 30_000,
   });
 
+  // Cache shape must match every other consumer of this query key exactly
+  // (`tables-screen.tsx`, `order-workspace.tsx`, `kds-board.tsx`,
+  // `reservations-screen.tsx` all cache the full `{ tables }` response
+  // object here) — React Query's cache is shared globally by key, so a
+  // queryFn that unwrapped to a bare array here would silently clobber
+  // what every other screen reading `["tables"]` expects to find.
   const tablesQuery = useQuery({
     queryKey: ["tables"],
-    queryFn: () => tablesApi.list().then((result) => result.tables),
+    queryFn: () => tablesApi.list(),
   });
 
   const tableById = useMemo(() => {
     const map = new Map<string, { name: string }>();
-    for (const table of tablesQuery.data ?? []) map.set(table.id, { name: table.name });
+    for (const table of tablesQuery.data?.tables ?? []) map.set(table.id, { name: table.name });
     return map;
   }, [tablesQuery.data]);
 
