@@ -15,7 +15,10 @@ export function signAccessToken(payload: AccessTokenPayload): string {
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  return jwt.verify(token, env.jwtAccessSecret) as AccessTokenPayload;
+  // `algorithms` is pinned explicitly (defense in depth against algorithm-
+  // confusion attacks) even though jsonwebtoken already rejects an
+  // attacker-supplied "none"/mismatched alg by default.
+  return jwt.verify(token, env.jwtAccessSecret, { algorithms: ["HS256"] }) as AccessTokenPayload;
 }
 
 export function signRefreshToken(payload: RefreshTokenPayload): string {
@@ -25,7 +28,7 @@ export function signRefreshToken(payload: RefreshTokenPayload): string {
 }
 
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
-  return jwt.verify(token, env.jwtRefreshSecret) as RefreshTokenPayload;
+  return jwt.verify(token, env.jwtRefreshSecret, { algorithms: ["HS256"] }) as RefreshTokenPayload;
 }
 
 /**
@@ -42,7 +45,9 @@ export function signTwoFactorToken(userId: string): string {
 }
 
 export function verifyTwoFactorToken(token: string): TwoFactorTokenPayload {
-  const decoded = jwt.verify(token, env.jwtAccessSecret) as TwoFactorTokenPayload;
+  const decoded = jwt.verify(token, env.jwtAccessSecret, {
+    algorithms: ["HS256"],
+  }) as TwoFactorTokenPayload;
   if (decoded.purpose !== "2fa-login") {
     throw new Error("Token is not a valid 2FA session token.");
   }
