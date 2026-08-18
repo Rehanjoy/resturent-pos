@@ -1,0 +1,162 @@
+# Saffron — Handover Document
+
+**Client:** digitecweb · **Version:** 1.0 (MVP) · **Date:** 2026-08-18 · **Prepared by:** development team
+
+**Status: MVP feature-complete, tested, and security-audited. Not yet deployed.** Sections 5, 7, 8, and 10 below are marked pending — they depend on hosting/domain/account decisions that only the client can make (Phase 8). This document will be updated once that happens.
+
+---
+
+## 1. What this application is
+
+Saffron is a restaurant POS and management platform: order taking, a live kitchen display, table management, menu management, GST billing, staff management, a sales dashboard, and reports — covering a restaurant's full front-of-house operations lifecycle. It's built as two separate applications (a Next.js admin/POS frontend and a Node/Express API) that a restaurant runs together, either self-hosted on-premise or in the cloud. Staff log in with a role (Owner, Manager, Cashier, Server, Chef, or Inventory Manager) and only see the screens their role is permitted to use.
+
+## 2. How the app works (per module)
+
+### Auth
+Email + password login (JWT access token, 15 min, held in browser memory only; refresh token, 7 days, httpOnly cookie). POS terminals can also use a fast PIN login for shift clock-in — blocked for any account with 2FA enabled, since 2FA is mandatory for Owner/Manager. Admin-created staff accounts are forced to reset their password on first login.
+
+### Tables & Areas
+Owner/Manager create Areas (e.g. "AC Indoor", "Terrace") and Tables within them. The Table Grid shows live status — free / occupied / reserved / needs cleaning — synced instantly across every open terminal over WebSocket. Server role can change a table's status (e.g. mark it free after cleaning) but can't add/delete tables themselves.
+
+### Menu
+Owner/Manager manage Categories and Dishes (price, veg/non-veg, spice level, image URL, description). The availability toggle is how a dish gets "86'd" (marked sold out) instantly — everyone else sees the menu read-only.
+
+### Orders & Kitchen (KDS)
+Tap a free table → New Order screen: pick a category, add dishes with customization (spice level, add-ons, notes) to a running cart, then **Send to Kitchen**. This creates a Kitchen Order Ticket (KOT) that appears live on the Kitchen Display board. A table's order can be sent to the kitchen in more than one batch — e.g. a dessert added after mains already went out becomes its own ticket, without disturbing the first one. The kitchen (Owner/Manager/Chef) marks items ready; tickets only leave the active board once a server **Serves** the ready items from the floor side, not the moment the kitchen finishes cooking — this is deliberate, matching how a real floor works.
+
+### Billing & Settlement
+Once every item on an order is served, Owner/Manager/Cashier can generate the bill: it computes GST (CGST/SGST, or whatever tax slabs are configured in Settings) on the post-discount subtotal, supports flat or percentage discounts, and **requires a manager's password to approve any discount above the configured threshold** (default 15%) — this can't be bypassed from the UI, it's enforced by the server. Payment can be split across cash/card/UPI; the amounts must sum exactly to the bill total. Invoice numbers are sequential and never reused, even under concurrent settlements. A bill can be voided with a mandatory reason (Owner/Manager only, fully logged) — voiding an unpaid bill reopens the order for correction; voiding an already-paid bill does not undo the payment, it's a logged record only.
+
+### Staff
+Owner/Manager add, edit, and deactivate staff accounts. **A Manager can fully manage frontline roles (Cashier/Server/Chef/Inventory Manager) but can never create, edit, or deactivate an Owner or another Manager account** — this stops a Manager from ever escalating privileges. Every staff member has an activity log (their orders, voids, discounts) and a list of active login sessions that can be individually revoked.
+
+### Settings
+Restaurant profile, GST/tax configuration, discount approval threshold, and which payment modes are accepted. Owner-only for the restaurant's core identity (name, GST number, logo); Manager can adjust the operational settings (tax slabs, discount threshold, payment modes).
+
+### Dashboard & Reports
+Dashboard: today's sales (gross/net/tax/discounts), payment mode split, live table/kitchen counts, top dishes, and a 7-day trend. Reports: the same data filterable by date range (Today/Yesterday/Last 7 Days/This Month/Custom), plus revenue by category and by payment mode, top and slow-moving dishes, and staff performance (orders handled, average table turnaround) — **the Staff Performance report is hidden from Cashiers**, everything else is visible to Owner/Manager/Cashier. CSV export is available on the sales and top-dishes reports.
+
+### Not yet built (Phase 2, per the product brief)
+Inventory & auto-deduction, Reservations, QR self-ordering, the public Website Builder, WhatsApp/SMS notifications.
+
+## 3. Architecture
+
+```
+Next.js (App Router, TypeScript)  ──REST + WebSocket──▶  Express API (TypeScript)
+        "frontend/"                                            "backend/"
+                                                                    │
+                                                              MongoDB (Mongoose)
+```
+
+Frontend and backend are **two separate codebases** (not a single Next.js app with API routes) per the client's explicit instruction — they can be deployed independently. Real-time updates (new kitchen tickets, table status changes) go over Socket.io, scoped to a `restaurant:{id}` room so multiple restaurants on shared infrastructure never see each other's events.
+
+**Repo structure:**
+```
+resturent-pos/
+├── docs/              product brief, brand kit, this handover, env registry, test/security reports
+├── assets/             logo files (SVG)
+├── backend/
+│   └── src/
+│       ├── config/     env loading, DB connection
+│       ├── models/     Mongoose schemas
+│       ├── services/   business logic (one file per module)
+│       ├── controllers/ req/res only, no logic
+│       ├── routes/     endpoint definitions + RBAC (authorize()) + validation
+│       ├── middleware/ auth, RBAC, rate limiting, validation, error handling
+│       └── sockets/    Socket.io server + room management
+│   └── tests/          automated test suite (Vitest)
+└── frontend/
+    └── app/admin/       every POS/dashboard screen, one folder per module
+    └── components/      one folder per module, mirrors app/admin structure
+    └── lib/             one API client + typed wrapper per module, auth context, socket client
+```
+
+**Hosting:** not yet decided — see §5/§7 (pending).
+
+## 4. Environment variables
+
+Full detail (including where to obtain each value) lives in `docs/env-registry.md` — reproduced here. **No actual secret values appear in this document or that one; only placeholders.**
+
+| Variable | Used by | Purpose |
+|---|---|---|
+| `NODE_ENV` | backend | `development` / `test` / `production` — controls error verbosity |
+| `PORT` | backend | Port the API + Socket.io server listens on |
+| `MONGODB_URI` | backend | MongoDB connection string |
+| `CORS_ORIGIN` | backend | Must exactly match the deployed frontend's URL |
+| `JWT_ACCESS_SECRET` | backend | Signs the 15-minute access token — generate with `openssl rand -hex 32`, never reuse across environments |
+| `JWT_REFRESH_SECRET` | backend | Signs the 7-day refresh token — must differ from the access secret |
+| `JWT_ACCESS_EXPIRY` | backend | Access token lifetime (default `15m`) |
+| `JWT_REFRESH_EXPIRY` | backend | Refresh token lifetime (default `7d`) |
+| `NEXT_PUBLIC_API_BASE_URL` | frontend | The backend's URL — exposed to the browser, never put a secret in a `NEXT_PUBLIC_` variable |
+
+## 5. Credentials & accounts registry — **pending**
+
+No hosting, domain, or third-party accounts have been created yet. This section will list every service the deployed app depends on (MongoDB Atlas or self-hosted, frontend host, domain registrar, etc.), who owns each account, and where access is granted — once those decisions are made in Phase 8. **Actual passwords will go in the client's password manager, never in this document.**
+
+The one credential that exists today is the local development seed account created by `backend/npm run seed`:
+- Email: `owner@saffron.dev`
+- Password: printed once by the seed script when it runs (also forces a password reset on first login)
+- This is a **local development seed only** — a real production Owner account must be created fresh at deployment time, and this seed script should not run against production data.
+
+## 6. Local development setup
+
+Prerequisites: Node.js (LTS), npm, a local or reachable MongoDB instance.
+
+```bash
+git clone <repo-url>
+cd resturent-pos
+
+# Backend
+cd backend
+npm install
+cp .env.example .env        # fill in JWT_ACCESS_SECRET / JWT_REFRESH_SECRET (openssl rand -hex 32) and MONGODB_URI
+npm run seed                # creates a demo restaurant + Owner account, prints the temporary password once
+npm run dev                 # http://localhost:5000
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+cp .env.example .env.local  # set NEXT_PUBLIC_API_BASE_URL to the backend URL above
+npm run dev                 # http://localhost:3000
+```
+
+Useful commands:
+```bash
+cd backend && npm run build       # production build (dist/)
+cd backend && npm run typecheck   # type-check only
+cd backend && npm test            # run the automated test suite (Vitest, ~69 tests)
+cd frontend && npm run build      # production build
+cd frontend && npm run lint       # ESLint
+cd frontend && npm run typecheck  # type-check only
+```
+
+## 7. Deployment & rollback — **pending**
+
+No deployment has happened yet. The PRD's intended model (§10) is Docker Compose for self-hosted on-premise installs, or Next.js + containerized Express + MongoDB Atlas for cloud/SaaS mode — the actual choice, plus the deploy/rollback procedure, will be documented here once Phase 8 runs with the client's hosting decision.
+
+## 8. Backups & data — **pending**
+
+Depends on the hosting decision in §7. MongoDB Atlas provides automated backups out of the box; a self-hosted deployment needs a scheduled `mongodump` (or equivalent) job documented here once chosen.
+
+## 9. Maintenance & troubleshooting
+
+**Routine:**
+- Run `npm audit` on both `backend/` and `frontend/` periodically (clean as of this handover — see `docs/05-security-report.md`) and update dependencies with known vulnerabilities.
+- JWT secrets should be rotated if ever suspected leaked — this immediately invalidates every active session (by design).
+- The in-memory rate limiter and login-lockout tracker (`backend/src/middleware/rate-limit.ts`, `backend/src/utils/login-attempt-tracker.ts`) are per-process. If the API is ever scaled to more than one instance, these need to move to a shared store (Redis) or brute-force protection silently stops working across instances — flagged in both files' own comments.
+
+**Known gaps / accepted trade-offs** (not bugs — deliberate MVP-scope decisions, detailed in `docs/01-product-brief.md`, `docs/02-brand-kit.md`, and each module's own code comments):
+- Dish images and the restaurant logo are stored as plain URLs — there's no file-upload/S3 pipeline yet.
+- Invoice PDFs are generated on-demand and streamed, not stored anywhere — no "re-download an old invoice" beyond calling the same endpoint again by ID.
+- No printer/ESC-POS integration — the invoice PDF is the only "print" path today (download and print manually, or wire a printer bridge later).
+- CSV is the only report export format; Excel/PDF export were scoped out.
+
+**Where logs live:** currently just process stdout/stderr on both apps (no centralized log aggregation set up yet) — add one (e.g. Winston/Pino to a file or log service, per the PRD's own §9 recommendation) as part of Phase 8 deployment hardening.
+
+## 10. Support & warranty — **pending**
+
+To be filled in per the commercial agreement with digitecweb once deployment is scheduled.
+
+---
+
+**Traceability:** this handover reflects the codebase as of git commit `2ced7c1` (after Phases 1–7: product brief, brand kit, wireframes, full MVP build, QA, security audit — see `docs/00`–`06` and the git log for the phase-by-phase history).
