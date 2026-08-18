@@ -47,13 +47,28 @@ const STATUS_TEXT: Record<OrderStatus, string> = {
 // floor actually needs to act on.
 const CLOSED_STATUSES = new Set<OrderStatus>(["closed", "void"]);
 
+/**
+ * A table's order is auto-created (empty, `status: "draft"`) the instant
+ * staff open it from the Table Grid — see `order-workspace.tsx`'s
+ * `openOrderMutation`, which fires unconditionally on mount so the New
+ * Order screen is always ready to add to. That means a table someone
+ * merely glanced at leaves behind a permanent zero-item draft with no
+ * real activity. This list is for staff to find and act on actual orders,
+ * so a draft with nothing in it yet is filtered out everywhere below,
+ * regardless of which status pill is selected — it isn't a fourth
+ * category, it's just noise.
+ */
+function isMeaningfulOrder(order: Order): boolean {
+  return order.items.length > 0;
+}
+
 type FilterKey = "active" | "closed" | "all";
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "active", label: "Active" },
-  { key: "closed", label: "Closed / Voided" },
-  { key: "all", label: "All" },
-];
+const FILTER_LABEL: Record<FilterKey, string> = {
+  active: "Active",
+  closed: "Closed / Voided",
+  all: "All",
+};
 
 function startOfTodayIso(): string {
   const start = new Date();
@@ -109,9 +124,24 @@ export function OrdersOverview() {
     return map;
   }, [tablesQuery.data]);
 
+  // Real orders only (see `isMeaningfulOrder`), split once by status so
+  // every pill's count can be shown without re-filtering per render.
+  const meaningfulOrders = useMemo(
+    () => (ordersQuery.data ?? []).filter(isMeaningfulOrder),
+    [ordersQuery.data],
+  );
+
+  const counts = useMemo(
+    () => ({
+      active: meaningfulOrders.filter((order) => !CLOSED_STATUSES.has(order.status)).length,
+      closed: meaningfulOrders.filter((order) => CLOSED_STATUSES.has(order.status)).length,
+      all: meaningfulOrders.length,
+    }),
+    [meaningfulOrders],
+  );
+
   const groups = useMemo(() => {
-    const orders = ordersQuery.data ?? [];
-    const filtered = orders.filter((order) => {
+    const filtered = meaningfulOrders.filter((order) => {
       if (filter === "active") return !CLOSED_STATUSES.has(order.status);
       if (filter === "closed") return CLOSED_STATUSES.has(order.status);
       return true;
@@ -134,7 +164,7 @@ export function OrdersOverview() {
         orders,
       }))
       .sort((a, b) => a.tableName.localeCompare(b.tableName, undefined, { numeric: true }));
-  }, [ordersQuery.data, tableById, filter]);
+  }, [meaningfulOrders, tableById, filter]);
 
   const isLoading = ordersQuery.isLoading || tablesQuery.isLoading;
   const isError = ordersQuery.isError || tablesQuery.isError;
@@ -142,16 +172,23 @@ export function OrdersOverview() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-1">
-        {FILTERS.map((option) => (
+        {(Object.keys(FILTER_LABEL) as FilterKey[]).map((key) => (
           <button
-            key={option.key}
+            key={key}
             type="button"
-            onClick={() => setFilter(option.key)}
-            className={`rounded-lg px-3 py-1.5 text-small font-medium ${
-              filter === option.key ? "bg-primary/10 text-primary" : "text-text-muted hover:text-text"
+            onClick={() => setFilter(key)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-small font-medium transition-colors ${
+              filter === key ? "bg-primary/10 text-primary" : "text-text-muted hover:text-text"
             }`}
           >
-            {option.label}
+            {FILTER_LABEL[key]}
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[11px] tabular-nums ${
+                filter === key ? "bg-primary/15 text-primary" : "bg-border text-text-muted"
+              }`}
+            >
+              {counts[key]}
+            </span>
           </button>
         ))}
       </div>
@@ -163,9 +200,15 @@ export function OrdersOverview() {
       )}
 
       {!isLoading && !isError && groups.length === 0 && (
-        <p className="text-small text-text-muted">
-          {filter === "active" ? "No active orders right now." : "No orders match this filter today."}
-        </p>
+        <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+          <p className="text-small text-text-muted">
+            {filter === "active"
+              ? "No active orders right now — new ones will show up here as soon as items are added."
+              : filter === "closed"
+                ? "No closed or voided orders yet today."
+                : "No orders yet today."}
+          </p>
+        </div>
       )}
 
       {!isLoading && !isError && groups.length > 0 && (
