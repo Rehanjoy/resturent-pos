@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { reportsApi } from "@/lib/reports/api";
 import type { ReportRangeParams } from "@/lib/reports/types";
-import { PaymentModeBar } from "@/components/dashboard/payment-mode-bar";
+import { PaymentModeDonut } from "@/components/dashboard/payment-mode-donut";
+import { PageHeader } from "@/components/ui/page-header";
 import { RangeFilter } from "./range-filter";
 import { ExportButton } from "./export-button";
 import { SalesOverviewTab } from "./sales-overview-tab";
@@ -72,21 +73,24 @@ export function ReportsScreen() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-      <h1 className="font-heading text-h1 font-semibold text-text">Reports</h1>
+      <PageHeader
+        title="Reports"
+        subtitle="Sales, revenue mix, and staff performance for the range you pick below."
+      />
 
       <RangeFilter params={params} onChange={setParams} />
 
-      <div className="flex items-center justify-between gap-3 border-b border-border">
-        <div className="flex gap-1 overflow-x-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1 rounded-2xl border border-border bg-surface p-1 shadow-sm">
           {visibleTabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`whitespace-nowrap rounded-t-md px-3 py-2 text-small font-medium ${
+              className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-small font-medium transition-colors ${
                 activeTab === tab.key
-                  ? "border-b-2 border-primary text-primary"
-                  : "text-text-muted hover:text-text"
+                  ? "bg-primary/10 text-primary"
+                  : "text-text-muted hover:bg-background hover:text-text"
               }`}
             >
               {tab.label}
@@ -108,7 +112,16 @@ export function ReportsScreen() {
             <ReportTabBody query={salesQuery} render={(r) => <RevenueByCategoryTab categories={r.revenueByCategory} />} />
           )}
           {activeTab === "payment-mode" && (
-            <ReportTabBody query={salesQuery} render={(r) => <PaymentModeBar breakdown={r.revenueByPaymentMode} />} />
+            <ReportTabBody
+              query={salesQuery}
+              render={(r) => (
+                <PaymentModeDonut
+                  breakdown={r.revenueByPaymentMode}
+                  title="Revenue by Payment Mode"
+                  subtitle="Selected range"
+                />
+              )}
+            />
           )}
           {activeTab === "top-dishes" && (
             <ReportTabBody query={topDishesQuery} render={(r) => <TopDishesTab report={r} />} />

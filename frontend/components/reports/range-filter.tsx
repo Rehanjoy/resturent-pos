@@ -18,17 +18,17 @@ export function RangeFilter({
   onChange: (params: ReportRangeParams) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-3 shadow-sm">
-      <div className="flex gap-1">
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-sm">
+      <div className="flex flex-wrap gap-1">
         {RANGE_OPTIONS.map((range) => (
           <button
             key={range}
             type="button"
             onClick={() => onChange({ range, from: params.from, to: params.to })}
-            className={`rounded-md px-3 py-1.5 text-small font-medium ${
+            className={`rounded-full px-3.5 py-1.5 text-small font-medium transition-colors ${
               params.range === range
                 ? "bg-primary/10 text-primary"
-                : "text-text-muted hover:text-text"
+                : "text-text-muted hover:bg-background hover:text-text"
             }`}
           >
             {RANGE_LABEL[range]}

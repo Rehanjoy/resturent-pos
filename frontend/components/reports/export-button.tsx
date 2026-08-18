@@ -42,7 +42,7 @@ export function ExportButton({
         type="button"
         onClick={handleExport}
         disabled={isExporting}
-        className="rounded-md border border-border px-3 py-1.5 text-small font-medium text-text hover:border-primary disabled:opacity-50"
+        className="rounded-lg border border-border bg-surface px-3.5 py-1.5 text-small font-medium text-text shadow-sm transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
       >
         {isExporting ? "Exporting…" : "Export CSV"}
       </button>

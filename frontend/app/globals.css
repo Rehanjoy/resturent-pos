@@ -24,6 +24,24 @@
   --color-warning: #d97706;
   --color-error: #dc2626;
   --color-info: #2563eb;
+
+  /*
+   * Sidebar chrome — added for the Phase 5 visual redesign (client-supplied
+   * reference screenshots called for a dark, near-black nav rail as "the
+   * one deliberate contrast-with-canvas choice"). Deliberately NOT part of
+   * the 4-step neutral scale above: it's a one-off structural surface for
+   * the nav rail only, doesn't replace/alter any brand-kit-approved color,
+   * and nothing outside `components/layout/sidebar.tsx` should reference
+   * it. Picked as a warm near-black (same hue family as `--color-text`,
+   * #2B2420) rather than a true neutral black, so it still reads as part
+   * of this warm palette rather than a generic dark-mode panel.
+   */
+  --color-sidebar: #201b17;
+  --color-sidebar-hover: #2c2620;
+  --color-sidebar-active: #e8564a;
+  --color-sidebar-border: #362f28;
+  --color-sidebar-foreground: #faf7f5;
+  --color-sidebar-muted: #a89c90;
 }
 
 @theme inline {
@@ -40,8 +58,42 @@
   --color-error: var(--color-error);
   --color-info: var(--color-info);
 
+  --color-sidebar: var(--color-sidebar);
+  --color-sidebar-hover: var(--color-sidebar-hover);
+  --color-sidebar-active: var(--color-sidebar-active);
+  --color-sidebar-border: var(--color-sidebar-border);
+  --color-sidebar-foreground: var(--color-sidebar-foreground);
+  --color-sidebar-muted: var(--color-sidebar-muted);
+
   --font-heading: var(--font-poppins);
   --font-body: var(--font-inter);
+
+  /*
+   * Type scale from docs/02-brand-kit.md §2. Every screen in this codebase
+   * already applies `text-h1`/`text-h2`/.../`text-small`/`text-button`
+   * classes expecting these sizes (paired with `font-heading`/`font-body`
+   * and a `font-*` weight utility for the rest of the brand-kit spec) —
+   * this block was missing from the original build, so those classes were
+   * silently no-ops and every heading/body/caption rendered at the browser
+   * default size. Fixing it here (rather than leaving it and hand-sizing
+   * only the screens touched in this pass) makes every screen in the app
+   * match the brand kit as originally specified, not just the ones
+   * redesigned in this pass.
+   */
+  --text-h1: 2rem;
+  --text-h1--line-height: 1.25;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.3;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.35;
+  --text-h4: 1rem;
+  --text-h4--line-height: 1.4;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.4;
+  --text-button: 1rem;
+  --text-button--line-height: 1;
 }
 
 body {

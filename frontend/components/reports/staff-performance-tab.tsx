@@ -6,7 +6,7 @@ export function StaffPerformanceTab({ report }: { report: StaffPerformanceReport
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+    <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <table className="w-full text-small">
         <thead>
           <tr className="border-b border-border text-left text-text-muted">
