@@ -11,6 +11,8 @@ import invoiceRoutes from "./invoice.routes";
 import paymentRoutes from "./payment.routes";
 import staffRoutes from "./staff.routes";
 import settingsRoutes from "./settings.routes";
+import dashboardRoutes from "./dashboard.routes";
+import reportRoutes from "./report.routes";
 
 const router = Router();
 
@@ -26,8 +28,10 @@ router.use("/invoices", invoiceRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/staff", staffRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/dashboard", dashboardRoutes);
+router.use("/reports", reportRoutes);
 
-// Feature routes (reports, website builder, etc.) are added here in later
+// Feature routes (website builder, etc. — Phase 2) are added here in later
 // parts of the build.
 
 export default router;

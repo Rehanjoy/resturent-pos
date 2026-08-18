@@ -14,7 +14,9 @@ import type { AuthUser } from "@/lib/auth/types";
  * entry at all, matching "no access, not even view").
  */
 const NAV_ITEMS: { href: string; label: string; roles: AuthUser["role"][] | null }[] = [
-  { href: "/admin", label: "Dashboard", roles: null },
+  // PRD §2 Dashboard column: Owner/Manager "Full", Cashier "View" — Server/
+  // Chef/Inventory Manager get no nav entry at all (not even view).
+  { href: "/admin", label: "Dashboard", roles: ["owner", "manager", "cashier"] },
   { href: "/admin/tables", label: "Tables", roles: ["owner", "manager", "cashier", "server"] },
   {
     href: "/admin/orders/active",
@@ -27,6 +29,10 @@ const NAV_ITEMS: { href: string; label: string; roles: AuthUser["role"][] | null
     roles: ["owner", "manager", "cashier", "server", "chef"],
   },
   { href: "/admin/menu", label: "Menu", roles: null },
+  // PRD §2 Reports column: Owner/Manager "Full", Cashier "sales only" (the
+  // Staff Performance tab is hidden/blocked for Cashier inside the screen
+  // itself and independently on the backend — see reports-screen.tsx).
+  { href: "/admin/reports", label: "Reports", roles: ["owner", "manager", "cashier"] },
   { href: "/admin/staff", label: "Staff", roles: ["owner", "manager"] },
   { href: "/admin/settings", label: "Settings", roles: ["owner", "manager"] },
 ];
