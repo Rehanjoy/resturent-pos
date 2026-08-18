@@ -9,6 +9,7 @@ import { ordersApi } from "@/lib/orders/api";
 import type { OrderStatus } from "@/lib/orders/types";
 import { billingApi } from "@/lib/billing/api";
 import type { Invoice, Payment, PaymentMode } from "@/lib/billing/types";
+import { settingsApi } from "@/lib/settings/api";
 import { BillItems } from "./bill-items";
 import { DiscountPanel } from "./discount-panel";
 import { TaxSummary } from "./tax-summary";
@@ -71,6 +72,14 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
     queryKey: ["invoice-by-order", orderId],
     queryFn: () => billingApi.getInvoiceByOrder(orderId).then((result) => result.invoice),
     enabled: !invoice && orderQuery.data?.status === "billed",
+  });
+
+  // PRD §3.14 Payment Modes toggle — the PaymentPanel only offers modes
+  // enabled in Settings. Falls back to showing all three if this hasn't
+  // loaded yet rather than blocking settlement on it.
+  const paymentModesQuery = useQuery({
+    queryKey: ["settings-payment-modes"],
+    queryFn: () => settingsApi.getPaymentModes().then((result) => result.enabledPaymentModes),
   });
 
   const effectiveInvoice = invoice ?? invoiceByOrderQuery.data ?? null;
@@ -169,6 +178,7 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
             <TaxSummary invoice={effectiveInvoice} />
             <PaymentPanel
               total={effectiveInvoice.total}
+              enabledModes={paymentModesQuery.data}
               onSettle={(payments) => {
                 setSettleError(null);
                 settleMutation.mutate(payments);

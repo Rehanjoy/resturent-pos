@@ -9,6 +9,8 @@ import orderRoutes from "./order.routes";
 import kitchenRoutes from "./kitchen.routes";
 import invoiceRoutes from "./invoice.routes";
 import paymentRoutes from "./payment.routes";
+import staffRoutes from "./staff.routes";
+import settingsRoutes from "./settings.routes";
 
 const router = Router();
 
@@ -22,8 +24,10 @@ router.use("/orders", orderRoutes);
 router.use("/kitchen", kitchenRoutes);
 router.use("/invoices", invoiceRoutes);
 router.use("/payments", paymentRoutes);
+router.use("/staff", staffRoutes);
+router.use("/settings", settingsRoutes);
 
-// Feature routes (staff, reports, etc.) are added here in later parts of
-// the build.
+// Feature routes (reports, website builder, etc.) are added here in later
+// parts of the build.
 
 export default router;

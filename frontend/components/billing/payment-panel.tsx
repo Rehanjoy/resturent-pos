@@ -27,17 +27,27 @@ interface PaymentLine {
  */
 export function PaymentPanel({
   total,
+  enabledModes,
   onSettle,
   isSettling,
   errorMessage,
 }: {
   total: number;
+  /** Which modes the Settings module (PRD §3.14) has enabled for this
+   * restaurant. Defaults to all three so this component still works if a
+   * caller doesn't have settings loaded yet. */
+  enabledModes?: PaymentMode[];
   onSettle: (payments: { mode: PaymentMode; amount: number }[]) => void;
   isSettling: boolean;
   errorMessage: string | null;
 }) {
+  const modeOptions = PAYMENT_MODE_OPTIONS.filter(
+    (option) => !enabledModes || enabledModes.includes(option.mode),
+  );
+  const defaultMode = modeOptions[0]?.mode ?? "cash";
+
   const [lines, setLines] = useState<PaymentLine[]>([
-    { id: nextLineId++, mode: "cash", amount: paiseToRupeesInput(total) },
+    { id: nextLineId++, mode: defaultMode, amount: paiseToRupeesInput(total) },
   ]);
 
   const paise = lines.map((line) => {
@@ -56,7 +66,7 @@ export function PaymentPanel({
     const remainingRupees = Math.max(0, remaining) / 100;
     setLines((current) => [
       ...current,
-      { id: nextLineId++, mode: "cash", amount: remainingRupees > 0 ? remainingRupees.toFixed(2) : "" },
+      { id: nextLineId++, mode: defaultMode, amount: remainingRupees > 0 ? remainingRupees.toFixed(2) : "" },
     ]);
   }
 
@@ -71,7 +81,7 @@ export function PaymentPanel({
       {lines.map((line, index) => (
         <div key={line.id} className="flex items-center gap-2">
           <div className="flex gap-1.5">
-            {PAYMENT_MODE_OPTIONS.map((option) => (
+            {modeOptions.map((option) => (
               <button
                 key={option.mode}
                 type="button"

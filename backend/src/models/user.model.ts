@@ -16,6 +16,7 @@ export interface UserDocument {
   restaurantId: Types.ObjectId;
   name: string;
   email: string;
+  phone?: string;
   passwordHash: string;
   role: UserRole;
   pinHash?: string;
@@ -44,6 +45,10 @@ const userSchema = new Schema<UserDocument>(
     },
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
+    // Optional — PRD §3.11 "name, email, phone, role, PIN/password". Not
+    // every seeded/legacy account will have one, so it stays optional
+    // rather than a backfill-required required field.
+    phone: { type: String, trim: true },
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: USER_ROLES, required: true },
     pinHash: { type: String, select: false },
