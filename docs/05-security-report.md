@@ -60,3 +60,14 @@ Both fixes verified: backend still builds/typechecks clean, and all 69 automated
 ## 8. Gate
 
 No high-severity findings remain open. Gate passes.
+
+## 9. Addendum — public website endpoint (2026-08-18)
+
+The Website Builder module added this codebase's first genuinely public, unauthenticated endpoint: `GET /api/public/:restaurantSlug/website`. Reviewed against the same standard as the original audit above, at build time rather than as a full re-run of §1–7:
+
+- **Rate limited** — the "Rate limiting scope" gap noted in §7 above (only `/api/auth/*` was limited) is partially closed: this route now has its own limiter (`publicRateLimiter`, 100 req/15min/IP), separate from and more generous than the login limiter, mounted via `router.use(publicRateLimiter)` before the route handler.
+- **No data leak** — the response DTO is hand-built (`public-website.service.ts`), not a passthrough of any internal model: it strips `ingredientMapping`/cost fields from menu items, filters to `isAvailable: true` only, and returns only `name`/`address`/`gstNumber` from `Restaurant` — no staff, session, or financial fields reachable.
+- **No tenant/enumeration leak** — `restaurantId` is resolved server-side from the slug, never accepted from the client. "Restaurant doesn't exist" and "restaurant exists but hasn't published" return an identical 404, so the endpoint can't be used to enumerate which restaurants are using the platform but haven't launched their site.
+- **Mounted outside the authenticated router tree** (`app.use("/api/public", publicRoutes)` before `app.use("/api", routes)` in `app.ts`) so it's structurally impossible for it to end up behind `authenticate` by accident, and equally impossible for an admin-only route to end up in front of it un-guarded.
+
+No findings from this addendum. Recommend folding this into a full re-audit before the next security gate rather than treating this note as a permanent substitute for one.

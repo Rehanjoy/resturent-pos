@@ -50,12 +50,15 @@ Enforcement: JWT claims (`role`, `restaurantId`, `staffId`) checked server-side 
 - Basic reports: sales by date range, export CSV
 - Audit logging for all financial actions (discount, void, refund, price edit)
 
-### Phase 2 (after MVP ships)
-- Inventory management + auto-deduction on order confirm (atomic, race-safe)
-- Reservation management + table auto-hold
+### Pulled forward from Phase 2 into active development (2026-08-18, client request)
+- **Inventory management** — item/supplier/category CRUD, append-only stock-transaction ledger, ingredient-to-dish mapping, atomic per-ingredient deduction triggered on send-to-kitchen (the closest real analogue this app has to "order confirmation" — no separate confirm step exists), low-stock dashboard widget. Shipped.
+- **Reservation management** — date-filtered list, table auto-hold triggered by concrete staff actions (assign table / seat / cancel / no-show) rather than a time-window/cron job, since no job scheduler exists in this codebase yet. Shipped.
+- **Website builder module** — admin content editor (Owner: full, Manager: view-only per the RBAC matrix) plus a real public, unauthenticated, rate-limited restaurant site with SEO metadata and Schema.org structured data. Shipped.
+
+### Still Phase 2/3 (not yet built)
 - QR self-ordering PWA (pending-approval gate before kitchen)
-- Website builder module (public site, SEO/Schema.org)
-- WhatsApp/SMS notifications (reservation confirmations, low-stock alerts)
+- WhatsApp/SMS notifications (reservation confirmations, low-stock alerts) — no provider integration exists yet
+- Multi-station KDS routing, shift scheduling, advanced analytics/forecasting, delivery aggregator integrations, multi-branch support
 
 ### Phase 3 (later)
 - Multi-station KDS routing (Tandoor/Main/Bar)
