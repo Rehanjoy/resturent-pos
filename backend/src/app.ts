@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { env } from "./config/env";
 import routes from "./routes";
+import publicRoutes from "./routes/public.routes";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 
 export function createApp(): Express {
@@ -32,6 +33,14 @@ export function createApp(): Express {
   // Parses the httpOnly refresh-token cookie set by the auth module.
   app.use(cookieParser());
 
+  // Mounted before the authenticated `/api` router tree and as its own
+  // prefix (not a route inside `routes/index.ts`) so it's structurally
+  // impossible for this router to end up behind the `authenticate`
+  // middleware some other route file adds — every route on `publicRoutes`
+  // is intentionally unauthenticated (the public restaurant website, PRD
+  // §3.13). See `routes/public.routes.ts` for the rate limiter applied to
+  // it.
+  app.use("/api/public", publicRoutes);
   app.use("/api", routes);
 
   app.use(notFoundHandler);

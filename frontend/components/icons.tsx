@@ -349,3 +349,25 @@ export function ChevronRightIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Added for the Website Builder module (PRD §3.13) — same flat
+// single-color, `currentColor`-stroke language as every icon above.
+export function GlobeIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17" />
+      <path d="M12 3.5c2.5 2.3 3.8 5.4 3.8 8.5s-1.3 6.2-3.8 8.5c-2.5-2.3-3.8-5.4-3.8-8.5S9.5 5.8 12 3.5Z" />
+    </svg>
+  );
+}
+
+export function ImageIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="3" y="4.5" width="18" height="15" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m4 17 5-5 3.5 3.5L17.5 11 20 14" />
+    </svg>
+  );
+}

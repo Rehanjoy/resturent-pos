@@ -7,6 +7,7 @@ import {
   BoxIcon,
   CalendarIcon,
   DashboardIcon,
+  GlobeIcon,
   KitchenIcon,
   LogoutIcon,
   MenuBookIcon,
@@ -34,7 +35,10 @@ import {
  * for the same reason (PRD §3.7) — role set mirrors Tables' own view role
  * set exactly (Owner/Manager/Cashier/Server all see it; Chef/Inventory
  * Manager don't), since PRD §2 combines "Tables" and "Reservation" into one
- * RBAC column.
+ * RBAC column. Website was added for the Website Builder module (PRD
+ * §3.13) — role set is Owner/Manager only (PRD §2 Website column: Owner
+ * "Full", Manager "View", every other role no access at all), matching
+ * Staff/Settings' own Owner+Manager-only nav entries above.
  */
 const NAV_ITEMS: {
   href: string;
@@ -86,6 +90,7 @@ const NAV_ITEMS: {
     icon: ReportsIcon,
   },
   { href: "/admin/staff", label: "Staff", roles: ["owner", "manager"], icon: StaffIcon },
+  { href: "/admin/website", label: "Website", roles: ["owner", "manager"], icon: GlobeIcon },
   { href: "/admin/settings", label: "Settings", roles: ["owner", "manager"], icon: SettingsIcon },
 ];
 
