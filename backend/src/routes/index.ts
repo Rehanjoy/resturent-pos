@@ -17,6 +17,7 @@ import inventoryCategoryRoutes from "./inventory-category.routes";
 import inventoryItemRoutes from "./inventory-item.routes";
 import supplierRoutes from "./supplier.routes";
 import inventoryTransactionRoutes from "./inventory-transaction.routes";
+import reservationRoutes from "./reservation.routes";
 
 const router = Router();
 
@@ -38,6 +39,7 @@ router.use("/inventory/categories", inventoryCategoryRoutes);
 router.use("/inventory/items", inventoryItemRoutes);
 router.use("/inventory/suppliers", supplierRoutes);
 router.use("/inventory/transactions", inventoryTransactionRoutes);
+router.use("/reservations", reservationRoutes);
 
 // Feature routes (website builder, etc. — Phase 2) are added here in later
 // parts of the build.

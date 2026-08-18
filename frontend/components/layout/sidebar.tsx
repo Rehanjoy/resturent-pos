@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { AuthUser } from "@/lib/auth/types";
 import {
   BoxIcon,
+  CalendarIcon,
   DashboardIcon,
   KitchenIcon,
   LogoutIcon,
@@ -25,11 +26,15 @@ import {
  * entry at all, matching "no access, not even view"). Moved here from
  * `app/admin/layout.tsx` during the Phase 5 visual redesign — this file is
  * now the single source of truth for "what's in the nav rail and who sees
- * it"; Reservations/Website are still not listed yet (separate build
- * parts). Inventory was added when the Phase-2 Inventory module (PRD §3.9)
- * was pulled forward — role set is Owner/Manager/Inventory Manager (Full)
- * and Chef (View, "deduction only" per the PRD §2 RBAC matrix); Cashier/
- * Server get no nav entry at all, matching "no access".
+ * it"; Website is still not listed yet (separate build part). Inventory was
+ * added when the Phase-2 Inventory module (PRD §3.9) was pulled forward —
+ * role set is Owner/Manager/Inventory Manager (Full) and Chef (View,
+ * "deduction only" per the PRD §2 RBAC matrix); Cashier/Server get no nav
+ * entry at all, matching "no access". Reservations was added alongside it
+ * for the same reason (PRD §3.7) — role set mirrors Tables' own view role
+ * set exactly (Owner/Manager/Cashier/Server all see it; Chef/Inventory
+ * Manager don't), since PRD §2 combines "Tables" and "Reservation" into one
+ * RBAC column.
  */
 const NAV_ITEMS: {
   href: string;
@@ -45,6 +50,12 @@ const NAV_ITEMS: {
     label: "Tables",
     roles: ["owner", "manager", "cashier", "server"],
     icon: TableIcon,
+  },
+  {
+    href: "/admin/reservations",
+    label: "Reservations",
+    roles: ["owner", "manager", "cashier", "server"],
+    icon: CalendarIcon,
   },
   {
     href: "/admin/orders/active",

@@ -313,3 +313,39 @@ export function TruckIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Added for the Reservations module (PRD §3.7) — same flat single-color,
+// `currentColor`-stroke language as every icon above.
+export function CalendarIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="3.5" y="5" width="17" height="15" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
+export function PhoneIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M5.5 4h3l1.5 4-2 1.5a10 10 0 0 0 4.5 4.5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A16 16 0 0 1 4 6.6 1.5 1.5 0 0 1 5.5 4Z" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="m14.5 5-7 7 7 7" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="m9.5 5 7 7-7 7" />
+    </svg>
+  );
+}

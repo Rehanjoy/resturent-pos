@@ -81,8 +81,11 @@ const EDITABLE_STATUSES: OrderStatus[] = ["draft", "sent", "in_kitchen", "ready"
 
 // Statuses that count as "this table already has a live order" — used to
 // avoid creating a duplicate draft, and to decide whether a void should
-// free the table back up.
-const ACTIVE_ORDER_STATUSES: OrderStatus[] = ["draft", "sent", "in_kitchen", "ready", "served"];
+// free the table back up. Exported so other modules that need to know "is
+// this table actively in use by an order" (e.g. `reservation.service.ts`'s
+// table-hold logic) check against the same single source of truth instead
+// of redefining their own list.
+export const ACTIVE_ORDER_STATUSES: OrderStatus[] = ["draft", "sent", "in_kitchen", "ready", "served"];
 
 export function toOrderDto(order: HydratedDocument<OrderDocument>): OrderDto {
   const items = order.items.map((item) => ({
