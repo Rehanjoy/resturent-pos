@@ -17,14 +17,14 @@ export function CategoryTabs({
   onSelect: (categoryId: string | null) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={() => onSelect(null)}
         className={`rounded-full px-4 py-1.5 text-small font-medium transition-colors ${
           activeCategoryId === null
-            ? "border border-primary text-primary"
-            : "border border-border text-text-muted hover:text-text"
+            ? "bg-primary text-white shadow-sm"
+            : "border border-border text-text-muted hover:border-primary hover:text-primary"
         }`}
       >
         All
@@ -36,8 +36,8 @@ export function CategoryTabs({
           onClick={() => onSelect(category.id)}
           className={`rounded-full px-4 py-1.5 text-small font-medium transition-colors ${
             activeCategoryId === category.id
-              ? "border border-primary text-primary"
-              : "border border-border text-text-muted hover:text-text"
+              ? "bg-primary text-white shadow-sm"
+              : "border border-border text-text-muted hover:border-primary hover:text-primary"
           }`}
         >
           {category.name}

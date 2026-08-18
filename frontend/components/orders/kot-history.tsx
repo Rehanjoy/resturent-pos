@@ -1,20 +1,26 @@
 "use client";
 
-import { formatMoney } from "@/lib/format";
 import type { OrderItem, OrderItemStatus } from "@/lib/orders/types";
 
 const STATUS_LABEL: Record<OrderItemStatus, string> = {
   pending: "New",
-  sent: "In Kitchen",
+  sent: "Preparing",
   ready: "Ready",
   served: "Served",
 };
 
-const STATUS_STYLES: Record<OrderItemStatus, string> = {
-  pending: "border-border text-text-muted",
-  sent: "border-info text-info",
-  ready: "border-warning text-warning",
-  served: "border-success text-success",
+const STATUS_DOT: Record<OrderItemStatus, string> = {
+  pending: "bg-text-muted",
+  sent: "bg-info",
+  ready: "bg-warning",
+  served: "bg-success",
+};
+
+const STATUS_TEXT: Record<OrderItemStatus, string> = {
+  pending: "text-text-muted",
+  sent: "text-info",
+  ready: "text-warning",
+  served: "text-success",
 };
 
 interface Batch {
@@ -46,8 +52,12 @@ function groupBySentBatch(items: OrderItem[]): Batch[] {
 }
 
 /**
- * Active Order screen's "already sent" panel — already-sent items grouped
- * by KOT batch, each with a per-item status pill (sent/ready/served).
+ * "Already sent to the kitchen" list — grouped by KOT batch (one group per
+ * `send-to-kitchen` call), each item showing a colored status dot and its
+ * current stage (Preparing/Ready/Served). Lives inside `CartRail`'s
+ * "In Kitchen" section on the Active Order screen — deliberately compact
+ * (no per-batch card chrome) since it shares a narrow rail with the
+ * pending-items cart below it.
  */
 export function KotHistory({ items }: { items: OrderItem[] }) {
   const sentItems = items.filter((item) => item.itemStatus !== "pending");
@@ -62,24 +72,26 @@ export function KotHistory({ items }: { items: OrderItem[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {batches.map((batch, index) => (
-        <div key={batch.sentAt ?? index} className="rounded-lg border border-border bg-surface p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="font-heading text-h4 font-semibold text-text">Batch {index + 1}</h3>
-            {batch.sentAt && (
-              <span className="text-small text-text-muted">
-                Sent {new Date(batch.sentAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            )}
-          </div>
+        <div key={batch.sentAt ?? index} className="flex flex-col gap-2">
+          {batch.sentAt && (
+            <p className="text-small text-text-muted">
+              Sent{" "}
+              {new Date(batch.sentAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          )}
           <ul className="flex flex-col gap-2">
             {batch.items.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-3">
-                <div>
+              <li key={item.id} className="flex items-start gap-2">
+                <span
+                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[item.itemStatus]}`}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
                   <p className="text-body text-text">
                     {item.qty} × {item.nameSnapshot}
                   </p>
@@ -92,10 +104,9 @@ export function KotHistory({ items }: { items: OrderItem[] }) {
                       .join(", ")}
                   </p>
                   {item.notes && <p className="text-small italic text-text-muted">{item.notes}</p>}
-                  <p className="text-numeric text-text-muted">{formatMoney(item.priceSnapshot)}</p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full border px-2.5 py-1 text-small font-medium ${STATUS_STYLES[item.itemStatus]}`}
+                  className={`shrink-0 text-small font-medium ${STATUS_TEXT[item.itemStatus]}`}
                 >
                   {STATUS_LABEL[item.itemStatus]}
                 </span>

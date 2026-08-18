@@ -31,16 +31,21 @@ export function OrderItemTile({
       type="button"
       disabled={!item.isAvailable}
       onClick={() => onSelect(item)}
-      className={`flex flex-col overflow-hidden rounded-lg border border-border bg-surface text-left shadow-sm transition-shadow ${
-        item.isAvailable ? "hover:shadow-md" : "cursor-not-allowed opacity-50"
+      className={`flex flex-col overflow-hidden rounded-2xl border border-border bg-surface text-left shadow-sm transition-shadow ${
+        item.isAvailable ? "hover:shadow-md" : "cursor-not-allowed opacity-60"
       }`}
     >
-      <div className="flex h-28 items-center justify-center bg-background text-small text-text-muted">
+      <div className="relative flex h-28 items-center justify-center bg-background text-small text-text-muted">
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- admin-supplied external URL, not part of the optimized asset pipeline yet.
           <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
         ) : (
           "No image"
+        )}
+        {!item.isAvailable && (
+          <span className="absolute right-2 top-2 rounded-full bg-text/80 px-2 py-0.5 text-small font-semibold text-white">
+            Sold out
+          </span>
         )}
       </div>
 
@@ -54,13 +59,11 @@ export function OrderItemTile({
           </span>
         </div>
 
-        <p className="text-numeric font-semibold text-text">{formatMoney(item.price)}</p>
-
-        {!item.isAvailable && (
-          <span className="w-fit rounded-full border border-border px-2 py-0.5 text-small text-text-muted">
-            Sold out
-          </span>
+        {item.description && (
+          <p className="line-clamp-2 text-small text-text-muted">{item.description}</p>
         )}
+
+        <p className="mt-auto pt-1 text-numeric font-semibold text-text">{formatMoney(item.price)}</p>
       </div>
     </button>
   );

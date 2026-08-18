@@ -8,6 +8,7 @@ import { tablesApi } from "@/lib/tables/api";
 import { kitchenApi } from "@/lib/kitchen/api";
 import type { Kot, KitchenNewTicketEvent, KitchenTicketReadyEvent } from "@/lib/orders/types";
 import { connectSocket } from "@/lib/socket";
+import { PageHeader } from "@/components/ui/page-header";
 import { TicketCard } from "./ticket-card";
 
 const VIEW_ROLES = new Set(["owner", "manager", "chef", "cashier", "server"]);
@@ -114,7 +115,14 @@ export function KdsBoard() {
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
-      <h1 className="font-heading text-h1 font-semibold text-text">Kitchen Display</h1>
+      <PageHeader
+        title="Kitchen Display"
+        subtitle={
+          isLoading
+            ? "Loading tickets…"
+            : `${cookingTickets.length} in kitchen · ${readyTickets.length} ready to serve`
+        }
+      />
 
       {isLoading && <p className="text-small text-text-muted">Loading tickets…</p>}
 
@@ -136,7 +144,7 @@ export function KdsBoard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <section className="flex flex-col gap-3">
             <h2 className="font-heading text-h3 font-semibold text-text">
-              Cooking ({cookingTickets.length})
+              In Kitchen ({cookingTickets.length})
             </h2>
             <div className="flex flex-col gap-4">
               {cookingTickets.length === 0 && (

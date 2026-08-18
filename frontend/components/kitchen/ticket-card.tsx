@@ -26,10 +26,16 @@ const TIER_BORDER: Record<UrgencyTier, string> = {
   error: "border-error",
 };
 
-const TIER_TEXT: Record<UrgencyTier, string> = {
-  success: "text-success",
-  warning: "text-warning",
-  error: "text-error",
+// Elapsed-time readout rendered as a colored pill (chip) rather than plain
+// colored text — same `bg-{tone}/10 text-{tone}` chip language already
+// used by `StatCard`/`LiveOpsTiles` elsewhere in the redesign, applied
+// here to the exact same success/warning/error SLA tiers the ticket border
+// already used (no change to the tier thresholds/logic, presentation
+// only).
+const TIER_CHIP: Record<UrgencyTier, string> = {
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/10 text-warning",
+  error: "bg-error/10 text-error",
 };
 
 function formatElapsed(minutes: number): string {
@@ -58,9 +64,19 @@ function useElapsedMinutes(sentAt: string): number {
 
 const ITEM_STATUS_LABEL: Record<Kot["items"][number]["itemStatus"], string> = {
   pending: "New",
-  sent: "Cooking",
+  sent: "Preparing",
   ready: "Ready",
   served: "Served",
+};
+
+// Same info/warning/success semantic set `kot-history.tsx` uses for these
+// exact statuses on the Order screen — kept identical here so a "Ready"
+// item reads the same color on both screens.
+const ITEM_STATUS_DOT: Record<Kot["items"][number]["itemStatus"], string> = {
+  pending: "bg-text-muted",
+  sent: "bg-info",
+  ready: "bg-warning",
+  served: "bg-success",
 };
 
 export function TicketCard({
@@ -86,16 +102,18 @@ export function TicketCard({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-lg border-2 bg-surface p-4 shadow-sm ${TIER_BORDER[tier]}`}
+      className={`flex flex-col gap-3 rounded-2xl border-2 bg-surface p-4 shadow-sm ${TIER_BORDER[tier]}`}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-heading text-h4 font-semibold text-text">{tableName}</h3>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="truncate font-heading text-h4 font-semibold text-text">{tableName}</h3>
           <p className="text-small text-text-muted">
             Sent {new Date(kot.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
-        <span className={`text-numeric font-semibold ${TIER_TEXT[tier]}`}>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-small font-semibold tabular-nums ${TIER_CHIP[tier]}`}
+        >
           {formatElapsed(elapsedMinutes)}
         </span>
       </div>
@@ -103,16 +121,22 @@ export function TicketCard({
       <ul className="flex flex-col gap-2">
         {kot.items.map((item) => (
           <li key={item.orderItemId} className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-body text-text">
-                {item.qty} × {item.nameSnapshot}
-              </p>
-              <p className="text-small text-text-muted">
-                {[item.spiceLevel && item.spiceLevel !== "none" ? item.spiceLevel : null, ...item.addOns]
-                  .filter(Boolean)
-                  .join(", ")}
-              </p>
-              {item.notes && <p className="text-small italic text-text-muted">{item.notes}</p>}
+            <div className="flex items-start gap-2">
+              <span
+                className={`mt-2 h-2 w-2 shrink-0 rounded-full ${ITEM_STATUS_DOT[item.itemStatus]}`}
+                aria-hidden
+              />
+              <div>
+                <p className="text-body text-text">
+                  {item.qty} × {item.nameSnapshot}
+                </p>
+                <p className="text-small text-text-muted">
+                  {[item.spiceLevel && item.spiceLevel !== "none" ? item.spiceLevel : null, ...item.addOns]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+                {item.notes && <p className="text-small italic text-text-muted">{item.notes}</p>}
+              </div>
             </div>
 
             {canManage && item.itemStatus !== "ready" && item.itemStatus !== "served" ? (
@@ -138,7 +162,7 @@ export function TicketCard({
           type="button"
           disabled={isMarkingAll}
           onClick={onMarkAllReady}
-          className="mt-1 w-full rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+          className="mt-1 w-full rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
         >
           {isMarkingAll ? "Marking…" : "Mark All Ready"}
         </button>

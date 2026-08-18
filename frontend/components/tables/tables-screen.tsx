@@ -12,15 +12,34 @@ import type {
   TableStatus,
   TableStatusChangedEvent,
 } from "@/lib/tables/types";
+import { ordersApi } from "@/lib/orders/api";
+import type { Order, OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
 import { connectSocket } from "@/lib/socket";
+import { PageHeader } from "@/components/ui/page-header";
 import { AreaTabs } from "./area-tabs";
 import { TableCard } from "./table-card";
+import { TableStatChips } from "./table-stat-chips";
 import { AreaFormModal } from "./area-form-modal";
 import { TableFormModal } from "./table-form-modal";
 
 const VIEW_ROLES = new Set(["owner", "manager", "cashier", "server"]);
 const MANAGE_ROLES = new Set(["owner", "manager"]);
 const STATUS_CHANGE_ROLES = new Set(["owner", "manager", "server"]);
+// Mirrors the Billing gate in `order-workspace.tsx` — same three roles can
+// jump straight from a served table's card to `/admin/billing/[orderId]`.
+const BILLING_ROLES = new Set(["owner", "manager", "cashier"]);
+
+// A table's own `status` field doesn't carry its order's item count/amount
+// — that lives on the `Order` document. Rather than add a new backend
+// endpoint (out of scope for this frontend-only pass), this screen reuses
+// the existing `GET /api/orders` list endpoint with a bounded time window:
+// any order still holding a table (draft/sent/in_kitchen/ready/served) was
+// necessarily created recently, so a 24h lookback is enough to catch every
+// live order — including one that started just before midnight — without
+// pulling the restaurant's entire order history on every Tables screen
+// load (that endpoint has no built-in pagination).
+const ACTIVE_ORDER_LOOKBACK_HOURS = 24;
+const LIVE_ORDER_STATUSES: OrderStatus[] = ["draft", "sent", "in_kitchen", "ready", "served"];
 
 function errorMessageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
@@ -56,8 +75,31 @@ export function TablesScreen() {
     enabled: canView,
   });
 
+  const activeOrdersQuery = useQuery({
+    queryKey: ["active-orders-for-tables"],
+    queryFn: () =>
+      ordersApi
+        .list({ from: new Date(Date.now() - ACTIVE_ORDER_LOOKBACK_HOURS * 3_600_000).toISOString() })
+        .then((result) => result.orders),
+    enabled: canView,
+  });
+
   const areas = areasQuery.data?.areas ?? [];
   const tables = tablesQuery.data?.tables;
+  const areaNameById = useMemo(
+    () => new Map((areasQuery.data?.areas ?? []).map((area) => [area.id, area.name])),
+    [areasQuery.data],
+  );
+
+  const orderByTableId = useMemo(() => {
+    const map = new Map<string, Order>();
+    for (const order of activeOrdersQuery.data ?? []) {
+      if (LIVE_ORDER_STATUSES.includes(order.status)) {
+        map.set(order.tableId, order);
+      }
+    }
+    return map;
+  }, [activeOrdersQuery.data]);
 
   const visibleTables = useMemo(() => {
     const all = tables ?? [];
@@ -66,7 +108,11 @@ export function TablesScreen() {
 
   // Real-time table-status sync (PRD §3.5) — every connected terminal
   // patches its local cache in place when any terminal changes a table's
-  // status, no refetch needed.
+  // status, no refetch needed. Also listens for `order:updated` so the
+  // item-count/amount shown on an occupied table's card stays live too
+  // (e.g. another terminal adds an item to the same table's order) —
+  // additive to the pre-existing table-status subscription, not a
+  // replacement for it.
   useEffect(() => {
     if (!canView) return;
     const socket = connectSocket();
@@ -85,9 +131,21 @@ export function TablesScreen() {
       );
     };
 
+    const handleOrderUpdated = (event: OrderUpdatedEvent) => {
+      queryClient.setQueryData<Order[] | undefined>(["active-orders-for-tables"], (current) => {
+        if (!current) return current;
+        const exists = current.some((order) => order.id === event.order.id);
+        return exists
+          ? current.map((order) => (order.id === event.order.id ? event.order : order))
+          : [...current, event.order];
+      });
+    };
+
     socket.on("table:status-changed", handleStatusChanged);
+    socket.on("order:updated", handleOrderUpdated);
     return () => {
       socket.off("table:status-changed", handleStatusChanged);
+      socket.off("order:updated", handleOrderUpdated);
     };
   }, [canView, queryClient]);
 
@@ -198,20 +256,25 @@ export function TablesScreen() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-h1 font-semibold text-text">Tables</h1>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => setTableModal({ mode: "add", table: null })}
-            disabled={areas.length === 0}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
-            title={areas.length === 0 ? "Add an area first" : undefined}
-          >
-            + Add Table
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Tables"
+        subtitle="Live floor status — tap a table to open its order."
+        action={
+          canManage && (
+            <button
+              type="button"
+              onClick={() => setTableModal({ mode: "add", table: null })}
+              disabled={areas.length === 0}
+              className="rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+              title={areas.length === 0 ? "Add an area first" : undefined}
+            >
+              + Add Table
+            </button>
+          )
+        }
+      />
+
+      {!isLoading && !isError && tables && tables.length > 0 && <TableStatChips tables={tables} />}
 
       <AreaTabs
         areas={areas}
@@ -281,15 +344,19 @@ export function TablesScreen() {
             <TableCard
               key={table.id}
               table={table}
+              areaName={areaNameById.get(table.areaId)}
+              order={orderByTableId.get(table.id)}
               canManage={canManage}
               canChangeStatus={canChangeStatus}
-              onNavigate={(target) => {
+              canBill={!!user && BILLING_ROLES.has(user.role)}
+              onOpen={(target) => {
                 if (target.status === "free") {
                   router.push(`/admin/orders/new?tableId=${target.id}`);
                 } else if (target.status === "occupied") {
                   router.push(`/admin/orders/active?tableId=${target.id}`);
                 }
               }}
+              onBill={(order) => router.push(`/admin/billing/${order.id}`)}
               onStatusChange={(target, status) =>
                 statusMutation.mutate({ id: target.id, status })
               }

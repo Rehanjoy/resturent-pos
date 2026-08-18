@@ -11,11 +11,12 @@ import { tablesApi } from "@/lib/tables/api";
 import { ordersApi } from "@/lib/orders/api";
 import type { OrderItem, OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
 import { connectSocket } from "@/lib/socket";
+import { PageHeader } from "@/components/ui/page-header";
+import { SearchIcon } from "@/components/icons";
 import { CategoryTabs } from "./category-tabs";
 import { OrderItemTile } from "./order-item-tile";
 import { ItemCustomizationModal, type ItemCustomization } from "./item-customization-modal";
 import { CartRail } from "./cart-rail";
-import { KotHistory } from "./kot-history";
 import { VoidOrderModal } from "./void-order-modal";
 
 const BUILD_ROLES = new Set(["owner", "manager", "cashier", "server"]);
@@ -56,6 +57,7 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
 
   const [orderId, setOrderId] = useState<string | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [customizeItem, setCustomizeItem] = useState<MenuItem | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
   const [voidModalOpen, setVoidModalOpen] = useState(false);
@@ -69,10 +71,17 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
   const table = tablesQuery.data?.tables.find((candidate) => candidate.id === tableId);
   const categories = categoriesQuery.data?.categories ?? [];
 
+  // Both filters run client-side — the full menu is already loaded in one
+  // shot by `menuItemsQuery` (no per-keystroke API calls needed, and no
+  // backend search endpoint required for this).
   const visibleItems = useMemo(() => {
     const items = menuItemsQuery.data?.menuItems ?? [];
-    return activeCategoryId ? items.filter((item) => item.categoryId === activeCategoryId) : items;
-  }, [menuItemsQuery.data, activeCategoryId]);
+    const byCategory = activeCategoryId
+      ? items.filter((item) => item.categoryId === activeCategoryId)
+      : items;
+    const term = searchTerm.trim().toLowerCase();
+    return term ? byCategory.filter((item) => item.name.toLowerCase().includes(term)) : byCategory;
+  }, [menuItemsQuery.data, activeCategoryId, searchTerm]);
 
   // Opening an order is idempotent on the backend (returns the table's
   // existing live order if there is one), so it's safe to fire this
@@ -188,55 +197,51 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
   const isError = openError || orderQuery.isError || categoriesQuery.isError || menuItemsQuery.isError;
 
   const pendingItems: OrderItem[] = order?.items.filter((item) => item.itemStatus === "pending") ?? [];
+  const sentItems: OrderItem[] = order?.items.filter((item) => item.itemStatus !== "pending") ?? [];
   const readyCount = order?.items.filter((item) => item.itemStatus === "ready").length ?? 0;
   const isVoidable = !!order && !NON_VOIDABLE.includes(order.status);
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-h1 font-semibold text-text">
-            {table ? table.name : "Order"}
-          </h1>
-          {order && (
-            <p className="text-small text-text-muted">Status: {STATUS_LABEL[order.status]}</p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {canBuild && readyCount > 0 && (
-            <button
-              type="button"
-              onClick={() => serveMutation.mutate()}
-              disabled={serveMutation.isPending}
-              className="rounded-md border border-success px-4 py-2 text-button text-success disabled:opacity-60"
-            >
-              {serveMutation.isPending ? "Serving…" : `Serve Ready Items (${readyCount})`}
-            </button>
-          )}
-          {canBill && order?.status === "served" && (
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/billing/${order.id}`)}
-              className="rounded-md bg-accent px-4 py-2 text-button text-white"
-            >
-              Settle Bill
-            </button>
-          )}
-          {canVoid && isVoidable && (
-            <button
-              type="button"
-              onClick={() => {
-                setVoidError(null);
-                setVoidModalOpen(true);
-              }}
-              className="rounded-md border border-error px-4 py-2 text-button text-error"
-            >
-              Void Order
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title={table ? table.name : "Order"}
+        subtitle={order ? `Status: ${STATUS_LABEL[order.status]}` : undefined}
+        action={
+          <div className="flex items-center gap-3">
+            {canBuild && readyCount > 0 && (
+              <button
+                type="button"
+                onClick={() => serveMutation.mutate()}
+                disabled={serveMutation.isPending}
+                className="rounded-lg border border-success px-4 py-2 text-button text-success disabled:opacity-60"
+              >
+                {serveMutation.isPending ? "Serving…" : `Serve Ready Items (${readyCount})`}
+              </button>
+            )}
+            {canBill && order?.status === "served" && (
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/billing/${order.id}`)}
+                className="rounded-lg bg-accent px-4 py-2 text-button text-white"
+              >
+                Settle Bill
+              </button>
+            )}
+            {canVoid && isVoidable && (
+              <button
+                type="button"
+                onClick={() => {
+                  setVoidError(null);
+                  setVoidModalOpen(true);
+                }}
+                className="rounded-lg border border-error px-4 py-2 text-button text-error"
+              >
+                Void Order
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {isLoading && <p className="text-small text-text-muted">Loading order…</p>}
 
@@ -249,23 +254,30 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
       {!isLoading && !isError && order && (
         <div className="flex flex-col gap-6 lg:flex-row">
           <div className="flex flex-1 flex-col gap-6">
-            <CategoryTabs
-              categories={categories}
-              activeCategoryId={activeCategoryId}
-              onSelect={setActiveCategoryId}
-            />
-
-            {mode === "active" && (
-              <section className="flex flex-col gap-2">
-                <h2 className="font-heading text-h3 font-semibold text-text">Sent to Kitchen</h2>
-                <KotHistory items={order.items} />
-              </section>
-            )}
+            <div className="flex flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <CategoryTabs
+                categories={categories}
+                activeCategoryId={activeCategoryId}
+                onSelect={setActiveCategoryId}
+              />
+              <div className="relative w-full shrink-0 sm:w-64">
+                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search dishes…"
+                  aria-label="Search dishes"
+                  className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-small text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
 
             <section className="flex flex-col gap-2">
-              <h2 className="font-heading text-h3 font-semibold text-text">Menu</h2>
               {visibleItems.length === 0 ? (
-                <p className="text-small text-text-muted">No dishes in this category yet.</p>
+                <p className="text-small text-text-muted">
+                  {searchTerm ? "No dishes match your search." : "No dishes in this category yet."}
+                </p>
               ) : (
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
                   {visibleItems.map((item) => (
@@ -285,7 +297,10 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
           </div>
 
           <CartRail
+            table={table}
+            order={order}
             pendingItems={pendingItems}
+            sentItems={sentItems}
             canBuild={canBuild}
             isSending={sendToKitchenMutation.isPending}
             isUpdating={updateItemMutation.isPending || removeItemMutation.isPending}
