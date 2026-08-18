@@ -116,6 +116,9 @@ export const api = {
       method: "PATCH",
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
-  delete: <TResponse>(path: string) =>
-    request<TResponse>(path, { method: "DELETE" }),
+  delete: <TResponse>(path: string, body?: unknown) =>
+    request<TResponse>(path, {
+      method: "DELETE",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
 };
