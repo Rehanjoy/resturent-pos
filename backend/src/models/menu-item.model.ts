@@ -6,6 +6,16 @@ export type MenuItemType = (typeof MENU_ITEM_TYPES)[number];
 export const SPICE_LEVELS = ["none", "mild", "medium", "spicy"] as const;
 export type SpiceLevel = (typeof SPICE_LEVELS)[number];
 
+/** One ingredient-to-inventory link (PRD §3.8/§3.9 "ingredient-to-inventory
+ * linking: each dish maps to inventory items + quantity consumed per unit
+ * sold"). `quantityPerUnit` is in the mapped `InventoryItem`'s own `unit`
+ * (e.g. 0.2 kg of paneer per Paneer Tikka sold). Read by
+ * `inventory-deduction.service.ts` on send-to-kitchen. */
+export interface IngredientMappingEntry {
+  inventoryItemId: Types.ObjectId;
+  quantityPerUnit: number;
+}
+
 export interface MenuItemDocument {
   _id: Types.ObjectId;
   restaurantId: Types.ObjectId;
@@ -18,18 +28,27 @@ export interface MenuItemDocument {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable: boolean;
-  ingredientMapping: unknown[];
+  ingredientMapping: IngredientMappingEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
+
+const ingredientMappingSchema = new Schema<IngredientMappingEntry>(
+  {
+    inventoryItemId: { type: Schema.Types.ObjectId, ref: "InventoryItem", required: true },
+    quantityPerUnit: { type: Number, required: true, min: 0 },
+  },
+  { _id: false },
+);
 
 /**
  * A sellable dish. `isAvailable` is the "86'd items" toggle (PRD §3.8) —
  * Owner/Manager can flip it instantly without opening the full edit form.
  *
- * `ingredientMapping` is an intentionally empty placeholder array. It
- * activates in the Phase 2 Inventory module (PRD §3.9 "ingredient-to-
- * inventory linking") — no deduction/costing logic reads or writes it yet.
+ * `ingredientMapping` links this dish to the Inventory module (PRD §3.9) —
+ * populated from the "Ingredients used" section of the Add/Edit Dish
+ * modal, and read by `inventory-deduction.service.ts` to auto-deduct stock
+ * when an order containing this dish is sent to the kitchen.
  */
 const menuItemSchema = new Schema<MenuItemDocument>(
   {
@@ -50,8 +69,7 @@ const menuItemSchema = new Schema<MenuItemDocument>(
     spiceLevel: { type: String, enum: SPICE_LEVELS },
     imageUrl: { type: String, trim: true },
     isAvailable: { type: Boolean, required: true, default: true },
-    // Phase 2 Inventory placeholder — see doc comment above.
-    ingredientMapping: { type: [Schema.Types.Mixed], default: [] },
+    ingredientMapping: { type: [ingredientMappingSchema], default: [] },
   },
   { timestamps: true },
 );

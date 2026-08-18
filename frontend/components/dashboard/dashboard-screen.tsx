@@ -18,6 +18,11 @@ import type { DailyRevenue } from "@/lib/dashboard/types";
 // the backend's `authorize()` guard on GET /api/dashboard/summary).
 const DASHBOARD_ROLES = new Set(["owner", "manager", "cashier"]);
 
+// Inventory RBAC (PRD §2 Inventory column) — Cashier can see this
+// dashboard but has no Inventory access at all, so the low-stock tile
+// below is rendered as a non-link for that role. See `live-ops-tiles.tsx`.
+const INVENTORY_VIEW_ROLES = new Set(["owner", "manager", "inventory_manager", "chef"]);
+
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /**
@@ -139,7 +144,11 @@ export function DashboardScreen() {
         </span>
       </div>
 
-      <LiveOpsTiles liveOps={liveOps} />
+      <LiveOpsTiles
+        liveOps={liveOps}
+        lowStockCount={summaryQuery.data.lowStockCount}
+        canViewInventory={INVENTORY_VIEW_ROLES.has(user.role)}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PaymentModeDonut breakdown={paymentModeBreakdown} subtitle="Today" />

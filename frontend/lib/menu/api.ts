@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { Category, MenuItem, MenuItemType, SpiceLevel } from "./types";
+import type { Category, IngredientMapping, MenuItem, MenuItemType, SpiceLevel } from "./types";
 
 export const categoriesApi = {
   list: () => api.get<{ categories: Category[] }>("/api/categories"),
@@ -23,6 +23,7 @@ export interface MenuItemInput {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable?: boolean;
+  ingredientMapping?: IngredientMapping[];
 }
 
 export const menuItemsApi = {

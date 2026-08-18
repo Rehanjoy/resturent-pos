@@ -13,6 +13,10 @@ import staffRoutes from "./staff.routes";
 import settingsRoutes from "./settings.routes";
 import dashboardRoutes from "./dashboard.routes";
 import reportRoutes from "./report.routes";
+import inventoryCategoryRoutes from "./inventory-category.routes";
+import inventoryItemRoutes from "./inventory-item.routes";
+import supplierRoutes from "./supplier.routes";
+import inventoryTransactionRoutes from "./inventory-transaction.routes";
 
 const router = Router();
 
@@ -30,6 +34,10 @@ router.use("/staff", staffRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/reports", reportRoutes);
+router.use("/inventory/categories", inventoryCategoryRoutes);
+router.use("/inventory/items", inventoryItemRoutes);
+router.use("/inventory/suppliers", supplierRoutes);
+router.use("/inventory/transactions", inventoryTransactionRoutes);
 
 // Feature routes (website builder, etc. — Phase 2) are added here in later
 // parts of the build.

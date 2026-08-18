@@ -42,6 +42,14 @@ export interface DailyRevenue {
   grossRevenue: number;
 }
 
+export interface LowStockItem {
+  id: string;
+  name: string;
+  unit: string;
+  currentStock: number;
+  reorderThreshold: number;
+}
+
 export interface DashboardSummary {
   salesSummary: SalesTotals;
   paymentModeBreakdown: PaymentModeAmount[];
@@ -49,4 +57,6 @@ export interface DashboardSummary {
   topDishes: TopDish[];
   topCategories: CategoryRevenue[];
   weeklyTrend: DailyRevenue[];
+  lowStockCount: number;
+  lowStockItems: LowStockItem[];
 }

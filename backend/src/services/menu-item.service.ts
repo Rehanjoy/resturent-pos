@@ -1,12 +1,19 @@
 import { Types, type HydratedDocument } from "mongoose";
 import { AppError } from "../utils/app-error";
 import { Category } from "../models/category.model";
+import { InventoryItem } from "../models/inventory-item.model";
 import {
   MenuItem,
+  type IngredientMappingEntry,
   type MenuItemDocument,
   type MenuItemType,
   type SpiceLevel,
 } from "../models/menu-item.model";
+
+export interface IngredientMappingDto {
+  inventoryItemId: string;
+  quantityPerUnit: number;
+}
 
 export interface MenuItemDto {
   id: string;
@@ -19,6 +26,7 @@ export interface MenuItemDto {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable: boolean;
+  ingredientMapping: IngredientMappingDto[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +43,10 @@ function toDto(item: HydratedDocument<MenuItemDocument>): MenuItemDto {
     spiceLevel: item.spiceLevel,
     imageUrl: item.imageUrl,
     isAvailable: item.isAvailable,
+    ingredientMapping: (item.ingredientMapping ?? []).map((entry) => ({
+      inventoryItemId: entry.inventoryItemId.toString(),
+      quantityPerUnit: entry.quantityPerUnit,
+    })),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -51,6 +63,43 @@ async function assertCategoryExists(
   if (!category) {
     throw new AppError("Selected category does not exist.", 400, "CATEGORY_NOT_FOUND");
   }
+}
+
+/**
+ * Validates every `inventoryItemId` in a dish's ingredient mapping belongs
+ * to this restaurant before it's saved (PRD §3.8 ingredient-to-inventory
+ * linking) — same "reject at the edge, never trust an id blindly" pattern
+ * as `assertCategoryExists`.
+ */
+async function assertIngredientMappingValid(
+  restaurantId: string,
+  mapping: { inventoryItemId: string; quantityPerUnit: number }[],
+): Promise<IngredientMappingEntry[]> {
+  if (mapping.length === 0) return [];
+
+  const ids = mapping.map((entry) => entry.inventoryItemId);
+  if (ids.some((id) => !Types.ObjectId.isValid(id))) {
+    throw new AppError(
+      "One of the selected ingredients does not exist.",
+      400,
+      "INVENTORY_ITEM_NOT_FOUND",
+    );
+  }
+
+  const found = await InventoryItem.find({ _id: { $in: ids }, restaurantId }).select("_id");
+  const foundIds = new Set(found.map((item) => item._id.toString()));
+  if (foundIds.size !== new Set(ids).size) {
+    throw new AppError(
+      "One of the selected ingredients does not exist.",
+      400,
+      "INVENTORY_ITEM_NOT_FOUND",
+    );
+  }
+
+  return mapping.map((entry) => ({
+    inventoryItemId: new Types.ObjectId(entry.inventoryItemId),
+    quantityPerUnit: entry.quantityPerUnit,
+  }));
 }
 
 async function findMenuItemOrThrow(
@@ -87,6 +136,7 @@ export interface MenuItemInput {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable?: boolean;
+  ingredientMapping?: IngredientMappingDto[];
 }
 
 export async function createMenuItem(
@@ -94,6 +144,10 @@ export async function createMenuItem(
   input: MenuItemInput,
 ): Promise<MenuItemDto> {
   await assertCategoryExists(restaurantId, input.categoryId);
+  const ingredientMapping = await assertIngredientMappingValid(
+    restaurantId,
+    input.ingredientMapping ?? [],
+  );
 
   const item = await MenuItem.create({
     restaurantId,
@@ -105,7 +159,7 @@ export async function createMenuItem(
     spiceLevel: input.spiceLevel,
     imageUrl: input.imageUrl || undefined,
     isAvailable: input.isAvailable ?? true,
-    ingredientMapping: [],
+    ingredientMapping,
   });
   return toDto(item);
 }
@@ -128,6 +182,12 @@ export async function updateMenuItem(
   if (input.spiceLevel !== undefined) item.spiceLevel = input.spiceLevel;
   if (input.imageUrl !== undefined) item.imageUrl = input.imageUrl || undefined;
   if (input.isAvailable !== undefined) item.isAvailable = input.isAvailable;
+  if (input.ingredientMapping !== undefined) {
+    item.ingredientMapping = await assertIngredientMappingValid(
+      restaurantId,
+      input.ingredientMapping,
+    );
+  }
 
   await item.save();
   return toDto(item);

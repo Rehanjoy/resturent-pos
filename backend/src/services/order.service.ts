@@ -13,6 +13,7 @@ import { Kot, type KotDocument } from "../models/kot.model";
 import { emitToRestaurant } from "../sockets";
 import { recordAuditLog } from "./audit-log.service";
 import * as tableService from "./table.service";
+import { deductInventoryForSentItems } from "./inventory-deduction.service";
 
 export interface OrderItemDto {
   id: string;
@@ -367,6 +368,14 @@ export async function sendToKitchen(
     throw new AppError("There are no new items to send to the kitchen.", 400, "NOTHING_TO_SEND");
   }
 
+  // Captured before the map below flips `itemStatus` — see
+  // `inventory-deduction.service.ts` for the full write-up of why
+  // deduction is wired at this exact point in the order lifecycle.
+  const itemsForDeduction = pendingItems.map((item) => ({
+    menuItemId: item.menuItemId.toString(),
+    qty: item.qty,
+  }));
+
   const sentAt = new Date();
   const hasExistingKot = await Kot.exists({ restaurantId, orderId: order._id });
 
@@ -396,6 +405,18 @@ export async function sendToKitchen(
 
   order.status = hasExistingKot ? "in_kitchen" : "sent";
   await order.save();
+
+  // Inventory auto-deduction side effect (PRD §3.9) — runs only after the
+  // order itself has successfully saved, and never throws (see
+  // `inventory-deduction.service.ts`), so it can't fail or block this
+  // request. Does not affect the return shape, status transitions, or
+  // socket events below.
+  await deductInventoryForSentItems(
+    restaurantId,
+    order.createdByStaffId.toString(),
+    order._id.toString(),
+    itemsForDeduction,
+  );
 
   const orderDto = toOrderDto(order);
   const kotDto = toKotDto(kot);

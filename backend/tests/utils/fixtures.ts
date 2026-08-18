@@ -5,6 +5,9 @@ import { Area } from "../../src/models/area.model";
 import { Table } from "../../src/models/table.model";
 import { Category } from "../../src/models/category.model";
 import { MenuItem } from "../../src/models/menu-item.model";
+import { InventoryCategory } from "../../src/models/inventory-category.model";
+import { InventoryItem } from "../../src/models/inventory-item.model";
+import { Supplier } from "../../src/models/supplier.model";
 import { hashPassword } from "../../src/utils/password";
 import { signAccessToken } from "../../src/utils/jwt";
 
@@ -75,6 +78,54 @@ export async function createTestMenuItem(
     type: "veg",
     isAvailable: true,
     ingredientMapping: [],
+  });
+}
+
+/** Reuses one "Test Inventory Category" per restaurant for the same reason
+ * as `createTestTable`'s "Test Area" reuse — `InventoryCategory` also has a
+ * unique `{restaurantId, name}` index. */
+export async function createTestInventoryCategory(restaurantId: string) {
+  return (
+    (await InventoryCategory.findOne({ restaurantId, name: "Test Inventory Category" })) ??
+    (await InventoryCategory.create({
+      restaurantId,
+      name: "Test Inventory Category",
+      displayOrder: 0,
+    }))
+  );
+}
+
+export async function createTestSupplier(
+  restaurantId: string,
+  overrides: Partial<{ name: string }> = {},
+) {
+  return Supplier.create({
+    restaurantId,
+    name: overrides.name ?? `Test Supplier ${new Types.ObjectId().toString()}`,
+  });
+}
+
+export async function createTestInventoryItem(
+  restaurantId: string,
+  overrides: Partial<{
+    name: string;
+    unit: string;
+    costPerUnit: number;
+    currentStock: number;
+    reorderThreshold: number;
+    supplierId: string;
+  }> = {},
+) {
+  const category = await createTestInventoryCategory(restaurantId);
+  return InventoryItem.create({
+    restaurantId,
+    categoryId: category._id,
+    name: overrides.name ?? `Test Ingredient ${new Types.ObjectId().toString().slice(-4)}`,
+    unit: overrides.unit ?? "kg",
+    costPerUnit: overrides.costPerUnit ?? 5000, // ₹50.00/unit in paise
+    currentStock: overrides.currentStock ?? 10,
+    reorderThreshold: overrides.reorderThreshold ?? 2,
+    supplierId: overrides.supplierId,
   });
 }
 

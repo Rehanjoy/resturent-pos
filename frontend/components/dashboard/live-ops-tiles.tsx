@@ -1,6 +1,13 @@
 import Link from "next/link";
 import type { LiveOps } from "@/lib/dashboard/types";
-import { ChairIcon, CheckCircleIcon, KitchenIcon, BroomIcon, type IconProps } from "@/components/icons";
+import {
+  ChairIcon,
+  CheckCircleIcon,
+  KitchenIcon,
+  BroomIcon,
+  AlertTriangleIcon,
+  type IconProps,
+} from "@/components/icons";
 
 const TONE_CHIP = {
   primary: "bg-primary/10 text-primary",
@@ -11,10 +18,25 @@ const TONE_CHIP = {
 
 /** Live operations widget (PRD §3.2) — deliberately not behind any cache,
  * unlike the top-dishes widget, since a stale table/kitchen count would
- * contradict "live". Each tile links to the screen that owns that state. */
-export function LiveOpsTiles({ liveOps }: { liveOps: LiveOps }) {
+ * contradict "live". Each tile links to the screen that owns that state.
+ * Includes the "Low-stock inventory alerts widget" (also PRD §3.2) as a
+ * fifth tile now that the Inventory module exists. `canViewInventory`
+ * controls whether that tile is a link — Cashier can see this dashboard
+ * (PRD §2 Dashboard "View") but has no Inventory access at all (PRD §2
+ * Inventory "—"), so for that role the tile renders as a plain, non-
+ * clickable stat rather than linking to a screen that would immediately
+ * deny access. */
+export function LiveOpsTiles({
+  liveOps,
+  lowStockCount,
+  canViewInventory,
+}: {
+  liveOps: LiveOps;
+  lowStockCount: number;
+  canViewInventory: boolean;
+}) {
   const tiles: {
-    href: string;
+    href: string | null;
     label: string;
     value: number;
     tone: keyof typeof TONE_CHIP;
@@ -48,18 +70,21 @@ export function LiveOpsTiles({ liveOps }: { liveOps: LiveOps }) {
       tone: "error",
       icon: BroomIcon,
     },
+    {
+      href: canViewInventory ? "/admin/inventory" : null,
+      label: "Low on Stock",
+      value: lowStockCount,
+      tone: lowStockCount > 0 ? "error" : "success",
+      icon: AlertTriangleIcon,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       {tiles.map((tile) => {
         const Icon = tile.icon;
-        return (
-          <Link
-            key={tile.label}
-            href={tile.href}
-            className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-primary"
-          >
+        const content = (
+          <>
             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${TONE_CHIP[tile.tone]}`}>
               <Icon className="h-5 w-5" />
             </span>
@@ -67,7 +92,19 @@ export function LiveOpsTiles({ liveOps }: { liveOps: LiveOps }) {
               <p className="font-heading text-h3 font-semibold text-text">{tile.value}</p>
               <p className="truncate text-small text-text-muted">{tile.label}</p>
             </div>
+          </>
+        );
+        const className =
+          "flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors hover:border-primary";
+
+        return tile.href ? (
+          <Link key={tile.label} href={tile.href} className={className}>
+            {content}
           </Link>
+        ) : (
+          <div key={tile.label} className={className.replace("hover:border-primary", "")}>
+            {content}
+          </div>
         );
       })}
     </div>

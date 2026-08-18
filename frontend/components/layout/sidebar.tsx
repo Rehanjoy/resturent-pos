@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthUser } from "@/lib/auth/types";
 import {
+  BoxIcon,
   DashboardIcon,
   KitchenIcon,
   LogoutIcon,
@@ -24,8 +25,11 @@ import {
  * entry at all, matching "no access, not even view"). Moved here from
  * `app/admin/layout.tsx` during the Phase 5 visual redesign — this file is
  * now the single source of truth for "what's in the nav rail and who sees
- * it"; Inventory/Reservations/Website are deliberately not listed yet
- * (separate Phase-2 build parts).
+ * it"; Reservations/Website are still not listed yet (separate build
+ * parts). Inventory was added when the Phase-2 Inventory module (PRD §3.9)
+ * was pulled forward — role set is Owner/Manager/Inventory Manager (Full)
+ * and Chef (View, "deduction only" per the PRD §2 RBAC matrix); Cashier/
+ * Server get no nav entry at all, matching "no access".
  */
 const NAV_ITEMS: {
   href: string;
@@ -55,6 +59,12 @@ const NAV_ITEMS: {
     icon: KitchenIcon,
   },
   { href: "/admin/menu", label: "Menu", roles: null, icon: MenuBookIcon },
+  {
+    href: "/admin/inventory",
+    label: "Inventory",
+    roles: ["owner", "manager", "inventory_manager", "chef"],
+    icon: BoxIcon,
+  },
   // PRD §2 Reports column: Owner/Manager "Full", Cashier "sales only" (the
   // Staff Performance tab is hidden/blocked for Cashier inside the screen
   // itself and independently on the backend — see reports-screen.tsx).

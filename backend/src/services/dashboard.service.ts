@@ -1,5 +1,6 @@
 import { resolveDateRange } from "../utils/date-range";
 import * as analytics from "./sales-analytics.service";
+import { getLowStockSummary, type LowStockItemDto } from "./inventory-item.service";
 
 export interface DashboardSummaryDto {
   salesSummary: analytics.SalesTotals;
@@ -8,6 +9,10 @@ export interface DashboardSummaryDto {
   topDishes: analytics.TopDish[];
   topCategories: analytics.CategoryRevenue[];
   weeklyTrend: analytics.DailyRevenue[];
+  /** PRD §3.2 "Low-stock inventory alerts widget" — items at or below
+   * their reorder threshold. */
+  lowStockCount: number;
+  lowStockItems: LowStockItemDto[];
 }
 
 const TOP_SELLERS_LIMIT = 5;
@@ -65,22 +70,22 @@ async function getCachedTopSellers(
  * deliberately NOT behind the top-sellers cache above, since a stale table/
  * kitchen count would contradict "live operations widget" being live.
  *
- * Low-stock inventory alerts (also listed in PRD §3.2) are intentionally
- * omitted — that widget needs the Phase-2 Inventory module, which doesn't
- * exist in this codebase yet. No fake/stubbed inventory data is returned in
- * its place.
+ * Low-stock inventory alerts (PRD §3.2) — likewise never cached; a stale
+ * "you're out of X" signal would be worse than no signal.
  */
 export async function getDashboardSummary(restaurantId: string): Promise<DashboardSummaryDto> {
   const today = resolveDateRange("today");
   const last7Days = resolveDateRange("7d");
 
-  const [salesSummary, paymentModeBreakdown, liveOps, topSellers, weeklyTrend] = await Promise.all([
-    analytics.aggregateSalesTotals(restaurantId, today.from, today.to),
-    analytics.aggregatePaymentModeBreakdown(restaurantId, today.from, today.to),
-    analytics.getLiveOps(restaurantId),
-    getCachedTopSellers(restaurantId, today.from, today.to),
-    analytics.aggregateDailyRevenue(restaurantId, last7Days.from, last7Days.to),
-  ]);
+  const [salesSummary, paymentModeBreakdown, liveOps, topSellers, weeklyTrend, lowStock] =
+    await Promise.all([
+      analytics.aggregateSalesTotals(restaurantId, today.from, today.to),
+      analytics.aggregatePaymentModeBreakdown(restaurantId, today.from, today.to),
+      analytics.getLiveOps(restaurantId),
+      getCachedTopSellers(restaurantId, today.from, today.to),
+      analytics.aggregateDailyRevenue(restaurantId, last7Days.from, last7Days.to),
+      getLowStockSummary(restaurantId),
+    ]);
 
   return {
     salesSummary,
@@ -89,5 +94,7 @@ export async function getDashboardSummary(restaurantId: string): Promise<Dashboa
     topDishes: topSellers.dishes,
     topCategories: topSellers.categories,
     weeklyTrend,
+    lowStockCount: lowStock.count,
+    lowStockItems: lowStock.items,
   };
 }

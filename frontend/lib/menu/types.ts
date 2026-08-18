@@ -11,6 +11,14 @@ export interface Category {
 export type MenuItemType = "veg" | "non-veg" | "egg";
 export type SpiceLevel = "none" | "mild" | "medium" | "spicy";
 
+/** One ingredient-to-inventory link — see
+ * `backend/src/models/menu-item.model.ts` `IngredientMappingEntry`.
+ * `quantityPerUnit` is in the mapped inventory item's own unit. */
+export interface IngredientMapping {
+  inventoryItemId: string;
+  quantityPerUnit: number;
+}
+
 /** Mirrors `backend/src/services/menu-item.service.ts` `MenuItemDto`. */
 export interface MenuItem {
   id: string;
@@ -24,6 +32,7 @@ export interface MenuItem {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable: boolean;
+  ingredientMapping: IngredientMapping[];
   createdAt: string;
   updatedAt: string;
 }

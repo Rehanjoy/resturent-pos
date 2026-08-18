@@ -10,6 +10,16 @@ const priceSchema = z
   .int("Price must be a whole number of paise (no decimals).")
   .positive("Price must be greater than zero.");
 
+// PRD §3.8/§3.9 "ingredient-to-inventory linking: each dish maps to
+// inventory items + quantity consumed per unit sold" — populated by the
+// Add/Edit Dish modal's "Ingredients used" section. `inventoryItemId`
+// existence is checked in the service layer (same pattern as
+// `categoryId`), not here.
+const ingredientMappingSchema = z.object({
+  inventoryItemId: z.string().min(1, "Select an ingredient."),
+  quantityPerUnit: z.number().positive("Quantity used must be greater than zero."),
+});
+
 export const createMenuItemSchema = z.object({
   categoryId: z.string().min(1, "Category is required."),
   name: z.string().trim().min(1, "Dish name is required.").max(120),
@@ -24,6 +34,7 @@ export const createMenuItemSchema = z.object({
     .optional()
     .or(z.literal("")),
   isAvailable: z.boolean().optional(),
+  ingredientMapping: z.array(ingredientMappingSchema).optional(),
 });
 
 export const updateMenuItemSchema = z.object({
@@ -40,6 +51,7 @@ export const updateMenuItemSchema = z.object({
     .optional()
     .or(z.literal("")),
   isAvailable: z.boolean().optional(),
+  ingredientMapping: z.array(ingredientMappingSchema).optional(),
 });
 
 export const menuItemIdParamsSchema = z.object({
