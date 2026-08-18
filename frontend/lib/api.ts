@@ -4,6 +4,8 @@
  * exactly one place (see coding-standards.md).
  */
 
+import { getAccessToken, notifySessionExpired, setAccessToken } from "./auth/token-store";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
 
@@ -25,18 +27,48 @@ interface ApiErrorBody {
   code: string;
 }
 
+// Codes that mean "the access token is missing/expired" — worth one
+// silent refresh + retry before surfacing an error to the caller. Auth
+// endpoint failures (wrong password, wrong PIN, locked out, etc.) use
+// different codes and never trigger this path.
+const RETRYABLE_AUTH_CODES = new Set(["INVALID_TOKEN", "UNAUTHENTICATED"]);
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const body = (await response.json()) as { accessToken: string };
+        setAccessToken(body.accessToken);
+        return body.accessToken;
+      })
+      .catch(() => null)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
 async function request<TResponse>(
   path: string,
   options: RequestInit = {},
+  allowAuthRetry = true,
 ): Promise<TResponse> {
+  const token = getAccessToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
-    // httpOnly auth cookies (added with the auth module) travel with
-    // every request automatically once this is in place.
+    // httpOnly refresh-token cookie travels with every request automatically.
     credentials: "include",
   });
 
@@ -47,6 +79,21 @@ async function request<TResponse>(
 
   if (!response.ok) {
     const errorBody = body as ApiErrorBody | null;
+
+    if (
+      response.status === 401 &&
+      allowAuthRetry &&
+      errorBody?.code &&
+      RETRYABLE_AUTH_CODES.has(errorBody.code)
+    ) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        return request<TResponse>(path, options, false);
+      }
+      setAccessToken(null);
+      notifySessionExpired();
+    }
+
     throw new ApiError(
       errorBody?.message ?? "Something went wrong. Please try again.",
       response.status,

@@ -10,6 +10,10 @@ Every environment variable used anywhere in the codebase is logged here the mome
 | `PORT` | `src/server.ts` | Port the Express + Socket.io HTTP server listens on. | Pick any free local port; default `5000`. |
 | `MONGODB_URI` | `src/config/db.ts` | Mongoose connection string for the MongoDB database. | Local dev: a local `mongod` instance (`mongodb://127.0.0.1:27017/saffron`). Staging/production: connection string from the MongoDB Atlas cluster's "Connect" dialog (or self-hosted MongoDB admin). |
 | `CORS_ORIGIN` | `src/app.ts`, `src/sockets/index.ts` | Restricts which browser origin may call the API / connect to Socket.io with credentials. Must exactly match the frontend's URL (protocol + host + port). | Local dev: `http://localhost:3000` (the frontend's dev server). Staging/production: the deployed frontend's URL. |
+| `JWT_ACCESS_SECRET` | `src/utils/jwt.ts` | Signs/verifies the short-lived (15 min) access token issued on login and carried in the `Authorization: Bearer` header on every authenticated request. Also signs the short-lived interim 2FA token. | Generate locally: `openssl rand -hex 32`. Never reuse across environments; rotate immediately if leaked (invalidates all active sessions). |
+| `JWT_REFRESH_SECRET` | `src/utils/jwt.ts` | Signs/verifies the long-lived (7 day) refresh token stored as an httpOnly cookie and hashed in the `sessions` collection for revocation. Must differ from `JWT_ACCESS_SECRET`. | Generate locally: `openssl rand -hex 32`. |
+| `JWT_ACCESS_EXPIRY` | `src/config/env.ts`, `src/utils/jwt.ts` | Access token lifetime (jsonwebtoken duration string). | Set manually; PRD default is `15m`. |
+| `JWT_REFRESH_EXPIRY` | `src/config/env.ts`, `src/utils/jwt.ts` | Refresh token lifetime (jsonwebtoken duration string) and the refresh cookie's `maxAge` basis. | Set manually; PRD default is `7d`. |
 
 ## frontend/.env.local (from `frontend/.env.example`)
 
