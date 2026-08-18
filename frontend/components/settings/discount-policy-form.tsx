@@ -30,7 +30,7 @@ export function DiscountPolicyForm({
   );
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+    <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
       <h2 className="font-heading text-h3 font-semibold text-text">Discount Policy</h2>
       <p className="mt-1 text-small text-text-muted">
         Discounts above this threshold need a manager or owner to confirm at settle time.
@@ -58,7 +58,7 @@ export function DiscountPolicyForm({
               setValue(nextType === "percent" ? "15" : "0.00");
               setType(nextType);
             }}
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="percent">Percent of bill</option>
             <option value="flat">Flat amount</option>
@@ -77,14 +77,14 @@ export function DiscountPolicyForm({
             value={value}
             onChange={(event) => setValue(event.target.value)}
             required
-            className="w-32 rounded-md border border-border px-3 py-2 text-body text-text"
+            className="w-32 rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </label>
 
         <button
           type="submit"
           disabled={isSubmitting || value.trim() === ""}
-          className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+          className="rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
         >
           {isSubmitting ? "Saving…" : "Save Discount Policy"}
         </button>

@@ -41,7 +41,7 @@ export function CategoryFormModal({
             onChange={(event) => setName(event.target.value)}
             required
             placeholder="e.g. Starters"
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
@@ -52,7 +52,7 @@ export function CategoryFormModal({
             min={0}
             value={displayOrder}
             onChange={(event) => setDisplayOrder(event.target.value)}
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
@@ -62,14 +62,14 @@ export function CategoryFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-border px-4 py-2 text-button text-text-muted hover:text-text"
+            className="rounded-lg border border-border px-4 py-2 text-button text-text-muted hover:text-text"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !name.trim()}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+            className="rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
           >
             {isSubmitting ? "Saving…" : "Save"}
           </button>

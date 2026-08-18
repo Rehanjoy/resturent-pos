@@ -20,14 +20,17 @@ export function CategorySidebar({
   onDeleteCategory: (category: Category) => void;
 }) {
   return (
-    <aside className="flex w-full flex-col gap-1 md:w-56 md:shrink-0">
+    <aside className="flex w-full shrink-0 flex-col gap-1 rounded-2xl border border-border bg-surface p-3 shadow-sm md:w-56">
+      <h3 className="px-3 pb-1 pt-1 text-small font-semibold uppercase tracking-wide text-text-muted">
+        Categories
+      </h3>
       <button
         type="button"
         onClick={() => onSelect(null)}
-        className={`rounded-md px-3 py-2 text-left text-body font-medium ${
+        className={`rounded-lg px-3 py-2 text-left text-body font-medium transition-colors ${
           activeCategoryId === null
             ? "bg-primary/10 text-primary"
-            : "text-text-muted hover:bg-surface hover:text-text"
+            : "text-text-muted hover:bg-background hover:text-text"
         }`}
       >
         All Dishes
@@ -38,10 +41,10 @@ export function CategorySidebar({
           <button
             type="button"
             onClick={() => onSelect(category.id)}
-            className={`flex-1 rounded-md px-3 py-2 text-left text-body font-medium ${
+            className={`flex-1 rounded-lg px-3 py-2 text-left text-body font-medium transition-colors ${
               activeCategoryId === category.id
                 ? "bg-primary/10 text-primary"
-                : "text-text-muted hover:bg-surface hover:text-text"
+                : "text-text-muted hover:bg-background hover:text-text"
             }`}
           >
             {category.name}
@@ -71,7 +74,7 @@ export function CategorySidebar({
         <button
           type="button"
           onClick={onAddCategory}
-          className="mt-2 rounded-md border border-dashed border-border px-3 py-2 text-left text-small font-medium text-text-muted hover:border-primary hover:text-primary"
+          className="mt-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-small font-medium text-text-muted transition-colors hover:border-primary hover:text-primary"
         >
           + Add Category
         </button>

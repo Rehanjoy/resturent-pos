@@ -21,7 +21,7 @@ export function Modal({
       role="presentation"
     >
       <div
-        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg"
+        className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

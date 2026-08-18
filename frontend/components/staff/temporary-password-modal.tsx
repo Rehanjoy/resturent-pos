@@ -28,14 +28,14 @@ export function TemporaryPasswordModal({
           {staffName}&apos;s account was created. Share this temporary password with them — they
           will be required to set a new one the first time they log in.
         </p>
-        <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2">
           <code className="text-body font-medium tracking-wide text-text">{password}</code>
           <button
             type="button"
             onClick={() => {
               void navigator.clipboard.writeText(password).then(() => setCopied(true));
             }}
-            className="rounded-md border border-border px-3 py-1.5 text-small text-text hover:bg-surface"
+            className="rounded-lg border border-border px-3 py-1.5 text-small text-text hover:bg-surface"
           >
             {copied ? "Copied" : "Copy"}
           </button>
@@ -47,7 +47,7 @@ export function TemporaryPasswordModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white"
+            className="rounded-lg bg-accent px-4 py-2 text-button text-white"
           >
             Done
           </button>

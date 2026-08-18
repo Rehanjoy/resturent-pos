@@ -41,7 +41,7 @@ export function ProfileForm({
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl ?? "");
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+    <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
       <h2 className="font-heading text-h3 font-semibold text-text">Restaurant Profile</h2>
       {!canEdit && (
         <p className="mt-1 text-small text-text-muted">
@@ -75,7 +75,7 @@ export function ProfileForm({
             onChange={(event) => setName(event.target.value)}
             disabled={!canEdit}
             required
-            className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
           />
         </label>
 
@@ -86,7 +86,7 @@ export function ProfileForm({
               value={line1}
               onChange={(event) => setLine1(event.target.value)}
               disabled={!canEdit}
-              className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -95,7 +95,7 @@ export function ProfileForm({
               value={line2}
               onChange={(event) => setLine2(event.target.value)}
               disabled={!canEdit}
-              className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -104,7 +104,7 @@ export function ProfileForm({
               value={city}
               onChange={(event) => setCity(event.target.value)}
               disabled={!canEdit}
-              className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -113,7 +113,7 @@ export function ProfileForm({
               value={state}
               onChange={(event) => setState(event.target.value)}
               disabled={!canEdit}
-              className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -122,7 +122,7 @@ export function ProfileForm({
               value={postalCode}
               onChange={(event) => setPostalCode(event.target.value)}
               disabled={!canEdit}
-              className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -131,7 +131,7 @@ export function ProfileForm({
               value={country}
               onChange={(event) => setCountry(event.target.value)}
               disabled={!canEdit}
-              className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
             />
           </label>
         </div>
@@ -143,7 +143,7 @@ export function ProfileForm({
             onChange={(event) => setGstNumber(event.target.value)}
             disabled={!canEdit}
             placeholder="e.g. 27ABCDE1234F1Z5"
-            className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
           />
         </label>
 
@@ -154,7 +154,7 @@ export function ProfileForm({
             onChange={(event) => setLogoUrl(event.target.value)}
             disabled={!canEdit}
             placeholder="https://…"
-            className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-background disabled:text-text-muted"
           />
           <span className="text-small text-text-muted">
             Direct image upload isn&apos;t built yet (needs S3/cloud storage wiring, deferred like
@@ -170,7 +170,7 @@ export function ProfileForm({
             <button
               type="submit"
               disabled={isSubmitting || !name.trim()}
-              className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+              className="rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
             >
               {isSubmitting ? "Saving…" : "Save Profile"}
             </button>

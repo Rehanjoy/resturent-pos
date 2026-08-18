@@ -13,9 +13,9 @@ export function BillItems({ items }: { items: OrderItem[] }) {
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+    <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface shadow-sm">
       {items.map((item) => (
-        <li key={item.id} className="flex items-start justify-between gap-3 px-4 py-3">
+        <li key={item.id} className="flex items-start justify-between gap-3 px-4 py-3.5">
           <div className="flex-1">
             <p className="text-body font-medium text-text">
               {item.qty} &times; {item.nameSnapshot}

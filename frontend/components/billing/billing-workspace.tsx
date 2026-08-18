@@ -10,6 +10,7 @@ import type { OrderStatus } from "@/lib/orders/types";
 import { billingApi } from "@/lib/billing/api";
 import type { Invoice, Payment, PaymentMode } from "@/lib/billing/types";
 import { settingsApi } from "@/lib/settings/api";
+import { PageHeader } from "@/components/ui/page-header";
 import { BillItems } from "./bill-items";
 import { DiscountPanel } from "./discount-panel";
 import { TaxSummary } from "./tax-summary";
@@ -131,15 +132,16 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
 
   if (orderQuery.isLoading) {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-16">
-        <p className="text-small text-text-muted">Loading bill…</p>
+      <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
+        <PageHeader title="Settle Bill" subtitle="Loading bill…" />
       </main>
     );
   }
 
   if (orderQuery.isError || !orderQuery.data) {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-16">
+      <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
+        <PageHeader title="Settle Bill" />
         <p className="text-small text-error">
           Could not load this order — check your connection and try again.
         </p>
@@ -151,18 +153,25 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-h1 font-semibold text-text">Settle Bill</h1>
-        <button
-          type="button"
-          onClick={() => router.push(`/admin/orders/active?tableId=${order.tableId}`)}
-          className="text-small text-secondary hover:underline"
-        >
-          Back to Order
-        </button>
-      </div>
+      <PageHeader
+        title="Settle Bill"
+        subtitle={`Order #${order.id.slice(-6).toUpperCase()}`}
+        action={
+          <button
+            type="button"
+            onClick={() => router.push(`/admin/orders/active?tableId=${order.tableId}`)}
+            className="rounded-lg border border-border px-4 py-2 text-small font-medium text-text-muted transition-colors hover:border-secondary hover:text-secondary"
+          >
+            Back to Order
+          </button>
+        }
+      />
 
-      {voidedNotice && <p className="text-small text-text-muted">{voidedNotice}</p>}
+      {voidedNotice && (
+        <p className="rounded-lg border border-border bg-surface px-4 py-3 text-small text-text-muted">
+          {voidedNotice}
+        </p>
+      )}
 
       {settledPayments && effectiveInvoice ? (
         <SettlementConfirmation invoice={effectiveInvoice} payments={settledPayments} />
@@ -174,7 +183,7 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
             </h2>
             <BillItems items={order.items} />
           </div>
-          <aside className="flex w-full max-w-sm shrink-0 flex-col gap-4 rounded-lg border border-border bg-surface p-4 shadow-sm">
+          <aside className="flex w-full max-w-sm shrink-0 flex-col gap-5 self-start rounded-2xl border border-border bg-surface p-5 shadow-sm lg:sticky lg:top-6">
             <TaxSummary invoice={effectiveInvoice} />
             <PaymentPanel
               total={effectiveInvoice.total}
@@ -193,7 +202,7 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
                   setVoidError(null);
                   setVoidModalOpen(true);
                 }}
-                className="rounded-md border border-error px-4 py-2 text-button text-error"
+                className="rounded-lg border border-error px-4 py-2.5 text-button text-error transition-colors hover:bg-error/10"
               >
                 Void This Bill
               </button>
@@ -206,7 +215,7 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
             <h2 className="font-heading text-h3 font-semibold text-text">Order Items</h2>
             <BillItems items={order.items} />
           </div>
-          <aside className="w-full max-w-sm shrink-0 rounded-lg border border-border bg-surface p-4 shadow-sm">
+          <aside className="w-full max-w-sm shrink-0 self-start rounded-2xl border border-border bg-surface p-5 shadow-sm lg:sticky lg:top-6">
             <DiscountPanel orderId={orderId} subtotal={order.subtotal} onGenerated={setInvoice} />
           </aside>
         </div>

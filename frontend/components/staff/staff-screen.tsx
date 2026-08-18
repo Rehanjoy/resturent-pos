@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api";
 import { staffApi, type CreateStaffInput, type UpdateStaffInput } from "@/lib/staff/api";
 import { MANAGER_ASSIGNABLE_ROLES, type StaffMember } from "@/lib/staff/types";
+import { PageHeader } from "@/components/ui/page-header";
+import { PlusIcon } from "@/components/icons";
 import { StaffTable } from "./staff-table";
 import { StaffFormModal, type StaffFormValues } from "./staff-form-modal";
 import { StaffDetailDrawer } from "./staff-detail-drawer";
@@ -118,25 +120,23 @@ export function StaffScreen() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-h1 font-semibold text-text">Staff</h1>
-          <p className="text-small text-text-muted">
-            Add, edit, and deactivate staff accounts. Owner and Manager accounts can only be
-            managed by an Owner.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setFormError(null);
-            setFormModal({ mode: "add", staff: null });
-          }}
-          className="rounded-md bg-accent px-4 py-2 text-button text-white"
-        >
-          + Add Staff
-        </button>
-      </div>
+      <PageHeader
+        title="Staff"
+        subtitle="Add, edit, and deactivate staff accounts. Owner and Manager accounts can only be managed by an Owner."
+        action={
+          <button
+            type="button"
+            onClick={() => {
+              setFormError(null);
+              setFormModal({ mode: "add", staff: null });
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add Staff
+          </button>
+        }
+      />
 
       {statusError && <p className="text-small text-error">{statusError}</p>}
 
@@ -149,14 +149,14 @@ export function StaffScreen() {
       )}
 
       {staffQuery.data && staffQuery.data.staff.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
           <p className="text-body text-text-muted">
             No staff accounts yet. Add your first team member to get started.
           </p>
           <button
             type="button"
             onClick={() => setFormModal({ mode: "add", staff: null })}
-            className="mt-4 rounded-md bg-accent px-4 py-2 text-button text-white"
+            className="mt-4 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
           >
             Add Staff
           </button>

@@ -217,3 +217,66 @@ export function CheckCircleIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Added for the Phase 5 Part 3 pass (Billing/Menu/Staff/Settings restyle) —
+// same flat single-color, `currentColor`-stroke language as every icon
+// above, just five more glyphs the reference screenshots call for
+// (payment-method buttons on Settle Bill, row actions on Staff).
+export function EditIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-2.8L17.3 5.5a2 2 0 0 0-2.8 0L4 16v4Z" />
+      <path d="M13 7.5 16.5 11" />
+    </svg>
+  );
+}
+
+export function PowerIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M12 3.5v7.5" />
+      <path d="M6.7 6.7a7.25 7.25 0 1 0 10.6 0" />
+    </svg>
+  );
+}
+
+export function CashIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="2.5" y="6" width="19" height="12" rx="1.5" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M5.5 9v0M18.5 15v0" strokeWidth="2.5" />
+    </svg>
+  );
+}
+
+export function CardIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="M2.5 9.5h19" />
+      <path d="M5.5 14.5h5" />
+    </svg>
+  );
+}
+
+export function UpiIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="7.5" y="2.5" width="9" height="19" rx="2" />
+      <path d="M10 18.5h4" />
+      <path d="m9.5 10 2.5-3.5L14.5 10" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4.5 7h15" />
+      <path d="M9.5 7V4.8c0-.7.6-1.3 1.3-1.3h2.4c.7 0 1.3.6 1.3 1.3V7" />
+      <path d="M6.5 7 7.3 19.5a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7" />
+      <path d="M10.3 11v6M13.7 11v6" />
+    </svg>
+  );
+}

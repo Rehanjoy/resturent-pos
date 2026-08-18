@@ -68,7 +68,7 @@ export function DishFormModal({
             value={categoryId}
             onChange={(event) => setCategoryId(event.target.value)}
             required
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           >
             {categories.length === 0 && <option value="">No categories yet</option>}
             {categories.map((category) => (
@@ -86,7 +86,7 @@ export function DishFormModal({
             onChange={(event) => setName(event.target.value)}
             required
             placeholder="e.g. Paneer Tikka"
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
@@ -96,7 +96,7 @@ export function DishFormModal({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={2}
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
@@ -109,7 +109,7 @@ export function DishFormModal({
             value={priceRupees}
             onChange={(event) => setPriceRupees(event.target.value)}
             required
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
@@ -118,7 +118,7 @@ export function DishFormModal({
           <select
             value={type}
             onChange={(event) => setType(event.target.value as MenuItemType)}
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           >
             <option value="veg">Veg</option>
             <option value="non-veg">Non-Veg</option>
@@ -131,7 +131,7 @@ export function DishFormModal({
           <select
             value={spiceLevel}
             onChange={(event) => setSpiceLevel(event.target.value as SpiceLevel)}
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           >
             <option value="none">Not applicable</option>
             <option value="mild">Mild</option>
@@ -146,7 +146,7 @@ export function DishFormModal({
             value={imageUrl}
             onChange={(event) => setImageUrl(event.target.value)}
             placeholder="https://…"
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
           {/* TODO: replace with a proper upload widget once S3/file storage is wired up (PRD §5.5). */}
           <span className="text-small text-text-muted">
@@ -169,14 +169,14 @@ export function DishFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-border px-4 py-2 text-button text-text-muted hover:text-text"
+            className="rounded-lg border border-border px-4 py-2 text-button text-text-muted hover:text-text"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !name.trim() || !categoryId || !priceRupees}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+            className="rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
           >
             {isSubmitting ? "Saving…" : "Save"}
           </button>

@@ -46,7 +46,7 @@ export function VoidInvoiceModal({
             rows={3}
             maxLength={300}
             placeholder="e.g. wrong items billed, price entry error"
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </label>
 
@@ -56,14 +56,14 @@ export function VoidInvoiceModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-border px-4 py-2 text-button text-text-muted hover:text-text"
+            className="rounded-lg border border-border px-4 py-2 text-button text-text-muted hover:text-text"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !reason.trim()}
-            className="rounded-md bg-error px-4 py-2 text-button text-white disabled:opacity-60"
+            className="rounded-lg bg-error px-4 py-2 text-button text-white transition-colors hover:opacity-90 disabled:opacity-60"
           >
             {isSubmitting ? "Voiding…" : "Void Bill"}
           </button>

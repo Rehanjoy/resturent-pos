@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { formatMoney, paiseToRupeesInput, rupeesToPaise } from "@/lib/format";
 import type { PaymentMode } from "@/lib/billing/types";
+import { CardIcon, CashIcon, type IconProps, UpiIcon } from "@/components/icons";
 
-const PAYMENT_MODE_OPTIONS: { mode: PaymentMode; label: string }[] = [
-  { mode: "cash", label: "Cash" },
-  { mode: "card", label: "Card" },
-  { mode: "upi", label: "UPI" },
+const PAYMENT_MODE_OPTIONS: { mode: PaymentMode; label: string; icon: (props: IconProps) => React.ReactElement }[] = [
+  { mode: "cash", label: "Cash", icon: CashIcon },
+  { mode: "card", label: "Card", icon: CardIcon },
+  { mode: "upi", label: "UPI", icon: UpiIcon },
 ];
 
 let nextLineId = 0;
@@ -76,59 +77,73 @@ export function PaymentPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-small font-medium text-text">Payment Method</h3>
+      <h3 className="text-small font-semibold uppercase tracking-wide text-text-muted">
+        Payment Method
+      </h3>
 
       {lines.map((line, index) => (
-        <div key={line.id} className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            {modeOptions.map((option) => (
+        <div key={line.id} className="flex flex-col gap-2 rounded-lg border border-border p-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-1.5">
+              {modeOptions.map((option) => {
+                const Icon = option.icon;
+                const isActive = line.mode === option.mode;
+                return (
+                  <button
+                    key={option.mode}
+                    type="button"
+                    onClick={() => updateLine(line.id, { mode: option.mode })}
+                    aria-pressed={isActive}
+                    title={option.label}
+                    className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-2 text-small font-medium transition-colors ${
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-text-muted hover:border-primary/50"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            {index > 0 && (
               <button
-                key={option.mode}
                 type="button"
-                onClick={() => updateLine(line.id, { mode: option.mode })}
-                className={`rounded-full border px-3 py-1.5 text-small ${
-                  line.mode === option.mode
-                    ? "border-primary text-primary"
-                    : "border-border text-text-muted"
-                }`}
+                onClick={() => removeLine(line.id)}
+                className="text-small text-text-muted hover:text-error"
+                aria-label="Remove payment line"
               >
-                {option.label}
+                Remove
               </button>
-            ))}
+            )}
           </div>
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={line.amount}
-            onChange={(event) => updateLine(line.id, { amount: event.target.value })}
-            className="w-24 rounded-md border border-border px-2 py-1.5 text-body text-text"
-            aria-label={`Amount for ${line.mode}`}
-          />
-          {index > 0 && (
-            <button
-              type="button"
-              onClick={() => removeLine(line.id)}
-              className="text-small text-text-muted hover:text-error"
-              aria-label="Remove payment line"
-            >
-              Remove
-            </button>
-          )}
+          <label className="flex items-center gap-2">
+            <span className="text-small text-text-muted">₹</span>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              value={line.amount}
+              onChange={(event) => updateLine(line.id, { amount: event.target.value })}
+              className="w-full rounded-md border border-border px-2 py-1.5 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-label={`Amount for ${line.mode}`}
+            />
+          </label>
         </div>
       ))}
 
       <button
         type="button"
         onClick={addLine}
-        className="self-start text-small text-secondary hover:underline"
+        className="self-start text-small font-medium text-secondary hover:underline"
       >
         + Split across another mode
       </button>
 
       <div className="flex items-center justify-between text-small">
         <span className="text-text-muted">Remaining</span>
-        <span className={remaining === 0 ? "text-success" : "text-error"}>
+        <span className={`font-medium ${remaining === 0 ? "text-success" : "text-error"}`}>
           {formatMoney(Math.abs(remaining))}
           {remaining !== 0 ? (remaining > 0 ? " left" : " over") : ""}
         </span>
@@ -144,9 +159,9 @@ export function PaymentPanel({
             lines.map((line, index) => ({ mode: line.mode, amount: paise[index] })),
           )
         }
-        className="w-full rounded-md bg-accent px-4 py-3 text-button text-white disabled:opacity-50"
+        className="w-full rounded-lg bg-accent px-4 py-3 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-50"
       >
-        {isSettling ? "Settling…" : "Settle Bill"}
+        {isSettling ? "Settling…" : `Collect ${formatMoney(total)}`}
       </button>
     </div>
   );

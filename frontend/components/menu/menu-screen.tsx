@@ -6,8 +6,10 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api";
 import { categoriesApi, menuItemsApi } from "@/lib/menu/api";
 import type { Category, MenuItem } from "@/lib/menu/types";
+import { PageHeader } from "@/components/ui/page-header";
+import { PlusIcon } from "@/components/icons";
 import { CategorySidebar } from "./category-sidebar";
-import { DishCard } from "./dish-card";
+import { buildCategoryNameMap, DishTable } from "./dish-table";
 import { CategoryFormModal } from "./category-form-modal";
 import { DishFormModal } from "./dish-form-modal";
 
@@ -48,6 +50,11 @@ export function MenuScreen() {
     const all = menuItems ?? [];
     return activeCategoryId ? all.filter((item) => item.categoryId === activeCategoryId) : all;
   }, [menuItems, activeCategoryId]);
+
+  const categoryNameById = useMemo(
+    () => buildCategoryNameMap(categoriesQuery.data?.categories ?? []),
+    [categoriesQuery.data],
+  );
 
   const createCategoryMutation = useMutation({
     mutationFn: categoriesApi.create,
@@ -141,23 +148,27 @@ export function MenuScreen() {
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-h1 font-semibold text-text">Menu</h1>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => {
-              setFormError(null);
-              setDishModal({ mode: "add", item: null });
-            }}
-            disabled={categories.length === 0}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
-            title={categories.length === 0 ? "Add a category first" : undefined}
-          >
-            + Add Dish
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Menu"
+        subtitle="Dishes, categories, and availability."
+        action={
+          canManage && (
+            <button
+              type="button"
+              onClick={() => {
+                setFormError(null);
+                setDishModal({ mode: "add", item: null });
+              }}
+              disabled={categories.length === 0}
+              className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
+              title={categories.length === 0 ? "Add a category first" : undefined}
+            >
+              <PlusIcon className="h-4 w-4" />
+              Add Dish
+            </button>
+          )
+        }
+      />
 
       {isLoading && <p className="text-small text-text-muted">Loading menu…</p>}
 
@@ -191,7 +202,7 @@ export function MenuScreen() {
 
           <div className="flex-1">
             {categories.length === 0 && (
-              <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+              <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
                 <p className="text-body text-text-muted">
                   No categories yet. Add your first category to start building the menu.
                 </p>
@@ -199,7 +210,7 @@ export function MenuScreen() {
                   <button
                     type="button"
                     onClick={() => setCategoryModal({ mode: "add", category: null })}
-                    className="mt-4 rounded-md bg-accent px-4 py-2 text-button text-white"
+                    className="mt-4 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
                   >
                     Add Category
                   </button>
@@ -208,7 +219,7 @@ export function MenuScreen() {
             )}
 
             {categories.length > 0 && visibleItems.length === 0 && (
-              <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+              <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
                 <p className="text-body text-text-muted">
                   No dishes here yet. Add your first dish to this category.
                 </p>
@@ -218,7 +229,7 @@ export function MenuScreen() {
                     onClick={() =>
                       setDishModal({ mode: "add", item: null })
                     }
-                    className="mt-4 rounded-md bg-accent px-4 py-2 text-button text-white"
+                    className="mt-4 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
                   >
                     Add Dish
                   </button>
@@ -227,31 +238,26 @@ export function MenuScreen() {
             )}
 
             {visibleItems.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleItems.map((item) => (
-                  <DishCard
-                    key={item.id}
-                    item={item}
-                    canManage={canManage}
-                    isTogglingAvailability={
-                      availabilityMutation.isPending &&
-                      availabilityMutation.variables?.id === item.id
-                    }
-                    onToggleAvailability={(target, isAvailable) =>
-                      availabilityMutation.mutate({ id: target.id, isAvailable })
-                    }
-                    onEdit={(target) => {
-                      setFormError(null);
-                      setDishModal({ mode: "edit", item: target });
-                    }}
-                    onDelete={(target) => {
-                      if (window.confirm(`Delete "${target.name}"?`)) {
-                        deleteItemMutation.mutate(target.id);
-                      }
-                    }}
-                  />
-                ))}
-              </div>
+              <DishTable
+                items={visibleItems}
+                categoryNameById={categoryNameById}
+                canManage={canManage}
+                isTogglingAvailability={(item) =>
+                  availabilityMutation.isPending && availabilityMutation.variables?.id === item.id
+                }
+                onToggleAvailability={(target, isAvailable) =>
+                  availabilityMutation.mutate({ id: target.id, isAvailable })
+                }
+                onEdit={(target) => {
+                  setFormError(null);
+                  setDishModal({ mode: "edit", item: target });
+                }}
+                onDelete={(target) => {
+                  if (window.confirm(`Delete "${target.name}"?`)) {
+                    deleteItemMutation.mutate(target.id);
+                  }
+                }}
+              />
             )}
           </div>
         </div>

@@ -8,6 +8,20 @@ import type { DiscountType, Invoice } from "@/lib/billing/types";
 import { formatMoney, rupeesToPaise } from "@/lib/format";
 import { ManagerApprovalModal } from "./manager-approval-modal";
 
+// Quick-pick percent shortcuts (reference screenshot's discount pills) —
+// purely a UX shortcut that fills the same `discountValue` input the
+// manager-approval-threshold logic already reads from
+// `buildDiscount()`/the backend's `discountExceedsThreshold` check below.
+// Doesn't add a new discount mechanism or bypass anything: picking "15%"
+// here is identical to a cashier typing "15" into the percent field by
+// hand.
+const QUICK_DISCOUNT_PERCENTS = [
+  { label: "None", value: "" },
+  { label: "5%", value: "5" },
+  { label: "10%", value: "10" },
+  { label: "15%", value: "15" },
+];
+
 /**
  * Pre-generate step of Settle Bill: shows the running subtotal from the
  * order, an optional flat/percent discount, and the "Generate Bill" action
@@ -72,30 +86,60 @@ export function DiscountPanel({
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between text-body">
-        <span className="text-text-muted">Subtotal</span>
-        <span className="text-numeric font-semibold text-text">{formatMoney(subtotal)}</span>
+    <div className="flex flex-col gap-5">
+      <div>
+        <h3 className="mb-1.5 text-small font-semibold uppercase tracking-wide text-text-muted">
+          Bill Summary
+        </h3>
+        <div className="flex items-center justify-between text-body">
+          <span className="text-text-muted">Subtotal</span>
+          <span className="text-numeric font-semibold text-text">{formatMoney(subtotal)}</span>
+        </div>
       </div>
 
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="flex flex-col gap-2.5">
         <legend className="text-small font-medium text-text">Discount (optional)</legend>
+
         <div className="flex gap-2">
           {(["percent", "flat"] as DiscountType[]).map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setDiscountType(option)}
-              className={`rounded-full border px-3 py-1.5 text-small capitalize ${
+              className={`rounded-full border px-3 py-1.5 text-small font-medium capitalize transition-colors ${
                 discountType === option
-                  ? "border-primary text-primary"
-                  : "border-border text-text-muted"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-text-muted hover:border-primary/50"
               }`}
             >
               {option === "percent" ? "Percent" : "Flat (₹)"}
             </button>
           ))}
         </div>
+
+        {/* Quick-pick shortcuts (reference screenshot) — only meaningful
+            for the percent flow; flat discounts stay free-typed since a
+            fixed "5/10/15" wouldn't map to a sensible rupee amount across
+            different bill sizes. */}
+        {discountType === "percent" && (
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_DISCOUNT_PERCENTS.map((quick) => (
+              <button
+                key={quick.label}
+                type="button"
+                onClick={() => setDiscountValue(quick.value)}
+                className={`rounded-full border px-2.5 py-1 text-small transition-colors ${
+                  discountValue === quick.value
+                    ? "border-secondary bg-secondary/10 text-secondary"
+                    : "border-border text-text-muted hover:border-secondary/50"
+                }`}
+              >
+                {quick.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <input
           type="number"
           min={0}
@@ -104,7 +148,7 @@ export function DiscountPanel({
           value={discountValue}
           onChange={(event) => setDiscountValue(event.target.value)}
           placeholder={discountType === "percent" ? "e.g. 10" : "e.g. 100.00"}
-          className="rounded-md border border-border px-3 py-2 text-body text-text"
+          className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </fieldset>
 
@@ -117,7 +161,7 @@ export function DiscountPanel({
           setGenerateError(null);
           generateMutation.mutate(undefined);
         }}
-        className="w-full rounded-md bg-accent px-4 py-3 text-button text-white disabled:opacity-50"
+        className="w-full rounded-lg bg-accent px-4 py-3 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-50"
       >
         {generateMutation.isPending ? "Generating…" : "Generate Bill"}
       </button>

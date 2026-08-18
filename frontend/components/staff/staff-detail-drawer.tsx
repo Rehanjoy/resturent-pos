@@ -116,7 +116,7 @@ export function StaffDetailDrawer({
               {sessionsQuery.data.sessions.map((session) => (
                 <li
                   key={session.id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-small text-text">
@@ -132,7 +132,7 @@ export function StaffDetailDrawer({
                         type="button"
                         onClick={() => revokeMutation.mutate(session.id)}
                         disabled={revokeMutation.isPending}
-                        className="shrink-0 rounded-md border border-error px-3 py-1.5 text-small text-error disabled:opacity-60"
+                        className="shrink-0 rounded-lg border border-error px-3 py-1.5 text-small text-error disabled:opacity-60"
                       >
                         Revoke
                       </button>
@@ -166,7 +166,7 @@ export function StaffDetailDrawer({
           {logs.length > 0 && (
             <ul className="flex flex-col gap-2">
               {logs.map((entry) => (
-                <li key={entry.id} className="rounded-md border border-border px-3 py-2">
+                <li key={entry.id} className="rounded-lg border border-border px-3 py-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-body font-medium text-text">{formatAction(entry.action)}</span>
                     <span className="shrink-0 text-small text-text-muted">

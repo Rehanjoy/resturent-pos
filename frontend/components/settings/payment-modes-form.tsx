@@ -43,7 +43,7 @@ export function PaymentModesForm({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+    <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
       <h2 className="font-heading text-h3 font-semibold text-text">Payment Modes</h2>
       <p className="mt-1 text-small text-text-muted">
         Only enabled modes appear on the Settle Bill screen&apos;s payment selector.
@@ -77,7 +77,7 @@ export function PaymentModesForm({
           <button
             type="submit"
             disabled={isSubmitting || selected.size === 0}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+            className="rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
           >
             {isSubmitting ? "Saving…" : "Save Payment Modes"}
           </button>

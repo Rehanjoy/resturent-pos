@@ -53,7 +53,7 @@ export function StaffFormModal({
             onChange={(event) => setName(event.target.value)}
             required
             placeholder="e.g. Rohan Mehta"
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
@@ -66,7 +66,7 @@ export function StaffFormModal({
             required
             disabled={isEdit}
             placeholder="name@restaurant.com"
-            className="rounded-md border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text disabled:bg-background disabled:text-text-muted"
           />
           {isEdit && (
             <span className="text-small text-text-muted">Email can&apos;t be changed here.</span>
@@ -80,7 +80,7 @@ export function StaffFormModal({
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             placeholder="e.g. 98765 43210"
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
@@ -89,7 +89,7 @@ export function StaffFormModal({
           <select
             value={role}
             onChange={(event) => setRole(event.target.value as StaffRole)}
-            className="rounded-md border border-border px-3 py-2 text-body text-text"
+            className="rounded-lg border border-border px-3 py-2 text-body text-text"
           >
             {assignableRoles.map((option) => (
               <option key={option.value} value={option.value}>
@@ -112,7 +112,7 @@ export function StaffFormModal({
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Leave blank to auto-generate one"
-              className="rounded-md border border-border px-3 py-2 text-body text-text"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text"
             />
             <span className="text-small text-text-muted">
               The new account is always required to reset its password on first login. Leave this
@@ -127,14 +127,14 @@ export function StaffFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-border px-4 py-2 text-button text-text-muted hover:text-text"
+            className="rounded-lg border border-border px-4 py-2 text-button text-text-muted hover:text-text"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !name.trim() || !email.trim()}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+            className="rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
           >
             {isSubmitting ? "Saving…" : "Save"}
           </button>

@@ -11,6 +11,7 @@ import type {
   RestaurantAddress,
   TaxConfigEntry,
 } from "@/lib/settings/types";
+import { PageHeader } from "@/components/ui/page-header";
 import { ProfileForm } from "./profile-form";
 import { TaxConfigForm } from "./tax-config-form";
 import { DiscountPolicyForm } from "./discount-policy-form";
@@ -98,12 +99,10 @@ export function SettingsScreen() {
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
-      <div>
-        <h1 className="font-heading text-h1 font-semibold text-text">Settings</h1>
-        <p className="text-small text-text-muted">
-          Restaurant profile, tax configuration, discount policy, and payment modes.
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle="Restaurant profile, tax configuration, discount policy, and payment modes."
+      />
 
       {settingsQuery.isLoading && <p className="text-small text-text-muted">Loading settings…</p>}
 

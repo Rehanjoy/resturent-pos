@@ -59,7 +59,7 @@ export function TaxConfigForm({
   const isValid = rows.every((row) => row.name.trim().length > 0 && Number.isFinite(Number(row.ratePercent)));
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-6 shadow-sm">
+    <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
       <h2 className="font-heading text-h3 font-semibold text-text">Tax Configuration</h2>
       <p className="mt-1 text-small text-text-muted">
         Add every tax slab that applies to a bill (e.g. CGST 2.5% + SGST 2.5%). Each slab is
@@ -90,12 +90,12 @@ export function TaxConfigForm({
               onChange={(event) => updateRow(row.id, { name: event.target.value })}
               placeholder="e.g. CGST"
               required
-              className="w-32 rounded-md border border-border px-3 py-2 text-body text-text"
+              className="w-32 rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <select
               value={row.type}
               onChange={(event) => updateRow(row.id, { type: event.target.value as TaxType })}
-              className="rounded-md border border-border px-3 py-2 text-body text-text"
+              className="rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               {TAX_TYPES.map((type) => (
                 <option key={type} value={type}>
@@ -112,7 +112,7 @@ export function TaxConfigForm({
                 value={row.ratePercent}
                 onChange={(event) => updateRow(row.id, { ratePercent: event.target.value })}
                 required
-                className="w-24 rounded-md border border-border px-3 py-2 text-body text-text"
+                className="w-24 rounded-lg border border-border px-3 py-2 text-body text-text focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <span className="text-small text-text-muted">%</span>
             </div>
@@ -141,7 +141,7 @@ export function TaxConfigForm({
           <button
             type="submit"
             disabled={isSubmitting || !isValid}
-            className="rounded-md bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+            className="rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
           >
             {isSubmitting ? "Saving…" : "Save Tax Configuration"}
           </button>
