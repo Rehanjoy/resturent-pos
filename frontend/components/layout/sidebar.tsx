@@ -161,7 +161,15 @@ export function Sidebar({
         // ambiguity to reason about; `lg:translate-x-0` sits in its own
         // media-query layer and always wins at `lg`+ regardless of which of
         // the two base classes is active below it.
-        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 ${
+        //
+        // `lg:sticky lg:top-0 lg:h-screen` (replacing the old `lg:static`):
+        // the admin shell (`app/admin/layout.tsx`) is a `min-h-screen` flex
+        // row with no shared scroll container, so on a tall screen (e.g.
+        // Menu with many dishes) the whole page scrolls — a `static` rail
+        // would scroll away with it. Sticky + capped to viewport height
+        // keeps the rail pinned while the content column beside it scrolls
+        // independently.
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0 ${
           isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
