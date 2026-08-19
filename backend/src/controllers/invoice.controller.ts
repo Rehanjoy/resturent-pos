@@ -13,6 +13,14 @@ export const generateInvoice = asyncHandler(async (req: Request, res: Response) 
   res.status(201).json({ invoice });
 });
 
+export const listInvoices = asyncHandler(async (req: Request, res: Response) => {
+  const page = req.query.page ? Number(req.query.page) : undefined;
+  const limit = req.query.limit ? Number(req.query.limit) : undefined;
+  const status = req.query.status as "issued" | "void" | undefined;
+  const result = await invoiceService.listInvoices(req.user!.restaurantId, { page, limit, status });
+  res.status(200).json(result);
+});
+
 export const getInvoice = asyncHandler(async (req: Request, res: Response) => {
   const result = await invoiceService.getInvoiceDetail(req.user!.restaurantId, String(req.params.id));
   res.status(200).json(result);

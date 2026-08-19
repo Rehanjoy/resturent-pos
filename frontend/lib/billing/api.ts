@@ -26,6 +26,17 @@ export interface CreatePaymentInput {
  * `lib/orders/api.ts`).
  */
 export const billingApi = {
+  listInvoices: (opts?: { page?: number; limit?: number; status?: string }) => {
+    const params = new URLSearchParams();
+    if (opts?.page) params.set("page", String(opts.page));
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    if (opts?.status) params.set("status", opts.status);
+    const qs = params.toString();
+    return api.get<{ invoices: Invoice[]; total: number; page: number; totalPages: number }>(
+      `/api/invoices${qs ? `?${qs}` : ""}`,
+    );
+  },
+
   generateInvoice: (orderId: string, input: GenerateInvoiceInput) =>
     api.post<{ invoice: Invoice }>(`/api/invoices/${orderId}/generate`, input),
 

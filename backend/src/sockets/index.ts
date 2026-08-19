@@ -26,7 +26,7 @@ function restaurantRoom(restaurantId: string): string {
 export function initSocketServer(httpServer: HttpServer): SocketIOServer {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: env.corsOrigin,
+      origin: env.corsOrigins,
       credentials: true,
     },
   });

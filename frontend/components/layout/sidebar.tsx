@@ -12,6 +12,7 @@ import {
   LogoutIcon,
   MenuBookIcon,
   OrdersIcon,
+  ReceiptIcon,
   ReportsIcon,
   SettingsIcon,
   StaffIcon,
@@ -79,6 +80,15 @@ const NAV_ITEMS: {
     label: "Inventory",
     roles: ["owner", "manager", "inventory_manager", "chef"],
     icon: BoxIcon,
+  },
+  // Bills/invoice history — same role set as every other billing action
+  // in this app (PRD §2 Billing: Owner/Manager/Cashier "Create/Settle";
+  // Server has no billing access at all).
+  {
+    href: "/admin/invoices",
+    label: "Bills",
+    roles: ["owner", "manager", "cashier"],
+    icon: ReceiptIcon,
   },
   // PRD §2 Reports column: Owner/Manager "Full", Cashier "sales only" (the
   // Staff Performance tab is hidden/blocked for Cashier inside the screen

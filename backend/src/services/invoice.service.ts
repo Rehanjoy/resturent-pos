@@ -4,6 +4,7 @@ import { comparePassword } from "../utils/password";
 import { User } from "../models/user.model";
 import { Restaurant, type RestaurantDocument } from "../models/restaurant.model";
 import { Order } from "../models/order.model";
+import { Table } from "../models/table.model";
 import {
   Invoice,
   type InvoiceDocument,
@@ -99,6 +100,35 @@ export function toInvoiceDto(invoice: HydratedDocument<InvoiceDocument>): Invoic
     createdByStaffId: invoice.createdByStaffId.toString(),
     createdAt: invoice.createdAt,
     updatedAt: invoice.updatedAt,
+  };
+}
+
+/**
+ * Lists all invoices for a restaurant, ordered by creation time (newest
+ * first). Supports cursor-free page/limit pagination so the frontend can
+ * load bills in manageable chunks.
+ */
+export async function listInvoices(
+  restaurantId: string,
+  opts: { page?: number; limit?: number; status?: InvoiceStatus } = {},
+): Promise<{ invoices: InvoiceDto[]; total: number; page: number; totalPages: number }> {
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 25));
+  const skip = (page - 1) * limit;
+
+  const filter: Record<string, unknown> = { restaurantId };
+  if (opts.status) filter.status = opts.status;
+
+  const [invoices, total] = await Promise.all([
+    Invoice.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Invoice.countDocuments(filter),
+  ]);
+
+  return {
+    invoices: invoices.map(toInvoiceDto),
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
   };
 }
 
@@ -330,12 +360,31 @@ export async function findInvoiceByOrder(
 export async function getInvoiceDetail(
   restaurantId: string,
   invoiceId: string,
-): Promise<{ invoice: InvoiceDto; payments: PaymentDto[] }> {
+): Promise<{ invoice: InvoiceDto; payments: PaymentDto[]; tableName?: string; orderCreatedAt?: Date; orderStatus?: string }> {
   const invoice = await findInvoiceOrThrow(restaurantId, invoiceId);
   const payments = await Payment.find({ restaurantId, invoiceId: invoice._id }).sort({
     createdAt: 1,
   });
-  return { invoice: toInvoiceDto(invoice), payments: payments.map(toPaymentDto) };
+
+  // Enrich with order + table info for the detail view
+  let tableName: string | undefined;
+  let orderCreatedAt: Date | undefined;
+  let orderStatus: string | undefined;
+  const order = await Order.findById(invoice.orderId);
+  if (order) {
+    orderCreatedAt = order.createdAt;
+    orderStatus = order.status;
+    const table = await Table.findById(order.tableId);
+    if (table) tableName = table.name;
+  }
+
+  return {
+    invoice: toInvoiceDto(invoice),
+    payments: payments.map(toPaymentDto),
+    tableName,
+    orderCreatedAt,
+    orderStatus,
+  };
 }
 
 export async function getInvoiceForPdf(

@@ -20,6 +20,11 @@ router.use(authenticate);
 const canBill = authorize("owner", "manager", "cashier");
 const canVoid = authorize("owner", "manager");
 
+router.get(
+  "/",
+  canBill,
+  invoiceController.listInvoices,
+);
 router.post(
   "/:orderId/generate",
   canBill,

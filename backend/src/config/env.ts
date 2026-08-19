@@ -6,7 +6,7 @@ interface EnvConfig {
   nodeEnv: string;
   port: number;
   mongodbUri: string;
-  corsOrigin: string;
+  corsOrigins: string[];
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
   jwtAccessExpiry: string;
@@ -25,7 +25,9 @@ export const env: EnvConfig = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 5000),
   mongodbUri: requireEnv("MONGODB_URI", "mongodb://127.0.0.1:27017/saffron"),
-  corsOrigin: requireEnv("CORS_ORIGIN", "http://localhost:3000"),
+  corsOrigins: requireEnv("CORS_ORIGIN", "http://localhost:3000")
+    .split(",")
+    .map((o) => o.trim()),
   // JWT signing secrets are real secrets — no fallback value. The process
   // must fail to start rather than sign tokens with a guessable default.
   jwtAccessSecret: requireEnv("JWT_ACCESS_SECRET"),
