@@ -145,18 +145,17 @@ export function InvoiceDetailScreen({ invoiceId }: { invoiceId: string }) {
               type="button"
               onClick={handleDownloadPdf}
               disabled={isDownloading}
-              className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-accent px-5 py-2.5 text-button font-bold text-white shadow-md shadow-primary/25 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/40 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg bg-accent px-5 py-2.5 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-50"
             >
-              <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              <svg className="h-4 w-4 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              <span className="relative z-10">{isDownloading ? "Preparing…" : "Download PDF"}</span>
+              <span>{isDownloading ? "Preparing…" : "Download PDF"}</span>
             </button>
             <button
               type="button"
               onClick={() => router.push("/admin/invoices")}
-              className="rounded-xl border border-border/80 bg-surface px-5 py-2.5 text-small font-semibold text-text-muted transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+              className="rounded-lg border border-border px-5 py-2.5 text-small font-semibold text-text-muted transition-colors hover:text-text"
             >
               ← Back to Bills
             </button>
@@ -167,7 +166,7 @@ export function InvoiceDetailScreen({ invoiceId }: { invoiceId: string }) {
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
         {/* ─── Left: Items + Totals ──────────────────────────────────── */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          <div className="overflow-hidden rounded-[20px] border border-border/60 bg-surface/80 shadow-md backdrop-blur-xl">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
             <div className="border-b border-border/40 bg-background/50 px-6 py-4">
               <h2 className="font-heading text-[1.1rem] font-bold text-text">Order Items</h2>
             </div>
@@ -184,7 +183,7 @@ export function InvoiceDetailScreen({ invoiceId }: { invoiceId: string }) {
                 </thead>
                 <tbody className="divide-y divide-border/20">
                   {invoice.items.map((item, idx) => (
-                    <tr key={item.menuItemId + idx} className="group transition-colors hover:bg-primary/[0.03]">
+                    <tr key={item.menuItemId + idx} className="group transition-colors hover:bg-primary/3">
                       <td className="px-6 py-4 text-small text-text-muted/70">{idx + 1}</td>
                       <td className="px-6 py-4">
                         <p className="text-body font-semibold text-text group-hover:text-primary transition-colors">{item.nameSnapshot}</p>
@@ -208,7 +207,7 @@ export function InvoiceDetailScreen({ invoiceId }: { invoiceId: string }) {
               </table>
             </div>
 
-            <div className="bg-gradient-to-b from-transparent to-background/50 px-6 py-6 pb-8 border-t border-border/40">
+            <div className="border-t border-border/40 bg-background/50 px-6 py-6 pb-8">
               <div className="flex w-full justify-end">
                 <div className="flex w-full max-w-sm flex-col gap-3">
                   <div className="flex justify-between text-body">
@@ -248,9 +247,8 @@ export function InvoiceDetailScreen({ invoiceId }: { invoiceId: string }) {
 
         {/* ─── Right: Info Cards ─────────────────────────────────────── */}
         <div className="flex flex-col gap-6">
-          <div className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-surface to-background p-[1px] shadow-md">
-            <div className="absolute inset-0 bg-gradient-to-br from-border/50 to-transparent" />
-            <div className="relative flex flex-col rounded-[19px] bg-surface h-full w-full overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+            <div className="flex h-full w-full flex-col">
               <div className="border-b border-border/40 bg-background/50 px-6 py-4">
                 <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Timeline</h3>
               </div>
@@ -296,7 +294,7 @@ export function InvoiceDetailScreen({ invoiceId }: { invoiceId: string }) {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[20px] border border-border/60 bg-surface shadow-md">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
             <div className="flex items-center justify-between border-b border-border/40 bg-background/50 px-6 py-4">
               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Overview</h3>
               <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest ${status.bg} ${status.text}`}>

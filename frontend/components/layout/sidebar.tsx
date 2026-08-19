@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthUser } from "@/lib/auth/types";
+import { useUiStore } from "@/lib/store/ui-store";
 import {
   BoxIcon,
   CalendarIcon,
@@ -117,6 +118,15 @@ function initialsOf(name: string): string {
  * `NAV_ITEMS` exactly as the previous top-nav did; this is a UX convenience
  * only, every route still re-checks role server-side and each screen also
  * gates itself (see the individual screen components).
+ *
+ * Responsive behavior (PRD §7 — tablet support for POS/KDS terminals):
+ * below the `lg` breakpoint this rail is an off-canvas drawer (fixed,
+ * slides in from the left, backdrop closes it on tap-outside) driven by
+ * `useUiStore`'s `isMobileNavOpen`; the hamburger toggle lives in
+ * `topbar.tsx`. At `lg` and above it reverts to the original always-docked
+ * rail — same breakpoint every other two-column layout in this app already
+ * switches on (`cart-rail.tsx`, `billing-workspace.tsx`, `kds-board.tsx`),
+ * so this doesn't introduce a new cutoff to reason about.
  */
 export function Sidebar({
   role,
@@ -128,75 +138,103 @@ export function Sidebar({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
+  const isMobileNavOpen = useUiStore((state) => state.isMobileNavOpen);
+  const closeMobileNav = useUiStore((state) => state.closeMobileNav);
   const visibleItems = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-3 px-5 pb-5 pt-6">
-        {/* Plain <img>, not next/image — the built-in optimizer blocks SVG
-            content-type by default (`images.dangerouslyAllowSVG`), and a
-            fixed 32px decorative mark gets nothing from the optimizer
-            anyway. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-mark.svg" alt="" width={32} height={32} className="h-8 w-8" />
-        <div className="leading-tight">
-          <p className="font-heading text-h4 font-semibold text-sidebar-foreground">Saffron POS</p>
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-sidebar-muted">
-            Modern Kitchen
-          </p>
-        </div>
-      </div>
+    <>
+      {/* Backdrop — mobile/tablet only (`lg:hidden`); docked desktop rail
+          never renders this, `isMobileNavOpen` is simply never true there
+          in practice since the toggle button is also `lg:hidden`. */}
+      {isMobileNavOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={closeMobileNav}
+          aria-hidden="true"
+        />
+      )}
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-        {visibleItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              // Active state uses `text-button` (16px SemiBold) rather than
-              // `text-small` (13px) white-on-coral — the brand kit only
-              // certifies white text on the primary/accent coral as meeting
-              // AA-large at 16px SemiBold minimum (docs/02-brand-kit.md
-              // contrast notes); a smaller label here would fall below that
-              // documented threshold.
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-button font-semibold transition-colors ${
-                isActive
-                  ? "bg-sidebar-active text-white shadow-sm"
-                  : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground"
-              }`}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-sidebar-border px-3 py-3">
-        <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-hover text-small font-semibold text-sidebar-foreground">
-            {initialsOf(user.name)}
-          </span>
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-small font-medium text-sidebar-foreground">{user.name}</p>
-            <p className="truncate text-[11px] capitalize text-sidebar-muted">
-              {user.role.replace("_", " ")}
+      <aside
+        // Exactly one of `translate-x-0` / `-translate-x-full` is present at
+        // a time (never both) so there's no same-specificity utility-order
+        // ambiguity to reason about; `lg:translate-x-0` sits in its own
+        // media-query layer and always wins at `lg`+ regardless of which of
+        // the two base classes is active below it.
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 ${
+          isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center gap-3 px-5 pb-5 pt-6">
+          {/* Plain <img>, not next/image — the built-in optimizer blocks SVG
+              content-type by default (`images.dangerouslyAllowSVG`), and a
+              fixed 32px decorative mark gets nothing from the optimizer
+              anyway. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.svg" alt="" width={32} height={32} className="h-8 w-8" />
+          <div className="leading-tight">
+            <p className="font-heading text-h4 font-semibold text-sidebar-foreground">Saffron POS</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-sidebar-muted">
+              Modern Kitchen
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            title="Log out"
-            aria-label="Log out"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground"
-          >
-            <LogoutIcon className="h-4 w-4" />
-          </button>
         </div>
-      </div>
-    </aside>
+
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
+          {visibleItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                // Closes the mobile drawer on navigation — harmless on the
+                // docked desktop rail (`isMobileNavOpen` has no visual
+                // effect there since `lg:translate-x-0` always wins).
+                onClick={closeMobileNav}
+                // Active state uses `text-button` (16px SemiBold) rather than
+                // `text-small` (13px) white-on-coral — the brand kit only
+                // certifies white text on the primary/accent coral as meeting
+                // AA-large at 16px SemiBold minimum (docs/02-brand-kit.md
+                // contrast notes); a smaller label here would fall below that
+                // documented threshold.
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-button font-semibold transition-colors ${
+                  isActive
+                    ? "bg-sidebar-active text-white shadow-sm"
+                    : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-sidebar-border px-3 py-3">
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-hover text-small font-semibold text-sidebar-foreground">
+              {initialsOf(user.name)}
+            </span>
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-small font-medium text-sidebar-foreground">{user.name}</p>
+              <p className="truncate text-[11px] capitalize text-sidebar-muted">
+                {user.role.replace("_", " ")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Log out"
+              aria-label="Log out"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground"
+            >
+              <LogoutIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }

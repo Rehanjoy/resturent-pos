@@ -1,6 +1,7 @@
 "use client";
 
 import { EditIcon, TrashIcon } from "@/components/icons";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { formatMoney } from "@/lib/format";
 import type { Category, MenuItem } from "@/lib/menu/types";
 
@@ -101,23 +102,12 @@ export function DishTable({
                 </td>
                 <td className="px-4 py-3">
                   {canManage ? (
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={item.isAvailable}
-                      aria-label={`${item.isAvailable ? "Mark unavailable" : "Mark available"}: ${item.name}`}
+                    <ToggleSwitch
+                      checked={item.isAvailable}
+                      onChange={(next) => onToggleAvailability(item, next)}
                       disabled={isTogglingAvailability(item)}
-                      onClick={() => onToggleAvailability(item, !item.isAvailable)}
-                      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-                        item.isAvailable ? "bg-success" : "bg-border"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                          item.isAvailable ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
+                      label={`${item.isAvailable ? "Mark unavailable" : "Mark available"}: ${item.name}`}
+                    />
                   ) : (
                     <span
                       className={`rounded-full px-2.5 py-1 text-small font-medium ${

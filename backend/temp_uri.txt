@@ -1,1 +1,0 @@
-mongodb://<USERNAME>:<PASSWORD>@ac-5tpg5qt-shard-00-01.nhxvyfw.mongodb.net:27017,ac-5tpg5qt-shard-00-00.nhxvyfw.mongodb.net:27017,ac-5tpg5qt-shard-00-02.nhxvyfw.mongodb.net:27017/?ssl=true&authSource=admin&replicaSet=atlas-q3rzmu-shard-0

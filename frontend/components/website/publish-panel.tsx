@@ -1,11 +1,14 @@
 "use client";
 
-import { PowerIcon } from "@/components/icons";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 
 /**
  * Publish/Unpublish toggle with a clear live-link state (PRD §3.13). The
  * public URL always resolves via the restaurant's slug — see
- * `app/(website)/[slug]/page.tsx` for the routing decision.
+ * `app/(website)/[slug]/page.tsx` for the routing decision. Uses the shared
+ * `ToggleSwitch` (same on/off visual language as every other boolean
+ * control in the app, e.g. the Menu module's availability toggle) rather
+ * than the previous bespoke Publish/Unpublish button.
  */
 export function PublishPanel({
   isPublished,
@@ -42,19 +45,17 @@ export function PublishPanel({
         </div>
 
         {canEdit && (
-          <button
-            type="button"
-            onClick={() => onToggle(!isPublished)}
-            disabled={isSubmitting}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-button shadow-sm transition-colors disabled:opacity-60 ${
-              isPublished
-                ? "border border-border text-text-muted hover:text-text"
-                : "bg-accent text-white hover:bg-primary"
-            }`}
-          >
-            <PowerIcon className="h-4 w-4" />
-            {isSubmitting ? "Saving…" : isPublished ? "Unpublish" : "Publish"}
-          </button>
+          <div className="flex items-center gap-2.5">
+            <span className="text-small font-medium text-text-muted">
+              {isSubmitting ? "Saving…" : isPublished ? "Published" : "Unpublished"}
+            </span>
+            <ToggleSwitch
+              checked={isPublished}
+              onChange={onToggle}
+              disabled={isSubmitting}
+              label={isPublished ? "Unpublish site" : "Publish site"}
+            />
+          </div>
         )}
       </div>
 

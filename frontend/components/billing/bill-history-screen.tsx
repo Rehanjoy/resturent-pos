@@ -111,9 +111,9 @@ export function BillHistoryScreen() {
               setStatusFilter(s);
               setPage(1);
             }}
-            className={`rounded-lg px-4 py-2 text-small font-semibold capitalize transition-all duration-200 ${
+            className={`rounded-lg px-4 py-2 text-small font-semibold capitalize transition-colors ${
               statusFilter === s
-                ? "bg-gradient-to-r from-primary to-accent text-white shadow-md shadow-primary/20"
+                ? "bg-accent text-white shadow-sm"
                 : "border border-border bg-surface text-text-muted hover:border-primary hover:text-primary"
             }`}
           >
@@ -154,8 +154,8 @@ export function BillHistoryScreen() {
       {/* Bills table */}
       {!isLoading && !isError && data && data.invoices.length > 0 && (
         <>
-          <div className="overflow-x-auto rounded-[20px] border border-border/60 bg-surface/80 p-1 shadow-md backdrop-blur-xl">
-            <div className="overflow-hidden rounded-[15px] border border-border/40 bg-surface">
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+            <div className="overflow-hidden rounded-xl">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border/40 bg-background/50">
@@ -190,7 +190,7 @@ export function BillHistoryScreen() {
                       <tr
                         key={inv.id}
                         onClick={() => router.push(`/admin/invoices/${inv.id}`)}
-                        className="group cursor-pointer transition-colors hover:bg-primary/[0.03]"
+                        className="group cursor-pointer transition-colors hover:bg-primary/3"
                       >
                         <td className="whitespace-nowrap px-6 py-4 text-small text-text-muted/70">
                           {serialNo}
@@ -247,7 +247,7 @@ export function BillHistoryScreen() {
 
           {/* Pagination */}
           {data.totalPages > 1 && (
-            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-surface/80 px-6 py-4 shadow-sm backdrop-blur-md">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-6 py-4 shadow-sm">
               <p className="text-small font-medium text-text-muted">
                 Page <span className="font-bold text-text">{data.page}</span> of <span className="font-bold text-text">{data.totalPages}</span> · {data.total} bills total
               </p>

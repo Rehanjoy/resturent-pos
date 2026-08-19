@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/components/ui/modal";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { paiseToRupeesInput, rupeesToPaise } from "@/lib/format";
 import { inventoryItemsApi } from "@/lib/inventory/api";
 import type { Category, IngredientMapping, MenuItem, MenuItemType, SpiceLevel } from "@/lib/menu/types";
@@ -257,14 +258,10 @@ export function DishFormModal({
           </button>
         </div>
 
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={isAvailable}
-            onChange={(event) => setIsAvailable(event.target.checked)}
-          />
+        <div className="flex items-center gap-2">
+          <ToggleSwitch checked={isAvailable} onChange={setIsAvailable} label="Available on the menu" />
           <span className="text-small font-medium text-text">Available on the menu</span>
-        </label>
+        </div>
 
         {errorMessage && <p className="text-small text-error">{errorMessage}</p>}
 

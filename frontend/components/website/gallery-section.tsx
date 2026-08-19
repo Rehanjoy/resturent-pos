@@ -46,9 +46,13 @@ export function GallerySection({
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {galleryImageUrls.map((url) => (
-            <div key={url} className="group relative overflow-hidden rounded-lg border border-border">
+            <div key={url} className="relative overflow-hidden rounded-lg border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt="" className="h-24 w-full object-cover" />
+              {/* Always visible (not hover-only) — the Website Builder is
+                  used from tablets too (Owner/Manager have no guaranteed
+                  hover state there), so an `opacity-0 group-hover` reveal
+                  would make this button unreachable on touch. */}
               {canEdit && (
                 <button
                   type="button"
@@ -56,7 +60,7 @@ export function GallerySection({
                   disabled={isRemoving}
                   aria-label="Remove image"
                   title="Remove image"
-                  className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-60"
+                  className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80 disabled:opacity-60"
                 >
                   <TrashIcon className="h-3.5 w-3.5" />
                 </button>

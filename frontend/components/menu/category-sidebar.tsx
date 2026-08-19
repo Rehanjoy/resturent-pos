@@ -37,7 +37,7 @@ export function CategorySidebar({
       </button>
 
       {categories.map((category) => (
-        <div key={category.id} className="group flex items-center justify-between">
+        <div key={category.id} className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => onSelect(category.id)}
@@ -49,19 +49,25 @@ export function CategorySidebar({
           >
             {category.name}
           </button>
+          {/* Always visible (not hover-only) — this screen is used on
+              touch-only tablets in the POS/KDS environment (PRD §7), which
+              have no hover state, so a `group-hover` reveal would make
+              these unreachable there. */}
           {canManage && (
-            <span className="hidden gap-1 pr-2 text-small text-text-muted group-hover:flex">
+            <span className="flex shrink-0 gap-2 pr-2 text-small text-text-muted">
               <button
                 type="button"
                 onClick={() => onEditCategory(category)}
-                className="hover:text-secondary"
+                aria-label={`Edit ${category.name}`}
+                className="rounded px-1 py-1 transition-colors hover:text-secondary"
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => onDeleteCategory(category)}
-                className="hover:text-error"
+                aria-label={`Delete ${category.name}`}
+                className="rounded px-1 py-1 transition-colors hover:text-error"
               >
                 Delete
               </button>

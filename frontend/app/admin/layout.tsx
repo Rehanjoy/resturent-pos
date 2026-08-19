@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useUiStore } from "@/lib/store/ui-store";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
@@ -26,6 +27,8 @@ import { Topbar } from "@/components/layout/topbar";
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   const { status, user, clearSession } = useAuth();
   const router = useRouter();
+  const isMobileNavOpen = useUiStore((state) => state.isMobileNavOpen);
+  const closeMobileNav = useUiStore((state) => state.closeMobileNav);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -34,6 +37,25 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
       router.replace("/reset-password");
     }
   }, [status, user, router]);
+
+  // Standard off-canvas-drawer behavior: lock background scroll while the
+  // mobile nav drawer is open (see `components/layout/sidebar.tsx`), and
+  // close it on Escape for keyboard users. Both are no-ops at `lg` and
+  // above, where the drawer state is never toggled open in the first place
+  // (the hamburger that flips it is `lg:hidden`).
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileNav();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMobileNavOpen, closeMobileNav]);
 
   const isGateOpen = status === "authenticated" && user && !user.mustResetPassword;
 

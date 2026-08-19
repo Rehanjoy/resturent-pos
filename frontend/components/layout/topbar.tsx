@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { AuthUser } from "@/lib/auth/types";
 import { useSocketConnectionState } from "@/lib/hooks/use-socket-connection-state";
-import { BellIcon, ClockIcon, PlusIcon, SearchIcon } from "@/components/icons";
+import { useUiStore } from "@/lib/store/ui-store";
+import { BellIcon, ClockIcon, MenuIcon, PlusIcon, SearchIcon } from "@/components/icons";
 
 // Same entry point the Table Grid's free-table cards use to start an order
 // (`/admin/orders/new?tableId=...` requires a table first) — a global
@@ -79,10 +80,24 @@ function ConnectionStatus() {
 export function Topbar({ user }: { user: AuthUser }) {
   const clock = useLiveClock();
   const canStartOrder = NEW_ORDER_ROLES.has(user.role);
+  const toggleMobileNav = useUiStore((state) => state.toggleMobileNav);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-surface px-6">
-      <div className="relative flex-1 max-w-sm">
+    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:gap-4 sm:px-6">
+      {/* Hamburger — only below `lg`, where the sidebar becomes an
+          off-canvas drawer instead of a docked rail (see
+          `components/layout/sidebar.tsx`). Sized to the 44px WCAG tap
+          target minimum. */}
+      <button
+        type="button"
+        onClick={toggleMobileNav}
+        aria-label="Open menu"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-background hover:text-text lg:hidden"
+      >
+        <MenuIcon className="h-5 w-5" />
+      </button>
+
+      <div className="relative hidden flex-1 max-w-sm sm:block">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
         <input
           type="search"

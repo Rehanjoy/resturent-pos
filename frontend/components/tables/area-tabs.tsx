@@ -34,7 +34,7 @@ export function AreaTabs({
       </button>
 
       {areas.map((area) => (
-        <div key={area.id} className="group relative flex items-center">
+        <div key={area.id} className="relative flex items-center">
           <button
             type="button"
             onClick={() => onSelect(area.id)}
@@ -46,13 +46,17 @@ export function AreaTabs({
           >
             {area.name}
           </button>
+          {/* Always visible (not hover-only) — this screen runs on
+              touch-only POS/KDS tablets (PRD §7), which have no hover
+              state, so a `group-hover` reveal would make these
+              unreachable there. */}
           {canManage && (
-            <span className="ml-1 hidden gap-1 group-hover:flex">
+            <span className="ml-1 flex gap-1.5">
               <button
                 type="button"
                 onClick={() => onEditArea(area)}
                 aria-label={`Edit ${area.name}`}
-                className="text-small text-text-muted hover:text-secondary"
+                className="text-small text-text-muted transition-colors hover:text-secondary"
               >
                 Edit
               </button>
@@ -60,7 +64,7 @@ export function AreaTabs({
                 type="button"
                 onClick={() => onDeleteArea(area)}
                 aria-label={`Delete ${area.name}`}
-                className="text-small text-text-muted hover:text-error"
+                className="text-small text-text-muted transition-colors hover:text-error"
               >
                 Delete
               </button>

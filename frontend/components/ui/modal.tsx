@@ -21,7 +21,14 @@ export function Modal({
       role="presentation"
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
+        // `max-h-[calc(100vh-2rem)]` + `overflow-y-auto` — without this a
+        // tall form (e.g. the Menu module's dish form with its ingredient
+        // rows) can exceed a short viewport (a phone in landscape, or a
+        // small tablet) with no way to reach the fields/buttons below the
+        // fold, since the overlay itself doesn't scroll. Every modal in the
+        // app goes through this one shell, so the fix applies everywhere at
+        // once.
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

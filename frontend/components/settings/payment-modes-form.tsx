@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import type { PaymentMode } from "@/lib/settings/types";
 
 const PAYMENT_MODE_OPTIONS: { mode: PaymentMode; label: string }[] = [
@@ -56,17 +57,16 @@ export function PaymentModesForm({
         }}
         className="mt-4 flex flex-col gap-3"
       >
-        <div className="flex gap-6">
+        <div className="flex flex-wrap gap-6">
           {PAYMENT_MODE_OPTIONS.map((option) => (
-            <label key={option.mode} className="flex items-center gap-2 text-body text-text">
-              <input
-                type="checkbox"
+            <div key={option.mode} className="flex items-center gap-2 text-body text-text">
+              <ToggleSwitch
                 checked={selected.has(option.mode)}
                 onChange={() => toggle(option.mode)}
-                className="h-4 w-4 rounded border-border"
+                label={`${selected.has(option.mode) ? "Disable" : "Enable"} ${option.label} as a payment mode`}
               />
-              {option.label}
-            </label>
+              <span>{option.label}</span>
+            </div>
           ))}
         </div>
 

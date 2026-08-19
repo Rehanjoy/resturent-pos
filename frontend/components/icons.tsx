@@ -362,6 +362,18 @@ export function GlobeIcon({ className }: IconProps) {
   );
 }
 
+// Added for the Phase 5 responsive pass — the off-canvas nav drawer's
+// hamburger toggle in `components/layout/topbar.tsx` (see
+// `components/layout/sidebar.tsx` for the drawer itself). Same flat
+// single-color, `currentColor`-stroke language as every icon above.
+export function MenuIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4 6.5h16M4 12h16M4 17.5h16" />
+    </svg>
+  );
+}
+
 export function ImageIcon({ className }: IconProps) {
   return (
     <svg {...BASE_PROPS} className={className}>
