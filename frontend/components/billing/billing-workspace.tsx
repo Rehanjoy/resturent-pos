@@ -6,7 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api";
 import { ordersApi } from "@/lib/orders/api";
-import type { OrderStatus } from "@/lib/orders/types";
+import type { OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
+import { useSocketEvent } from "@/lib/hooks/use-socket-event";
 import { billingApi } from "@/lib/billing/api";
 import type { Invoice, Payment, PaymentMode } from "@/lib/billing/types";
 import { settingsApi } from "@/lib/settings/api";
@@ -67,6 +68,16 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
   const orderQuery = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => ordersApi.get(orderId).then((result) => result.order),
+  });
+
+  // If this order changes underneath this screen (e.g. voided from another
+  // terminal, or another cashier's tab), patch the cache in place so the
+  // status-gated view below (served/billed/voided/etc.) reflects it without
+  // a reload — same pattern as `order-workspace.tsx`'s own subscription to
+  // this order.
+  useSocketEvent<OrderUpdatedEvent>("order:updated", (event) => {
+    if (event.order.id !== orderId) return;
+    queryClient.setQueryData(["order", orderId], event.order);
   });
 
   const invoiceByOrderQuery = useQuery({

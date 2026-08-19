@@ -7,6 +7,8 @@ import { ApiError } from "@/lib/api";
 import { reservationsApi } from "@/lib/reservations/api";
 import type { Reservation } from "@/lib/reservations/types";
 import { areasApi, tablesApi } from "@/lib/tables/api";
+import type { RestaurantTable, TableStatusChangedEvent } from "@/lib/tables/types";
+import { useSocketEvent } from "@/lib/hooks/use-socket-event";
 import { todayLocalDateString } from "@/lib/reservations/date";
 import { PageHeader } from "@/components/ui/page-header";
 import { PlusIcon } from "@/components/icons";
@@ -63,6 +65,30 @@ export function ReservationsScreen() {
     queryFn: () => areasApi.list(),
     enabled: canView,
   });
+
+  // Reservations directly drive a table's hold state (assign/seat/cancel/
+  // no-show — see the module doc note in `01-product-brief.md`), so the
+  // table picker/dropdown this screen feeds (`SeatReservationModal`,
+  // `ReservationFormModal`) needs to reflect a table going
+  // reserved/occupied/free the instant it changes anywhere else, not just
+  // after this screen's own mutations settle.
+  useSocketEvent<TableStatusChangedEvent>(
+    "table:status-changed",
+    (event) => {
+      queryClient.setQueryData<{ tables: RestaurantTable[] } | undefined>(
+        ["tables"],
+        (current) => {
+          if (!current) return current;
+          return {
+            tables: current.tables.map((table) =>
+              table.id === event.table.id ? event.table : table,
+            ),
+          };
+        },
+      );
+    },
+    { enabled: canView },
+  );
 
   const reservations = useMemo(
     () => reservationsQuery.data?.reservations ?? [],

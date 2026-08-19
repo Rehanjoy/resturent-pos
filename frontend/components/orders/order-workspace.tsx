@@ -10,7 +10,7 @@ import type { MenuItem } from "@/lib/menu/types";
 import { tablesApi } from "@/lib/tables/api";
 import { ordersApi } from "@/lib/orders/api";
 import type { OrderItem, OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
-import { connectSocket } from "@/lib/socket";
+import { useSocketEvent } from "@/lib/hooks/use-socket-event";
 import { PageHeader } from "@/components/ui/page-header";
 import { SearchIcon } from "@/components/icons";
 import { CategoryTabs } from "./category-tabs";
@@ -18,22 +18,12 @@ import { OrderItemTile } from "./order-item-tile";
 import { ItemCustomizationModal, type ItemCustomization } from "./item-customization-modal";
 import { CartRail } from "./cart-rail";
 import { VoidOrderModal } from "./void-order-modal";
+import { OrderStatusStepper } from "./order-status-stepper";
 
 const BUILD_ROLES = new Set(["owner", "manager", "cashier", "server"]);
 const VOID_ROLES = new Set(["owner", "manager"]);
 const BILLING_ROLES = new Set(["owner", "manager", "cashier"]);
 const NON_VOIDABLE: OrderStatus[] = ["billed", "closed", "void"];
-
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  draft: "Draft",
-  sent: "Sent to Kitchen",
-  in_kitchen: "In Kitchen",
-  ready: "Ready to Serve",
-  served: "Served",
-  billed: "Billed",
-  closed: "Closed",
-  void: "Voided",
-};
 
 function errorMessageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
@@ -121,18 +111,14 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
     }
   }, [mode, order, router, tableId]);
 
-  useEffect(() => {
-    if (!orderId) return;
-    const socket = connectSocket();
-    const handleOrderUpdated = (event: OrderUpdatedEvent) => {
+  useSocketEvent<OrderUpdatedEvent>(
+    "order:updated",
+    (event) => {
       if (event.order.id !== orderId) return;
       queryClient.setQueryData(["order", orderId], event.order);
-    };
-    socket.on("order:updated", handleOrderUpdated);
-    return () => {
-      socket.off("order:updated", handleOrderUpdated);
-    };
-  }, [orderId, queryClient]);
+    },
+    { enabled: !!orderId },
+  );
 
   const addItemMutation = useMutation({
     mutationFn: (customization: ItemCustomization & { menuItemId: string }) =>
@@ -205,7 +191,6 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
       <PageHeader
         title={table ? table.name : "Order"}
-        subtitle={order ? `Status: ${STATUS_LABEL[order.status]}` : undefined}
         action={
           <div className="flex items-center gap-3">
             {canBuild && readyCount > 0 && (
@@ -249,6 +234,14 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
         <p className="text-small text-error">
           {openError ?? "Could not load this order — check your connection and try again."}
         </p>
+      )}
+
+      {!isLoading && !isError && order && (
+        <OrderStatusStepper
+          status={order.status}
+          voidReason={order.voidReason}
+          className="rounded-2xl border border-border bg-surface px-4 py-4 shadow-sm"
+        />
       )}
 
       {!isLoading && !isError && order && (

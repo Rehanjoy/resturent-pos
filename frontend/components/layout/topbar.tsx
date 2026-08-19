@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { AuthUser } from "@/lib/auth/types";
+import { useSocketConnectionState } from "@/lib/hooks/use-socket-connection-state";
 import { BellIcon, ClockIcon, PlusIcon, SearchIcon } from "@/components/icons";
 
 // Same entry point the Table Grid's free-table cards use to start an order
@@ -34,6 +35,39 @@ function useLiveClock(): string {
 }
 
 /**
+ * Live/Reconnecting indicator — the professional touch that tells staff
+ * whether the screen they're looking at is actually receiving real-time
+ * updates right now, driven by `useSocketConnectionState`'s real
+ * `connect`/`disconnect`/`reconnect` events (never a hardcoded "always
+ * green" dot). Green + a subtle pulse when connected; amber + "Reconnecting…"
+ * while the socket is down or retrying — colors straight from the brand
+ * kit's semantic tokens (`--color-success` / `--color-warning`).
+ */
+function ConnectionStatus() {
+  const state = useSocketConnectionState();
+  const connected = state === "connected";
+
+  // Tailwind's build-time scanner needs literal class strings (no
+  // `` `bg-${tone}` `` template interpolation), so the two states are
+  // spelled out in full rather than composed from a shared token name.
+  const dotColor = connected ? "bg-success" : "bg-warning";
+  const textColor = connected ? "text-success" : "text-warning";
+
+  return (
+    <div
+      className="hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-small font-medium sm:flex"
+      title={connected ? "Receiving live updates" : "Reconnecting to live updates…"}
+    >
+      <span className="relative flex h-2 w-2">
+        <span className={`absolute inline-flex h-full w-full animate-pulse rounded-full ${dotColor} opacity-75`} />
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${dotColor}`} />
+      </span>
+      <span className={textColor}>{connected ? "Live" : "Reconnecting…"}</span>
+    </div>
+  );
+}
+
+/**
  * Shared top bar for the admin/POS shell: search (decorative — no search
  * endpoint exists yet, this is purely the layout slot the reference
  * screenshots call for), a live clock, a notifications bell (decorative —
@@ -59,6 +93,8 @@ export function Topbar({ user }: { user: AuthUser }) {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
+        <ConnectionStatus />
+
         <div className="hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-small font-medium tabular-nums text-text-muted sm:flex">
           <ClockIcon className="h-4 w-4" />
           <span>{clock}</span>

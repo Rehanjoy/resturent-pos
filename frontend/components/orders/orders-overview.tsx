@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ordersApi } from "@/lib/orders/api";
 import { tablesApi } from "@/lib/tables/api";
-import type { Order, OrderStatus } from "@/lib/orders/types";
+import type { Order, OrderCreatedEvent, OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
+import { useSocketEvent } from "@/lib/hooks/use-socket-event";
+import { orderStatusTone, type OrderStatusTone } from "./order-status-stepper";
 import { formatMoney } from "@/lib/format";
 import { ReceiptIcon } from "@/components/icons";
 
@@ -20,26 +22,25 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   void: "Voided",
 };
 
-const STATUS_DOT: Record<OrderStatus, string> = {
-  draft: "bg-text-muted",
-  sent: "bg-info",
-  in_kitchen: "bg-warning",
-  ready: "bg-success",
-  served: "bg-primary",
-  billed: "bg-secondary",
-  closed: "bg-text-muted",
-  void: "bg-error",
+// Colors are derived from `orderStatusTone` (also used by
+// `order-status-stepper.tsx`) rather than hand-picked per status here, so
+// this compact row dot can never drift out of sync with what the same
+// status looks like on the full stepper — e.g. `sent`/`in_kitchen`/`ready`/
+// `served` all render as the stepper's "current step" accent color (they're
+// all "the order is actively moving, not finished yet"), and `billed`/
+// `closed` both render as the stepper's "complete" success color.
+const TONE_DOT: Record<OrderStatusTone, string> = {
+  muted: "bg-text-muted",
+  current: "bg-accent",
+  success: "bg-success",
+  error: "bg-error",
 };
 
-const STATUS_TEXT: Record<OrderStatus, string> = {
-  draft: "text-text-muted",
-  sent: "text-info",
-  in_kitchen: "text-warning",
-  ready: "text-success",
-  served: "text-primary",
-  billed: "text-secondary",
-  closed: "text-text-muted",
-  void: "text-error",
+const TONE_TEXT: Record<OrderStatusTone, string> = {
+  muted: "text-text-muted",
+  current: "text-accent",
+  success: "text-success",
+  error: "text-error",
 };
 
 // Terminal/idle states a table naturally accumulates over a day — grouped
@@ -96,6 +97,7 @@ function relativeTime(iso: string): string {
  */
 export function OrdersOverview() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterKey>("active");
 
   const ordersQuery = useQuery({
@@ -104,8 +106,25 @@ export function OrdersOverview() {
     // fast and relevant to the floor's current shift. A fuller date-range
     // history view belongs on the Reports screen, not here.
     queryFn: () => ordersApi.list({ from: startOfTodayIso() }).then((result) => result.orders),
-    refetchInterval: 30_000,
+    // Live updates arrive over the socket (below) the moment they happen —
+    // this poll is only a safety net for an event missed during a dropped
+    // connection/reconnect window, so it can be long-interval rather than
+    // the primary update path.
+    refetchInterval: 60_000,
   });
+
+  const patchOrder = (incoming: Order) => {
+    queryClient.setQueryData<Order[] | undefined>(["orders-overview", "today"], (current) => {
+      if (!current) return current;
+      const exists = current.some((order) => order.id === incoming.id);
+      return exists
+        ? current.map((order) => (order.id === incoming.id ? incoming : order))
+        : [...current, incoming];
+    });
+  };
+
+  useSocketEvent<OrderCreatedEvent>("order:created", (event) => patchOrder(event.order));
+  useSocketEvent<OrderUpdatedEvent>("order:updated", (event) => patchOrder(event.order));
 
   // Cache shape must match every other consumer of this query key exactly
   // (`tables-screen.tsx`, `order-workspace.tsx`, `kds-board.tsx`,
@@ -229,8 +248,12 @@ export function OrdersOverview() {
                   >
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="flex items-center gap-2 text-small font-medium">
-                        <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[order.status]}`} />
-                        <span className={STATUS_TEXT[order.status]}>{STATUS_LABEL[order.status]}</span>
+                        <span
+                          className={`h-2 w-2 shrink-0 rounded-full ${TONE_DOT[orderStatusTone(order.status)]}`}
+                        />
+                        <span className={TONE_TEXT[orderStatusTone(order.status)]}>
+                          {STATUS_LABEL[order.status]}
+                        </span>
                       </span>
                       <span className="flex items-center gap-1.5 text-small text-text-muted">
                         <ReceiptIcon className="h-3.5 w-3.5" />

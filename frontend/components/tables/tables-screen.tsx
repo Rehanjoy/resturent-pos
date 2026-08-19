@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -14,7 +14,7 @@ import type {
 } from "@/lib/tables/types";
 import { ordersApi } from "@/lib/orders/api";
 import type { Order, OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
-import { connectSocket } from "@/lib/socket";
+import { useSocketEvent } from "@/lib/hooks/use-socket-event";
 import { PageHeader } from "@/components/ui/page-header";
 import { AreaTabs } from "./area-tabs";
 import { TableCard } from "./table-card";
@@ -113,11 +113,9 @@ export function TablesScreen() {
   // (e.g. another terminal adds an item to the same table's order) —
   // additive to the pre-existing table-status subscription, not a
   // replacement for it.
-  useEffect(() => {
-    if (!canView) return;
-    const socket = connectSocket();
-
-    const handleStatusChanged = (event: TableStatusChangedEvent) => {
+  useSocketEvent<TableStatusChangedEvent>(
+    "table:status-changed",
+    (event) => {
       queryClient.setQueryData<{ tables: RestaurantTable[] } | undefined>(
         ["tables"],
         (current) => {
@@ -129,9 +127,13 @@ export function TablesScreen() {
           };
         },
       );
-    };
+    },
+    { enabled: canView },
+  );
 
-    const handleOrderUpdated = (event: OrderUpdatedEvent) => {
+  useSocketEvent<OrderUpdatedEvent>(
+    "order:updated",
+    (event) => {
       queryClient.setQueryData<Order[] | undefined>(["active-orders-for-tables"], (current) => {
         if (!current) return current;
         const exists = current.some((order) => order.id === event.order.id);
@@ -139,15 +141,9 @@ export function TablesScreen() {
           ? current.map((order) => (order.id === event.order.id ? event.order : order))
           : [...current, event.order];
       });
-    };
-
-    socket.on("table:status-changed", handleStatusChanged);
-    socket.on("order:updated", handleOrderUpdated);
-    return () => {
-      socket.off("table:status-changed", handleStatusChanged);
-      socket.off("order:updated", handleOrderUpdated);
-    };
-  }, [canView, queryClient]);
+    },
+    { enabled: canView },
+  );
 
   const createAreaMutation = useMutation({
     mutationFn: areasApi.create,

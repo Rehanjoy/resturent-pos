@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api";
 import { tablesApi } from "@/lib/tables/api";
 import { kitchenApi } from "@/lib/kitchen/api";
 import type { Kot, KitchenNewTicketEvent, KitchenTicketReadyEvent } from "@/lib/orders/types";
-import { connectSocket } from "@/lib/socket";
+import { useSocketEvent } from "@/lib/hooks/use-socket-event";
 import { PageHeader } from "@/components/ui/page-header";
 import { TicketCard } from "./ticket-card";
 
@@ -42,40 +41,35 @@ export function KdsBoard() {
     (tablesQuery.data?.tables ?? []).map((table) => [table.id, table.name]),
   );
 
-  useEffect(() => {
-    if (!canView) return;
-    const socket = connectSocket();
+  const upsertTicket = (kot: Kot) => {
+    queryClient.setQueryData<Kot[] | undefined>(["kitchenTickets"], (current) => {
+      if (!current) return [kot];
+      const exists = current.some((candidate) => candidate.id === kot.id);
+      const next = exists
+        ? current.map((candidate) => (candidate.id === kot.id ? kot : candidate))
+        : [...current, kot];
+      return [...next].sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+    });
+  };
 
-    const upsertTicket = (kot: Kot) => {
-      queryClient.setQueryData<Kot[] | undefined>(["kitchenTickets"], (current) => {
-        if (!current) return [kot];
-        const exists = current.some((candidate) => candidate.id === kot.id);
-        const next = exists
-          ? current.map((candidate) => (candidate.id === kot.id ? kot : candidate))
-          : [...current, kot];
-        return [...next].sort((a, b) => a.sentAt.localeCompare(b.sentAt));
-      });
-    };
-
-    const handleNewTicket = (event: KitchenNewTicketEvent) => upsertTicket(event.kot);
-    const handleTicketReady = (event: KitchenTicketReadyEvent) => upsertTicket(event.kot);
-    // Serving an item doesn't carry a KOT payload (it's an order-level
-    // action) — refetch so tickets that just became fully-served drop off
-    // the active queue immediately (PRD §3.4 "auto-clears ticket ...").
-    const handleOrderUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: ["kitchenTickets"] });
-    };
-
-    socket.on("kitchen:new-ticket", handleNewTicket);
-    socket.on("kitchen:ticket-ready", handleTicketReady);
-    socket.on("order:updated", handleOrderUpdated);
-
-    return () => {
-      socket.off("kitchen:new-ticket", handleNewTicket);
-      socket.off("kitchen:ticket-ready", handleTicketReady);
-      socket.off("order:updated", handleOrderUpdated);
-    };
-  }, [canView, queryClient]);
+  useSocketEvent<KitchenNewTicketEvent>(
+    "kitchen:new-ticket",
+    (event) => upsertTicket(event.kot),
+    { enabled: canView },
+  );
+  useSocketEvent<KitchenTicketReadyEvent>(
+    "kitchen:ticket-ready",
+    (event) => upsertTicket(event.kot),
+    { enabled: canView },
+  );
+  // Serving an item doesn't carry a KOT payload (it's an order-level
+  // action) — refetch so tickets that just became fully-served drop off
+  // the active queue immediately (PRD §3.4 "auto-clears ticket ...").
+  useSocketEvent(
+    "order:updated",
+    () => queryClient.invalidateQueries({ queryKey: ["kitchenTickets"] }),
+    { enabled: canView },
+  );
 
   const itemReadyMutation = useMutation({
     mutationFn: ({ kotId, orderItemId }: { kotId: string; orderItemId: string }) =>
