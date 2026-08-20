@@ -1,5 +1,13 @@
 import { api } from "@/lib/api";
-import type { Contact, ContactImportResult, WhatsappConfig } from "./types";
+import type {
+  AudienceSelector,
+  CampaignRecipient,
+  Contact,
+  ContactImportResult,
+  MarketingCampaign,
+  MessageTemplate,
+  WhatsappConfig,
+} from "./types";
 
 export interface SaveWhatsappConfigInput {
   phoneNumberId: string;
@@ -24,9 +32,21 @@ export interface CreateContactInput {
 
 export type UpdateContactInput = Partial<CreateContactInput> & { optedIn?: boolean };
 
-function buildQuery(params: ListContactsParams): string {
+export interface ListCampaignsParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateCampaignInput {
+  name: string;
+  templateId: string;
+  audience: AudienceSelector;
+  bodyParams?: string[];
+}
+
+function buildQuery(params: object): string {
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
+  for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
     if (value !== undefined && value !== "") query.set(key, String(value));
   }
   const qs = query.toString();
@@ -35,9 +55,9 @@ function buildQuery(params: ListContactsParams): string {
 
 /**
  * Marketing module admin API — WhatsApp connection config + Contacts (Part
- * 1 of 3; Part 2 will add campaigns/broadcast, Part 3 the AI auto-reply
- * inbox, both under this same `/api/marketing` prefix). Goes through the
- * shared `lib/api.ts` client like every other admin screen.
+ * 1), Templates + Campaigns (Part 2 — this pass; Part 3 will add the AI
+ * auto-reply inbox), all under this same `/api/marketing` prefix. Goes
+ * through the shared `lib/api.ts` client like every other admin screen.
  */
 export const marketingApi = {
   getWhatsappConfig: () =>
@@ -65,4 +85,26 @@ export const marketingApi = {
     formData.append("file", file);
     return api.postForm<ContactImportResult>("/api/marketing/contacts/import", formData);
   },
+
+  listMessageTemplates: () =>
+    api.get<{ templates: MessageTemplate[] }>("/api/marketing/templates"),
+
+  syncMessageTemplates: () =>
+    api.post<{ total: number; created: number; updated: number }>("/api/marketing/templates/sync"),
+
+  listCampaigns: (params: ListCampaignsParams = {}) =>
+    api.get<{ campaigns: MarketingCampaign[]; total: number; page: number; totalPages: number }>(
+      `/api/marketing/campaigns${buildQuery(params)}`,
+    ),
+
+  createCampaign: (input: CreateCampaignInput) =>
+    api.post<{ campaign: MarketingCampaign }>("/api/marketing/campaigns", input),
+
+  getCampaign: (id: string) =>
+    api.get<{ campaign: MarketingCampaign }>(`/api/marketing/campaigns/${id}`),
+
+  listCampaignRecipients: (id: string, params: ListCampaignsParams = {}) =>
+    api.get<{ recipients: CampaignRecipient[]; total: number; page: number; totalPages: number }>(
+      `/api/marketing/campaigns/${id}/recipients${buildQuery(params)}`,
+    ),
 };

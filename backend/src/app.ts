@@ -28,7 +28,22 @@ export function createApp(): Express {
       credentials: true,
     }),
   );
-  app.use(express.json());
+  app.use(
+    express.json({
+      // Captures the exact raw request bytes on every request (cheap —
+      // `express.json` already buffers the body internally to parse it),
+      // stashed as `req.rawBody`. The one consumer today is
+      // `middleware/verify-meta-signature.ts`: Meta signs its WhatsApp
+      // webhook POSTs (`whatsapp-webhook.routes.ts`) with HMAC-SHA256 over
+      // these exact bytes, and re-signing the already-parsed-and-
+      // re-stringified `req.body` would not reliably reproduce the same
+      // signature (key order / whitespace can differ). Every other route
+      // ignores `req.rawBody` entirely.
+      verify: (req, _res, buf) => {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true }));
   // Parses the httpOnly refresh-token cookie set by the auth module.
   app.use(cookieParser());

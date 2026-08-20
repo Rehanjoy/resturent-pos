@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { PageHeader } from "@/components/ui/page-header";
 import { SetupTab } from "./setup-tab";
 import { ContactsTab } from "./contacts-tab";
+import { CampaignsTab } from "./campaigns-tab";
 
 // Marketing module is Owner/Manager only, no other role gets a nav entry
 // or access at all (see `frontend/components/layout/sidebar.tsx`). Within
@@ -15,15 +16,17 @@ import { ContactsTab } from "./contacts-tab";
 const VIEW_ROLES = new Set(["owner", "manager"]);
 const MANAGE_WHATSAPP_ROLES = new Set(["owner"]);
 
-// This is Part 1 of 3 — Part 2 appends "campaigns" here (broadcast +
-// analytics), Part 3 appends "inbox" (AI auto-reply). Kept as a literal
-// union now so adding a tab later is a one-line type + array change, not a
-// restructure.
-type TabKey = "setup" | "contacts";
+// Part 1 shipped "setup"/"contacts". Part 2 (this pass) adds "campaigns"
+// (broadcast + analytics — itself split into Campaigns/Templates
+// sub-views, see `campaigns-tab.tsx`). Part 3 will append "inbox" (AI
+// auto-reply). Kept as a literal union so adding a tab later is a one-line
+// type + array change, not a restructure.
+type TabKey = "setup" | "contacts" | "campaigns";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "setup", label: "Setup" },
   { key: "contacts", label: "Contacts" },
+  { key: "campaigns", label: "Campaigns" },
 ];
 
 export function MarketingScreen() {
@@ -68,6 +71,7 @@ export function MarketingScreen() {
 
       {activeTab === "setup" && <SetupTab canManage={canManageWhatsapp} />}
       {activeTab === "contacts" && <ContactsTab />}
+      {activeTab === "campaigns" && <CampaignsTab onGoToSetup={() => setActiveTab("setup")} />}
     </main>
   );
 }

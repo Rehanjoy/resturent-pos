@@ -21,6 +21,8 @@ import reservationRoutes from "./reservation.routes";
 import websiteRoutes from "./website.routes";
 import whatsappConfigRoutes from "./whatsapp-config.routes";
 import contactRoutes from "./contact.routes";
+import messageTemplateRoutes from "./message-template.routes";
+import marketingCampaignRoutes from "./marketing-campaign.routes";
 
 const router = Router();
 
@@ -44,10 +46,16 @@ router.use("/inventory/suppliers", supplierRoutes);
 router.use("/inventory/transactions", inventoryTransactionRoutes);
 router.use("/reservations", reservationRoutes);
 router.use("/website", websiteRoutes);
-// Marketing module (Part 1 of 3: WhatsApp connection config + Contacts).
-// Two resource routers under one `/marketing` prefix, same "one router
-// file per resource" convention as every other module.
+// Marketing module. Part 1 shipped WhatsApp connection config + Contacts;
+// Part 2 (this pass) adds Templates (read-only Meta template cache) and
+// Campaigns (broadcast + delivery tracking). Same "one router file per
+// resource, all under one `/marketing` prefix" convention throughout —
+// the public webhook that feeds Campaigns' delivery status is a separate
+// router entirely (`whatsapp-webhook.routes.ts`, mounted under
+// `/api/public` in `public.routes.ts`, never here).
 router.use("/marketing/whatsapp-config", whatsappConfigRoutes);
 router.use("/marketing/contacts", contactRoutes);
+router.use("/marketing/templates", messageTemplateRoutes);
+router.use("/marketing/campaigns", marketingCampaignRoutes);
 
 export default router;

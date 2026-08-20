@@ -21,9 +21,13 @@ export interface ContactDocument {
 
 /**
  * A WhatsApp-reachable contact for the Marketing module (Part 1: manual add
- * + CSV import; Part 2 will add `reservation`/`order` auto-sync sources and
- * filter campaign audiences on `tags`/`optedIn` — both fields exist here
- * already so Part 2 doesn't need a migration).
+ * + CSV import). Part 2 (`marketing-campaign.service.ts` `resolveAudience`)
+ * filters campaign audiences on exactly `tags`/`optedIn` — both fields
+ * existed here already, so no migration was needed to add Campaigns.
+ * Auto-sourcing contacts from `reservation`/`order` activity (the two
+ * `ContactSource` values that exist in the enum but no write path produces
+ * yet) remains a documented future enhancement, not scoped to any part
+ * built so far.
  *
  * `phone` is E.164 (`"+919876543210"`) — the format the WhatsApp Business
  * Cloud API requires for every recipient (`utils/phone.ts`). The compound

@@ -12,6 +12,8 @@ interface EnvConfig {
   jwtAccessExpiry: string;
   jwtRefreshExpiry: string;
   encryptionKey: string;
+  whatsappWebhookVerifyToken: string;
+  metaAppSecret: string;
 }
 
 function requireEnv(name: string, fallback?: string): string {
@@ -53,4 +55,15 @@ export const env: EnvConfig = {
   // Gemini API key in Part 3) — real secret, no fallback, same reasoning as
   // the JWT secrets above. See `utils/encryption.ts`.
   encryptionKey: requireHexKey("ENCRYPTION_KEY", 32),
+  // Marketing module Part 2 — WhatsApp webhook (`whatsapp-webhook.routes.ts`).
+  // A value *we* choose and paste into Meta's webhook config, not one Meta
+  // hands us — still required with no fallback, same fail-fast posture,
+  // because a guessable default would let anyone complete Meta's
+  // verification handshake against our webhook URL.
+  whatsappWebhookVerifyToken: requireEnv("WHATSAPP_WEBHOOK_VERIFY_TOKEN"),
+  // Meta App secret, used only to verify the `X-Hub-Signature-256` HMAC on
+  // inbound webhook POSTs (`middleware/verify-meta-signature.ts`) — the
+  // real security boundary on that public, unauthenticated route. Real
+  // secret, no fallback.
+  metaAppSecret: requireEnv("META_APP_SECRET"),
 };

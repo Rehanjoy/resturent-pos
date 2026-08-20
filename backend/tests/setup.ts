@@ -10,4 +10,8 @@ process.env.CORS_ORIGIN ??= "http://localhost:3000";
 // 64 hex characters (32 bytes) — required shape for `config/env.ts`'s
 // `requireHexKey("ENCRYPTION_KEY", 32)`. Throwaway test-only value.
 process.env.ENCRYPTION_KEY ??= "8251dd00e700a9acf30b4656c7f7c09c548ca9ac7ae91322a71c050416004674";
+// Marketing module Part 2 — WhatsApp webhook secrets. Throwaway test-only
+// values, never used outside this suite.
+process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ??= "test-webhook-verify-token";
+process.env.META_APP_SECRET ??= "test-meta-app-secret-do-not-use-in-prod";
 process.env.NODE_ENV = "test";
