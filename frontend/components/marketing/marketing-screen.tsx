@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SetupTab } from "./setup-tab";
 import { ContactsTab } from "./contacts-tab";
 import { CampaignsTab } from "./campaigns-tab";
+import { InboxTab } from "./inbox-tab";
 
 // Marketing module is Owner/Manager only, no other role gets a nav entry
 // or access at all (see `frontend/components/layout/sidebar.tsx`). Within
@@ -16,17 +17,21 @@ import { CampaignsTab } from "./campaigns-tab";
 const VIEW_ROLES = new Set(["owner", "manager"]);
 const MANAGE_WHATSAPP_ROLES = new Set(["owner"]);
 
-// Part 1 shipped "setup"/"contacts". Part 2 (this pass) adds "campaigns"
-// (broadcast + analytics — itself split into Campaigns/Templates
-// sub-views, see `campaigns-tab.tsx`). Part 3 will append "inbox" (AI
-// auto-reply). Kept as a literal union so adding a tab later is a one-line
-// type + array change, not a restructure.
-type TabKey = "setup" | "contacts" | "campaigns";
+// Part 1 shipped "setup"/"contacts". Part 2 added "campaigns" (broadcast +
+// analytics — itself split into Campaigns/Templates sub-views, see
+// `campaigns-tab.tsx`). Part 3 (this pass) adds "inbox" (the AI auto-reply
+// Inbox — conversation list + detail; the AI settings themselves live in
+// the Setup tab, next to the WhatsApp connection card, since both are
+// "connect a credential + configure how it's used" cards). Kept as a
+// literal union so adding a tab later is a one-line type + array change,
+// not a restructure.
+type TabKey = "setup" | "contacts" | "campaigns" | "inbox";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "setup", label: "Setup" },
   { key: "contacts", label: "Contacts" },
   { key: "campaigns", label: "Campaigns" },
+  { key: "inbox", label: "Inbox" },
 ];
 
 export function MarketingScreen() {
@@ -72,6 +77,7 @@ export function MarketingScreen() {
       {activeTab === "setup" && <SetupTab canManage={canManageWhatsapp} />}
       {activeTab === "contacts" && <ContactsTab />}
       {activeTab === "campaigns" && <CampaignsTab onGoToSetup={() => setActiveTab("setup")} />}
+      {activeTab === "inbox" && <InboxTab />}
     </main>
   );
 }

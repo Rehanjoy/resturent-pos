@@ -1,3 +1,4 @@
+import type { Types } from "mongoose";
 import { AppError } from "../utils/app-error";
 import { Restaurant, type RestaurantAddress } from "../models/restaurant.model";
 import { WebsiteContent } from "../models/website-content.model";
@@ -40,6 +41,50 @@ export interface PublicWebsiteDto {
 }
 
 /**
+ * Builds the public-safe menu shape (available items only, no recipe/cost
+ * data) from live `Category`/`MenuItem` data for one restaurant. Extracted
+ * out of `getPublicWebsite` so the Marketing module's AI auto-reply
+ * (`ai-config.service.ts` `buildRestaurantContext`) can reuse the exact
+ * same "what can the bot see" shape/logic instead of re-querying raw
+ * `MenuItem` documents (and, e.g., accidentally leaking `ingredientMapping`
+ * cost data into a customer-facing chat reply).
+ */
+export async function buildPublicMenu(
+  restaurantId: Types.ObjectId | string,
+): Promise<PublicMenuCategoryDto[]> {
+  const [categories, menuItems] = await Promise.all([
+    Category.find({ restaurantId }).sort({ displayOrder: 1, name: 1 }),
+    MenuItem.find({ restaurantId, isAvailable: true }).sort({ name: 1 }),
+  ]);
+
+  const itemsByCategoryId = new Map<string, PublicMenuItemDto[]>();
+  for (const item of menuItems) {
+    const key = item.categoryId.toString();
+    const list = itemsByCategoryId.get(key) ?? [];
+    list.push({
+      id: item._id.toString(),
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      type: item.type,
+      spiceLevel: item.spiceLevel,
+      imageUrl: item.imageUrl,
+    });
+    itemsByCategoryId.set(key, list);
+  }
+
+  return categories
+    .map((category) => ({
+      id: category._id.toString(),
+      name: category.name,
+      items: itemsByCategoryId.get(category._id.toString()) ?? [],
+    }))
+    // Skip categories with no currently-available dish rather than showing
+    // an empty section.
+    .filter((category) => category.items.length > 0);
+}
+
+/**
  * Public, unauthenticated read for the customer-facing website (PRD
  * §3.13). `restaurantId` is resolved internally from the slug in the URL —
  * this route never accepts a client-supplied restaurant id (there isn't
@@ -74,36 +119,7 @@ export async function getPublicWebsite(restaurantSlug: string): Promise<PublicWe
     throw new AppError("This restaurant's website could not be found.", 404, "NOT_FOUND");
   }
 
-  const [categories, menuItems] = await Promise.all([
-    Category.find({ restaurantId: restaurant._id }).sort({ displayOrder: 1, name: 1 }),
-    MenuItem.find({ restaurantId: restaurant._id, isAvailable: true }).sort({ name: 1 }),
-  ]);
-
-  const itemsByCategoryId = new Map<string, PublicMenuItemDto[]>();
-  for (const item of menuItems) {
-    const key = item.categoryId.toString();
-    const list = itemsByCategoryId.get(key) ?? [];
-    list.push({
-      id: item._id.toString(),
-      name: item.name,
-      description: item.description,
-      price: item.price,
-      type: item.type,
-      spiceLevel: item.spiceLevel,
-      imageUrl: item.imageUrl,
-    });
-    itemsByCategoryId.set(key, list);
-  }
-
-  const menu: PublicMenuCategoryDto[] = categories
-    .map((category) => ({
-      id: category._id.toString(),
-      name: category.name,
-      items: itemsByCategoryId.get(category._id.toString()) ?? [],
-    }))
-    // Skip categories with no currently-available dish rather than showing
-    // an empty section on the public page.
-    .filter((category) => category.items.length > 0);
+  const menu = await buildPublicMenu(restaurant._id);
 
   return {
     restaurant: {

@@ -6,6 +6,18 @@ export type MessageLogDirection = (typeof MESSAGE_LOG_DIRECTIONS)[number];
 export const MESSAGE_LOG_STATUSES = ["sent", "delivered", "read", "failed"] as const;
 export type MessageLogStatus = (typeof MESSAGE_LOG_STATUSES)[number];
 
+// Part 3's AI auto-reply inbox. `"customer"` is every inbound message.
+// `"bot"` is an AI-generated auto-reply (`whatsapp-webhook.service.ts`).
+// `"staff"` is a human-typed reply, either through the Inbox's manual reply
+// endpoint or (by convention, not enforced by the schema) a Part 2 campaign
+// send — a campaign broadcast is a staff-initiated send in the same sense a
+// manual Inbox reply is, so it defaults/backfills to `"staff"` rather than
+// left unset, keeping `senderType` meaningful on every `"outbound"` row.
+// `undefined` only ever occurs on rows written before this field existed
+// (pre-Part-3 data, never written going forward).
+export const MESSAGE_LOG_SENDER_TYPES = ["customer", "bot", "staff"] as const;
+export type MessageLogSenderType = (typeof MESSAGE_LOG_SENDER_TYPES)[number];
+
 export interface WhatsappMessageLogDocument {
   _id: Types.ObjectId;
   restaurantId: Types.ObjectId;
@@ -13,16 +25,26 @@ export interface WhatsappMessageLogDocument {
    * Part 3's AI auto-reply inbox rows (both outbound replies and inbound
    * customer messages), which log here too but aren't tied to a campaign. */
   campaignId?: Types.ObjectId;
+  /** Set only for Part 3's Inbox rows (inbound customer messages and every
+   * outbound bot/staff reply inside a conversation thread) — left unset for
+   * Part 2's campaign-send rows, which aren't part of any conversation
+   * thread. `Conversation.lastMessagePreview`/`lastMessageAt` are the
+   * inbox-list summary; this field is what lets the conversation detail
+   * screen pull the full message history for one thread. */
+  conversationId?: Types.ObjectId;
   contactId: Types.ObjectId;
   /** Denormalized from `Contact.phone` at send time — stays meaningful even
    * if the contact is later deleted, since this row is part of an
    * append-only send/delivery audit trail. */
   phone: string;
-  /** Only `"outbound"` is produced anywhere in the codebase today (Part 2's
-   * campaign sends). `"inbound"` is Part 3's extension point — see
-   * `whatsapp-webhook.service.ts`'s doc comment on where that gets wired
-   * in, reusing this same model rather than a second one. */
+  /** Part 2 only ever produces `"outbound"` (campaign sends). Part 3 adds
+   * real `"inbound"` rows (customer messages) alongside `"outbound"` bot/
+   * staff replies, all reusing this same model rather than a second one —
+   * see `whatsapp-webhook.service.ts`. */
   direction: MessageLogDirection;
+  /** Who this message is from/as, on this app's side of the conversation —
+   * see `MESSAGE_LOG_SENDER_TYPES` above for the per-value meaning. */
+  senderType?: MessageLogSenderType;
   /** Meta's own message id (`wamid...`) — globally unique across every
    * WhatsApp Business Platform sender, which is what makes the webhook
    * lookup in `whatsapp-webhook.service.ts` `applyStatusUpdate` work.
@@ -33,6 +55,13 @@ export interface WhatsappMessageLogDocument {
    * (`sendTemplateMessage` threw) or Meta's own delivery-failure reason
    * relayed through a webhook status event. */
   failureReason?: string;
+  /** The message text itself — Part 2's template sends didn't need this
+   * (the template body + params fully reconstruct it from
+   * `MessageTemplate`), but Part 3's free-form Inbox conversation does: the
+   * conversation detail screen renders this directly as each chat bubble,
+   * and `generateReply`'s conversation-history context is built from it.
+   * Left unset on Part 2's campaign rows, unchanged behavior for those. */
+  messageText?: string;
   createdAt: Date;
   /** Bumped every time `status` changes (send attempt -> Meta's
    * delivered/read/failed webhook callbacks) — lets the campaign detail
@@ -65,12 +94,15 @@ const whatsappMessageLogSchema = new Schema<WhatsappMessageLogDocument>(
       required: true,
     },
     campaignId: { type: Schema.Types.ObjectId, ref: "MarketingCampaign" },
+    conversationId: { type: Schema.Types.ObjectId, ref: "Conversation" },
     contactId: { type: Schema.Types.ObjectId, ref: "Contact", required: true },
     phone: { type: String, required: true, trim: true },
     direction: { type: String, enum: MESSAGE_LOG_DIRECTIONS, required: true },
+    senderType: { type: String, enum: MESSAGE_LOG_SENDER_TYPES },
     metaMessageId: { type: String, trim: true },
     status: { type: String, enum: MESSAGE_LOG_STATUSES, required: true },
     failureReason: { type: String, trim: true },
+    messageText: { type: String, trim: true },
     statusUpdatedAt: { type: Date, required: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
@@ -82,6 +114,9 @@ const whatsappMessageLogSchema = new Schema<WhatsappMessageLogDocument>(
 whatsappMessageLogSchema.index({ restaurantId: 1, metaMessageId: 1 });
 // Powers the campaign detail screen's recipients list.
 whatsappMessageLogSchema.index({ restaurantId: 1, campaignId: 1, createdAt: -1 });
+// Powers the Inbox conversation detail screen's message history
+// (`conversation.service.ts` `listConversationMessages`).
+whatsappMessageLogSchema.index({ restaurantId: 1, conversationId: 1, createdAt: 1 });
 
 export const WhatsappMessageLog = model<WhatsappMessageLogDocument>(
   "WhatsappMessageLog",

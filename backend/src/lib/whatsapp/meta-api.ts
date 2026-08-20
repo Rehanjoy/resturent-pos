@@ -9,7 +9,10 @@
  * Media headers and button components are real Meta template features but
  * out of scope for this MVP; re-add them here the same way
  * `sendTemplateMessage`'s `components` array is built, if a later part
- * needs them.
+ * needs them. Part 3 adds `sendTextMessage` — free-form text for the AI
+ * auto-reply Inbox's bot/staff replies, distinct from `sendTemplateMessage`
+ * because it's only valid within Meta's 24-hour customer-service window
+ * (see that function's own doc comment).
  *
  * Re-implemented for this codebase's own conventions from the reference at
  * https://github.com/ArnasDon/wacrm (MIT licensed) — same Graph API
@@ -143,6 +146,57 @@ export async function sendTemplateMessage(
       to,
       type: "template",
       template: templatePayload,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await readMetaErrorMessage(response, `Meta API error (HTTP ${response.status}).`);
+    throw new Error(message);
+  }
+
+  const body = (await response.json()) as { messages?: { id: string }[] };
+  const messageId = body.messages?.[0]?.id;
+  if (!messageId) {
+    throw new Error("Meta accepted the message but returned no message id.");
+  }
+  return { messageId };
+}
+
+export interface SendTextMessageArgs {
+  phoneNumberId: string;
+  accessToken: string;
+  /** E.164 recipient phone number. */
+  to: string;
+  text: string;
+}
+
+/**
+ * Sends a free-form text message to one recipient — Part 3's AI auto-reply
+ * Inbox (bot replies and manual staff replies), never Part 2's campaign
+ * broadcasts (those must use `sendTemplateMessage`, see that function's
+ * doc comment). Free-form text is only accepted by Meta within the
+ * 24-hour customer-service window opened by the customer's own inbound
+ * message — every caller of this function is, by construction, replying
+ * inside a conversation the customer just messaged into, so that window is
+ * always open; Meta itself would reject the call otherwise (surfaced here
+ * as a thrown error, same as every other Graph API failure in this file).
+ */
+export async function sendTextMessage(args: SendTextMessageArgs): Promise<MetaSendMessageResult> {
+  const { phoneNumberId, accessToken, to, text } = args;
+  const url = `${META_API_BASE}/${encodeURIComponent(phoneNumberId)}/messages`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "text",
+      text: { body: text },
     }),
   });
 

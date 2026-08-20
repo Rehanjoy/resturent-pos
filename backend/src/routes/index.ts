@@ -23,6 +23,8 @@ import whatsappConfigRoutes from "./whatsapp-config.routes";
 import contactRoutes from "./contact.routes";
 import messageTemplateRoutes from "./message-template.routes";
 import marketingCampaignRoutes from "./marketing-campaign.routes";
+import aiConfigRoutes from "./ai-config.routes";
+import conversationRoutes from "./conversation.routes";
 
 const router = Router();
 
@@ -47,15 +49,20 @@ router.use("/inventory/transactions", inventoryTransactionRoutes);
 router.use("/reservations", reservationRoutes);
 router.use("/website", websiteRoutes);
 // Marketing module. Part 1 shipped WhatsApp connection config + Contacts;
-// Part 2 (this pass) adds Templates (read-only Meta template cache) and
-// Campaigns (broadcast + delivery tracking). Same "one router file per
-// resource, all under one `/marketing` prefix" convention throughout —
-// the public webhook that feeds Campaigns' delivery status is a separate
-// router entirely (`whatsapp-webhook.routes.ts`, mounted under
-// `/api/public` in `public.routes.ts`, never here).
+// Part 2 added Templates (read-only Meta template cache) and Campaigns
+// (broadcast + delivery tracking). Part 3 (this pass) adds the AI
+// auto-reply Inbox: `ai-config` (Gemini key + auto-reply settings) and
+// `conversations` (the Inbox list/detail/reply/close/hand-back-to-bot
+// endpoints). Same "one router file per resource, all under one
+// `/marketing` prefix" convention throughout — the public webhook that
+// feeds both Campaigns' delivery status and the Inbox's inbound messages
+// is a separate router entirely (`whatsapp-webhook.routes.ts`, mounted
+// under `/api/public` in `public.routes.ts`, never here).
 router.use("/marketing/whatsapp-config", whatsappConfigRoutes);
 router.use("/marketing/contacts", contactRoutes);
 router.use("/marketing/templates", messageTemplateRoutes);
 router.use("/marketing/campaigns", marketingCampaignRoutes);
+router.use("/marketing/ai-config", aiConfigRoutes);
+router.use("/marketing/conversations", conversationRoutes);
 
 export default router;

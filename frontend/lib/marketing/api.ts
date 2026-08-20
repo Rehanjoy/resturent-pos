@@ -1,9 +1,13 @@
 import { api } from "@/lib/api";
 import type {
+  AiConfig,
   AudienceSelector,
   CampaignRecipient,
   Contact,
   ContactImportResult,
+  Conversation,
+  ConversationMessage,
+  ConversationStatus,
   MarketingCampaign,
   MessageTemplate,
   WhatsappConfig,
@@ -44,6 +48,21 @@ export interface CreateCampaignInput {
   bodyParams?: string[];
 }
 
+export interface SaveAiConfigInput {
+  /** Omitted/empty = leave the previously saved key untouched — see
+   * `ai-config.service.ts` `SaveAiConfigInput`'s own doc comment. */
+  geminiApiKey?: string;
+  systemPromptExtra?: string;
+  autoReplyEnabled?: boolean;
+  maxAutoRepliesPerConversation?: number;
+}
+
+export interface ListConversationsParams {
+  status?: ConversationStatus;
+  page?: number;
+  limit?: number;
+}
+
 function buildQuery(params: object): string {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
@@ -55,9 +74,10 @@ function buildQuery(params: object): string {
 
 /**
  * Marketing module admin API — WhatsApp connection config + Contacts (Part
- * 1), Templates + Campaigns (Part 2 — this pass; Part 3 will add the AI
- * auto-reply inbox), all under this same `/api/marketing` prefix. Goes
- * through the shared `lib/api.ts` client like every other admin screen.
+ * 1), Templates + Campaigns (Part 2), AI Config + the AI auto-reply Inbox's
+ * Conversations (Part 3 — this pass), all under this same `/api/marketing`
+ * prefix. Goes through the shared `lib/api.ts` client like every other
+ * admin screen.
  */
 export const marketingApi = {
   getWhatsappConfig: () =>
@@ -107,4 +127,28 @@ export const marketingApi = {
     api.get<{ recipients: CampaignRecipient[]; total: number; page: number; totalPages: number }>(
       `/api/marketing/campaigns/${id}/recipients${buildQuery(params)}`,
     ),
+
+  getAiConfig: () => api.get<{ config: AiConfig | null }>("/api/marketing/ai-config"),
+
+  saveAiConfig: (input: SaveAiConfigInput) =>
+    api.patch<{ config: AiConfig }>("/api/marketing/ai-config", input),
+
+  listConversations: (params: ListConversationsParams = {}) =>
+    api.get<{ conversations: Conversation[]; total: number; page: number; totalPages: number }>(
+      `/api/marketing/conversations${buildQuery(params)}`,
+    ),
+
+  getConversation: (id: string) =>
+    api.get<{ conversation: Conversation; messages: ConversationMessage[] }>(
+      `/api/marketing/conversations/${id}`,
+    ),
+
+  replyToConversation: (id: string, text: string) =>
+    api.post<{ conversation: Conversation }>(`/api/marketing/conversations/${id}/reply`, { text }),
+
+  closeConversation: (id: string) =>
+    api.patch<{ conversation: Conversation }>(`/api/marketing/conversations/${id}/close`),
+
+  handBackToBot: (id: string) =>
+    api.patch<{ conversation: Conversation }>(`/api/marketing/conversations/${id}/hand-back-to-bot`),
 };

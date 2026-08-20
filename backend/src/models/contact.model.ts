@@ -1,7 +1,7 @@
 import { Schema, model, type Types } from "mongoose";
 import { E164_PHONE_REGEX } from "../utils/phone";
 
-export const CONTACT_SOURCES = ["manual", "csv_import", "reservation", "order"] as const;
+export const CONTACT_SOURCES = ["manual", "csv_import", "reservation", "order", "whatsapp"] as const;
 export type ContactSource = (typeof CONTACT_SOURCES)[number];
 
 export interface ContactDocument {
@@ -27,7 +27,11 @@ export interface ContactDocument {
  * Auto-sourcing contacts from `reservation`/`order` activity (the two
  * `ContactSource` values that exist in the enum but no write path produces
  * yet) remains a documented future enhancement, not scoped to any part
- * built so far.
+ * built so far. `"whatsapp"` (Part 3) is the one exception — the AI
+ * auto-reply Inbox find-or-creates a `Contact` the first time a phone
+ * number messages the connected WhatsApp number
+ * (`whatsapp-webhook.service.ts` `findOrCreateContactAndConversation`), the
+ * same way `csv_import` auto-creates one per row.
  *
  * `phone` is E.164 (`"+919876543210"`) — the format the WhatsApp Business
  * Cloud API requires for every recipient (`utils/phone.ts`). The compound

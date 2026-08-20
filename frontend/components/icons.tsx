@@ -398,3 +398,33 @@ export function MegaphoneIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Added for the Marketing module's Inbox (Part 3 — AI auto-reply). A paper
+// plane reads as "send a message" at a glance, used on the conversation
+// detail screen's manual reply button. Same flat single-color,
+// `currentColor`-stroke language as every icon above.
+export function SendIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4.5 12 20 4.5l-5 15-4-6-6-1.5Z" />
+      <path d="m11 13 3.5-3.5" />
+    </svg>
+  );
+}
+
+// Added for the Marketing module's Inbox (Part 3). A bot/robot mark reads
+// as "the AI is handling this" at a glance — used to label bot-authored
+// chat bubbles on the conversation detail screen. Same flat single-color,
+// `currentColor`-stroke language as every icon above.
+export function BotIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <rect x="4.5" y="8.5" width="15" height="10" rx="3" />
+      <path d="M12 8.5V5.5" />
+      <circle cx="12" cy="4" r="1.25" />
+      <circle cx="9" cy="13.5" r="1.25" />
+      <circle cx="15" cy="13.5" r="1.25" />
+      <path d="M9.5 17h5" />
+    </svg>
+  );
+}

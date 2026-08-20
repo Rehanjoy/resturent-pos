@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api";
 import { marketingApi } from "@/lib/marketing/api";
 import { CheckCircleIcon, PhoneIcon } from "@/components/icons";
+import { AiSettingsPanel } from "./ai-settings-panel";
 
 function errorMessageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
@@ -145,6 +146,8 @@ export function SetupTab({ canManage }: { canManage: boolean }) {
           </button>
         </form>
       )}
+
+      <AiSettingsPanel canManage={canManage} />
     </div>
   );
 }
