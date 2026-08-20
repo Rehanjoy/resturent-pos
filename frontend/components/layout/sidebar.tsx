@@ -11,6 +11,7 @@ import {
   GlobeIcon,
   KitchenIcon,
   LogoutIcon,
+  MegaphoneIcon,
   MenuBookIcon,
   OrdersIcon,
   ReceiptIcon,
@@ -40,7 +41,13 @@ import {
  * RBAC column. Website was added for the Website Builder module (PRD
  * §3.13) — role set is Owner/Manager only (PRD §2 Website column: Owner
  * "Full", Manager "View", every other role no access at all), matching
- * Staff/Settings' own Owner+Manager-only nav entries above.
+ * Staff/Settings' own Owner+Manager-only nav entries above. Marketing was
+ * added for the WhatsApp marketing module (PRD §6 "WhatsApp Business API")
+ * — Owner/Manager only, no other role gets a nav entry or access at all,
+ * same gate as Staff/Settings/Website (this is Part 1 of 3: WhatsApp
+ * connection Setup + Contacts; Part 2 adds Campaigns, Part 3 adds the AI
+ * auto-reply Inbox, both as tabs inside the same screen, not new nav
+ * entries).
  */
 const NAV_ITEMS: {
   href: string;
@@ -102,6 +109,7 @@ const NAV_ITEMS: {
   },
   { href: "/admin/staff", label: "Staff", roles: ["owner", "manager"], icon: StaffIcon },
   { href: "/admin/website", label: "Website", roles: ["owner", "manager"], icon: GlobeIcon },
+  { href: "/admin/marketing", label: "Marketing", roles: ["owner", "manager"], icon: MegaphoneIcon },
   { href: "/admin/settings", label: "Settings", roles: ["owner", "manager"], icon: SettingsIcon },
 ];
 

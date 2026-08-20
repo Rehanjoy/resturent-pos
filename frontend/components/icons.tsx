@@ -383,3 +383,18 @@ export function ImageIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Added for the Marketing module (WhatsApp Business Cloud API — PRD §6
+// "WhatsApp Business API"). A speech-bubble mark reads as "messaging" at a
+// glance, which fits Part 1 (Setup/Contacts) as well as Part 2's broadcast
+// campaigns and Part 3's inbox that will share this same nav entry. Same
+// flat single-color, `currentColor`-stroke language as every icon above.
+export function MegaphoneIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M4 10.5v3a1.5 1.5 0 0 0 1.5 1.5H7l3.5 4v-14L7 9H5.5A1.5 1.5 0 0 0 4 10.5Z" />
+      <path d="M14 8.5c1.6 1 1.6 6 0 7" />
+      <path d="M17 6c2.8 1.6 2.8 10.4 0 12" />
+    </svg>
+  );
+}

@@ -59,12 +59,17 @@ async function request<TResponse>(
   path: string,
   options: RequestInit = {},
   allowAuthRetry = true,
+  isFormData = false,
 ): Promise<TResponse> {
   const token = getAccessToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      // A `FormData` body (file upload) must NOT get an explicit
+      // Content-Type — the browser sets `multipart/form-data` with the
+      // correct boundary itself; overriding it here would break parsing on
+      // the server (see `api.postForm` / the Marketing Contacts CSV import).
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -88,7 +93,7 @@ async function request<TResponse>(
     ) {
       const newToken = await refreshAccessToken();
       if (newToken) {
-        return request<TResponse>(path, options, false);
+        return request<TResponse>(path, options, false, isFormData);
       }
       setAccessToken(null);
       notifySessionExpired();
@@ -121,4 +126,8 @@ export const api = {
       method: "DELETE",
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
+  /** POST a `FormData` body (file upload) — see the `isFormData` note on
+   * `request` above for why this can't just reuse `api.post`. */
+  postForm: <TResponse>(path: string, formData: FormData) =>
+    request<TResponse>(path, { method: "POST", body: formData }, true, true),
 };

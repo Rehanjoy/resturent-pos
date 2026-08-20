@@ -14,6 +14,7 @@ Every environment variable used anywhere in the codebase is logged here the mome
 | `JWT_REFRESH_SECRET` | `src/utils/jwt.ts` | Signs/verifies the long-lived (7 day) refresh token stored as an httpOnly cookie and hashed in the `sessions` collection for revocation. Must differ from `JWT_ACCESS_SECRET`. | Generate locally: `openssl rand -hex 32`. |
 | `JWT_ACCESS_EXPIRY` | `src/config/env.ts`, `src/utils/jwt.ts` | Access token lifetime (jsonwebtoken duration string). | Set manually; PRD default is `15m`. |
 | `JWT_REFRESH_EXPIRY` | `src/config/env.ts`, `src/utils/jwt.ts` | Refresh token lifetime (jsonwebtoken duration string) and the refresh cookie's `maxAge` basis. | Set manually; PRD default is `7d`. |
+| `ENCRYPTION_KEY` | `src/utils/encryption.ts` (via `src/config/env.ts`) | AES-256-GCM key protecting Marketing module secrets-at-rest — the Meta WhatsApp Business Cloud API access token (`WhatsappConfig.accessTokenEncrypted`) now, a Gemini API key in Part 3. Must be exactly 64 hex characters (32 bytes); the process fails to start otherwise. | Generate locally: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Never reuse across environments; rotating it makes every previously encrypted secret unreadable (the restaurant would need to reconnect WhatsApp). |
 
 ## frontend/.env.local (from `frontend/.env.example`)
 

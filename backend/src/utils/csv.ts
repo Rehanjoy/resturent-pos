@@ -21,3 +21,60 @@ export function toCsv(headers: string[], rows: Record<string, string | number>[]
   }
   return lines.join("\n");
 }
+
+/**
+ * Minimal RFC4180-ish CSV parser for the Contacts import endpoint
+ * (`contact.service.ts` `importContactsFromCsv`) — handles quoted fields
+ * (commas/newlines inside quotes, escaped `""`). Deliberately not a new
+ * dependency, same "small hand-rolled utility" scope as `toCsv` above.
+ * Returns raw string cells; the caller is responsible for header mapping
+ * and per-row validation. Fully blank trailing lines are dropped so a file
+ * saved with a trailing newline doesn't produce a phantom empty row.
+ */
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+
+  const input = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  for (let i = 0; i < input.length; i += 1) {
+    const char = input[i]!;
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (input[i + 1] === '"') {
+          field += '"';
+          i += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += char;
+    }
+  }
+
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+
+  return rows.filter((cells) => !(cells.length === 1 && cells[0] === ""));
+}

@@ -19,6 +19,8 @@ import supplierRoutes from "./supplier.routes";
 import inventoryTransactionRoutes from "./inventory-transaction.routes";
 import reservationRoutes from "./reservation.routes";
 import websiteRoutes from "./website.routes";
+import whatsappConfigRoutes from "./whatsapp-config.routes";
+import contactRoutes from "./contact.routes";
 
 const router = Router();
 
@@ -42,5 +44,10 @@ router.use("/inventory/suppliers", supplierRoutes);
 router.use("/inventory/transactions", inventoryTransactionRoutes);
 router.use("/reservations", reservationRoutes);
 router.use("/website", websiteRoutes);
+// Marketing module (Part 1 of 3: WhatsApp connection config + Contacts).
+// Two resource routers under one `/marketing` prefix, same "one router
+// file per resource" convention as every other module.
+router.use("/marketing/whatsapp-config", whatsappConfigRoutes);
+router.use("/marketing/contacts", contactRoutes);
 
 export default router;

@@ -7,4 +7,7 @@
 process.env.JWT_ACCESS_SECRET ??= "test-access-secret-do-not-use-in-prod";
 process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret-do-not-use-in-prod";
 process.env.CORS_ORIGIN ??= "http://localhost:3000";
+// 64 hex characters (32 bytes) — required shape for `config/env.ts`'s
+// `requireHexKey("ENCRYPTION_KEY", 32)`. Throwaway test-only value.
+process.env.ENCRYPTION_KEY ??= "8251dd00e700a9acf30b4656c7f7c09c548ca9ac7ae91322a71c050416004674";
 process.env.NODE_ENV = "test";
