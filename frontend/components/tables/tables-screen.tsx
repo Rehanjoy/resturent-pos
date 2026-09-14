@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api";
@@ -12,43 +11,27 @@ import type {
   TableStatus,
   TableStatusChangedEvent,
 } from "@/lib/tables/types";
-import { ordersApi } from "@/lib/orders/api";
-import type { Order, OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
 import { useSocketEvent } from "@/lib/hooks/use-socket-event";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AreaTabs } from "./area-tabs";
-import { TableCard } from "./table-card";
-import { TableStatChips } from "./table-stat-chips";
 import { AreaFormModal } from "./area-form-modal";
 import { TableFormModal } from "./table-form-modal";
-import { SeatingFloor } from "./seating-floor";
+import { UnifiedSeatingFloor } from "./unified-seating-floor";
 
 const VIEW_ROLES = new Set(["owner", "manager", "cashier", "server"]);
 const MANAGE_ROLES = new Set(["owner", "manager"]);
 const STATUS_CHANGE_ROLES = new Set(["owner", "manager", "server"]);
-// Mirrors the Billing gate in `order-workspace.tsx` — same three roles can
-// jump straight from a served table's card to `/admin/billing/[orderId]`.
-const BILLING_ROLES = new Set(["owner", "manager", "cashier"]);
-
-// A table's own `status` field doesn't carry its order's item count/amount
-// — that lives on the `Order` document. Rather than add a new backend
-// endpoint (out of scope for this frontend-only pass), this screen reuses
-// the existing `GET /api/orders` list endpoint with a bounded time window:
-// any order still holding a table (draft/sent/in_kitchen/ready/served) was
-// necessarily created recently, so a 24h lookback is enough to catch every
-// live order — including one that started just before midnight — without
-// pulling the restaurant's entire order history on every Tables screen
-// load (that endpoint has no built-in pagination).
-const ACTIVE_ORDER_LOOKBACK_HOURS = 24;
-const LIVE_ORDER_STATUSES: OrderStatus[] = ["draft", "sent", "in_kitchen", "ready", "served"];
-
 function errorMessageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
 }
 
 export function TablesScreen() {
   const { user } = useAuth();
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   const canView = !!user && VIEW_ROLES.has(user.role);
@@ -56,7 +39,6 @@ export function TablesScreen() {
   const canChangeStatus = !!user && STATUS_CHANGE_ROLES.has(user.role);
 
   const [activeAreaId, setActiveAreaId] = useState<string | null>(null);
-  const [view, setView] = useState<"chairs" | "manage">("chairs");
   const [search, setSearch] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
   const [areaModal, setAreaModal] = useState<{ mode: "add" | "edit"; area: Area | null } | null>(
     null,
@@ -78,32 +60,8 @@ export function TablesScreen() {
     enabled: canView,
   });
 
-  const activeOrdersQuery = useQuery({
-    queryKey: ["active-orders-for-tables"],
-    queryFn: () =>
-      ordersApi
-        .list({ from: new Date(Date.now() - ACTIVE_ORDER_LOOKBACK_HOURS * 3_600_000).toISOString() })
-        .then((result) => result.orders),
-    enabled: canView,
-  });
-
   const areas = areasQuery.data?.areas ?? [];
   const tables = tablesQuery.data?.tables;
-  const areaNameById = useMemo(
-    () => new Map((areasQuery.data?.areas ?? []).map((area) => [area.id, area.name])),
-    [areasQuery.data],
-  );
-
-  const orderByTableId = useMemo(() => {
-    const map = new Map<string, Order>();
-    for (const order of activeOrdersQuery.data ?? []) {
-      if (LIVE_ORDER_STATUSES.includes(order.status)) {
-        map.set(order.tableId, order);
-      }
-    }
-    return map;
-  }, [activeOrdersQuery.data]);
-
   const visibleTables = useMemo(() => {
     const all = tables ?? [];
     return all.filter(table => (!activeAreaId || table.areaId === activeAreaId) && table.name.toLowerCase().includes(search.toLowerCase()));
@@ -130,20 +88,6 @@ export function TablesScreen() {
           };
         },
       );
-    },
-    { enabled: canView },
-  );
-
-  useSocketEvent<OrderUpdatedEvent>(
-    "order:updated",
-    (event) => {
-      queryClient.setQueryData<Order[] | undefined>(["active-orders-for-tables"], (current) => {
-        if (!current) return current;
-        const exists = current.some((order) => order.id === event.order.id);
-        return exists
-          ? current.map((order) => (order.id === event.order.id ? event.order : order))
-          : [...current, event.order];
-      });
     },
     { enabled: canView },
   );
@@ -260,22 +204,30 @@ export function TablesScreen() {
         subtitle="A place for every guest. Manage chairs, shared tables and group bookings."
         action={
           canManage && (
-            <button
+            <Button
               type="button"
+              variant="accent"
               onClick={() => setTableModal({ mode: "add", table: null })}
               disabled={areas.length === 0}
-              className="rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
               title={areas.length === 0 ? "Add an area first" : undefined}
             >
               + Add Table
-            </button>
+            </Button>
           )
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3"><div className="flex rounded-full bg-white p-1"><button onClick={() => setView("chairs")} className={`min-h-11 rounded-full px-5 text-sm font-semibold ${view === "chairs" ? "bg-primary text-white" : "text-text-muted"}`}>Chairs & groups</button><button onClick={() => setView("manage")} className={`min-h-11 rounded-full px-5 text-sm font-semibold ${view === "manage" ? "bg-primary text-white" : "text-text-muted"}`}>Manage tables</button></div><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search tables…" aria-label="Search tables" className="min-w-0 flex-1 rounded-full border border-border bg-white px-4 py-2" /></div>
-
-      {!isLoading && !isError && tables && tables.length > 0 && <TableStatChips tables={tables} />}
+      <div className="rounded-2xl border border-border bg-white p-2 shadow-sm">
+        <label htmlFor="table-search" className="sr-only">Search tables</label>
+        <Input
+          id="table-search"
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by table name…"
+          className="border-0 bg-transparent shadow-none focus-visible:ring-2 focus-visible:ring-primary"
+        />
+      </div>
 
       <AreaTabs
         areas={areas}
@@ -297,84 +249,65 @@ export function TablesScreen() {
         }}
       />
 
-      {isLoading && <p className="text-small text-text-muted">Loading tables…</p>}
+      {isLoading && (
+        <div role="status" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3].map((key) => <Skeleton key={key} className="h-40 rounded-3xl" />)}
+        </div>
+      )}
 
       {isError && (
-        <p className="text-small text-error">
-          Could not load tables — check your connection and try again.
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>Could not load tables — check your connection and try again.</AlertDescription>
+        </Alert>
       )}
 
       {!isLoading && !isError && areas.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+        <Card className="border-dashed p-8 text-center">
           <p className="text-body text-text-muted">
             No areas yet. Add your first area to start setting up tables.
           </p>
           {canManage && (
-            <button
-              type="button"
-              onClick={() => setAreaModal({ mode: "add", area: null })}
-              className="mt-4 rounded-md bg-accent px-4 py-2 text-button text-white"
-            >
+            <Button type="button" variant="accent" onClick={() => setAreaModal({ mode: "add", area: null })} className="mt-4">
               Add Area
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
       )}
 
       {!isLoading && !isError && areas.length > 0 && visibleTables.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+        <Card className="border-dashed p-8 text-center">
           <p className="text-body text-text-muted">
             No tables yet. Add your first table to start taking orders.
           </p>
           {canManage && (
-            <button
-              type="button"
-              onClick={() => setTableModal({ mode: "add", table: null })}
-              className="mt-4 rounded-md bg-accent px-4 py-2 text-button text-white"
-            >
+            <Button type="button" variant="accent" onClick={() => setTableModal({ mode: "add", table: null })} className="mt-4">
               Add Table
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
       )}
 
-      {view === "chairs" && <SeatingFloor areaId={activeAreaId} search={search} canManage={canManage} canBook={canChangeStatus} />}
-
-      {view === "manage" && !isLoading && !isError && visibleTables.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {visibleTables.map((table) => (
-            <TableCard
-              key={table.id}
-              table={table}
-              areaName={areaNameById.get(table.areaId)}
-              order={orderByTableId.get(table.id)}
-              canManage={canManage}
-              canChangeStatus={canChangeStatus}
-              canBill={!!user && BILLING_ROLES.has(user.role)}
-              onOpen={(target) => {
-                if (target.status === "free") {
-                  router.push(`/admin/orders/new?tableId=${target.id}`);
-                } else if (target.status === "occupied") {
-                  router.push(`/admin/orders/active?tableId=${target.id}`);
-                }
-              }}
-              onBill={(order) => router.push(`/admin/billing/${order.id}`)}
-              onStatusChange={(target, status) =>
-                statusMutation.mutate({ id: target.id, status })
-              }
-              onEdit={(target) => {
-                setFormError(null);
-                setTableModal({ mode: "edit", table: target });
-              }}
-              onDelete={(target) => {
-                if (window.confirm(`Delete table "${target.name}"?`)) {
-                  deleteTableMutation.mutate(target.id);
-                }
-              }}
-            />
-          ))}
-        </div>
+      {!isLoading && !isError && tables && tables.length > 0 && (
+        <UnifiedSeatingFloor
+          areaId={activeAreaId}
+          search={search}
+          canManage={canManage}
+          canBook={canChangeStatus}
+          catalogTables={tables}
+          onEditTable={(target) => {
+            setFormError(null);
+            setTableModal({ mode: "edit", table: target });
+          }}
+          onDeleteTable={(target) => {
+            if (window.confirm(`Delete table "${target.name}"?`)) {
+              deleteTableMutation.mutate(target.id);
+            }
+          }}
+          onSetTableAvailable={(target) =>
+            statusMutation.mutate({ id: target.id, status: "free" })
+          }
+          tableStatusPending={statusMutation.isPending}
+        />
       )}
 
       {areaModal && (

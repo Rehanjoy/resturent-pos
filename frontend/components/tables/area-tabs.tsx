@@ -1,6 +1,7 @@
 "use client";
 
 import type { Area } from "@/lib/tables/types";
+import { Button } from "@/components/ui/button";
 
 export function AreaTabs({
   areas,
@@ -19,68 +20,53 @@ export function AreaTabs({
   onEditArea: (area: Area) => void;
   onDeleteArea: (area: Area) => void;
 }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
-      <button
-        type="button"
-        onClick={() => onSelect(null)}
-        className={`rounded-full px-4 py-1.5 text-small font-medium transition-colors ${
-          activeAreaId === null
-            ? "border border-primary text-primary"
-            : "border border-border text-text-muted hover:text-text"
-        }`}
-      >
-        All
-      </button>
+  const activeArea = areas.find((area) => area.id === activeAreaId);
 
-      {areas.map((area) => (
-        <div key={area.id} className="relative flex items-center">
-          <button
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+      <div className="flex max-w-full gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Dining areas">
+        <Button
+          type="button"
+          variant="outline"
+          role="tab"
+          aria-selected={activeAreaId === null}
+          onClick={() => onSelect(null)}
+          className={activeAreaId === null ? "border-primary bg-primary text-white hover:border-primary hover:text-white" : "border-border text-text-muted"}
+        >
+          All areas
+        </Button>
+
+        {areas.map((area) => (
+          <Button
+            key={area.id}
             type="button"
+            variant="outline"
+            role="tab"
+            aria-selected={activeAreaId === area.id}
             onClick={() => onSelect(area.id)}
-            className={`rounded-full px-4 py-1.5 text-small font-medium transition-colors ${
-              activeAreaId === area.id
-                ? "border border-primary text-primary"
-                : "border border-border text-text-muted hover:text-text"
-            }`}
+            className={activeAreaId === area.id ? "border-primary bg-primary text-white hover:border-primary hover:text-white" : "border-border text-text-muted"}
           >
             {area.name}
-          </button>
-          {/* Always visible (not hover-only) — this screen runs on
-              touch-only POS/KDS tablets (PRD §7), which have no hover
-              state, so a `group-hover` reveal would make these
-              unreachable there. */}
-          {canManage && (
-            <span className="ml-1 flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => onEditArea(area)}
-                aria-label={`Edit ${area.name}`}
-                className="text-small text-text-muted transition-colors hover:text-secondary"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteArea(area)}
-                aria-label={`Delete ${area.name}`}
-                className="text-small text-text-muted transition-colors hover:text-error"
-              >
-                Delete
-              </button>
-            </span>
-          )}
-        </div>
-      ))}
+          </Button>
+        ))}
+      </div>
 
       {canManage && (
-        <button
-          type="button"
-          onClick={onAddArea}
-          className="rounded-full border border-dashed border-border px-4 py-1.5 text-small font-medium text-text-muted hover:border-primary hover:text-primary"
-        >
-          + Add Area
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {activeArea && (
+            <>
+              <Button type="button" variant="ghost" onClick={() => onEditArea(activeArea)} className="hover:bg-surface hover:text-secondary">
+                Edit area
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => onDeleteArea(activeArea)} className="hover:bg-red-50 hover:text-error">
+                Delete area
+              </Button>
+            </>
+          )}
+          <Button type="button" variant="outline" onClick={onAddArea} className="border-dashed border-primary text-primary hover:border-primary hover:text-primary">
+            + Add area
+          </Button>
+        </div>
       )}
     </div>
   );
