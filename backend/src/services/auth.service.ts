@@ -377,16 +377,34 @@ export async function refreshSession(
   }
 
   if (session.revokedAt) {
-    // Rotation-reuse detection: a refresh token that was already rotated
-    // out (or explicitly revoked) is being presented again — most likely
-    // it leaked. Kill every session for this user so both the attacker
-    // and the legitimate user are forced to log in again.
-    await revokeAllSessionsForUser(session.userId);
-    throw new AppError(
-      "Session revoked for security. Please log in again.",
-      401,
-      "REFRESH_TOKEN_REUSED",
-    );
+    // Rotation-reuse detection with a 60-second grace window:
+    // In React 18/19 StrictMode or concurrent duplicate calls,
+    // multiple requests can present the same token almost simultaneously.
+    const ROTATION_GRACE_PERIOD_MS = 60 * 1000;
+    const isWithinGracePeriod =
+      Date.now() - session.revokedAt.getTime() < ROTATION_GRACE_PERIOD_MS;
+
+    if (!isWithinGracePeriod) {
+      await revokeAllSessionsForUser(session.userId);
+      throw new AppError(
+        "Session revoked for security. Please log in again.",
+        401,
+        "REFRESH_TOKEN_REUSED",
+      );
+    }
+
+    // Within grace period: user is legitimate! Fetch user and issue fresh tokens without killing other sessions.
+    const user = await User.findById(payload.userId);
+    if (!user || !user.isActive) {
+      throw new AppError("Account not available.", 401, "ACCOUNT_UNAVAILABLE");
+    }
+
+    const tokens = await issueTokensForUser(user, {
+      userAgent: input.userAgent,
+      ipAddress: input.ipAddress,
+    });
+
+    return { ...tokens, user: sanitizeUser(user) };
   }
 
   if (session.expiresAt.getTime() < Date.now()) {

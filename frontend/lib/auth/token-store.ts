@@ -1,25 +1,85 @@
-/**
- * In-memory-only access token store — deliberately NOT localStorage or
- * sessionStorage. Per PRD §7 (XSS mitigation), a plain module-level
- * variable can't be read by browser storage inspection and isn't exposed
- * to any script that doesn't already have access to this module's scope.
- * The refresh token (7-day) never touches JavaScript at all — it's an
- * httpOnly cookie the browser manages entirely; the backend is the only
- * thing that ever reads it.
- *
- * Trade-off: this variable resets to `null` on every full page reload.
- * `AuthProvider` (`auth-context.tsx`) calls `POST /api/auth/refresh` on
- * mount to silently re-derive a fresh access token from the httpOnly
- * cookie before rendering any protected content.
- */
-let accessToken: string | null = null;
+const ACCESS_TOKEN_KEY = "saffron_access_token";
+const AUTH_USER_KEY = "saffron_auth_user";
+
+let inMemoryToken: string | null = null;
+
+function isTokenValid(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    // Cushion of 10 seconds before actual exp
+    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now() + 10000;
+  } catch {
+    return false;
+  }
+}
 
 export function getAccessToken(): string | null {
-  return accessToken;
+  if (inMemoryToken && isTokenValid(inMemoryToken)) {
+    return inMemoryToken;
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(ACCESS_TOKEN_KEY);
+      if (stored) {
+        if (isTokenValid(stored)) {
+          inMemoryToken = stored;
+          return stored;
+        } else {
+          localStorage.removeItem(ACCESS_TOKEN_KEY);
+          localStorage.removeItem(AUTH_USER_KEY);
+          inMemoryToken = null;
+        }
+      }
+    } catch {
+      // Ignore localStorage exceptions (private mode, SSR)
+    }
+  }
+
+  return null;
 }
 
 export function setAccessToken(token: string | null): void {
-  accessToken = token;
+  inMemoryToken = token;
+  if (typeof window !== "undefined") {
+    try {
+      if (token) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, token);
+      } else {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }
+}
+
+export function getStoredUser<T>(): T | null {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(AUTH_USER_KEY);
+      if (stored) return JSON.parse(stored) as T;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function setStoredUser(user: unknown | null): void {
+  if (typeof window !== "undefined") {
+    try {
+      if (user) {
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(AUTH_USER_KEY);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }
 }
 
 // Lets the transport layer (lib/api.ts) tell AuthProvider "the session is
@@ -35,3 +95,4 @@ export function onSessionExpired(listener: SessionExpiredListener | null): void 
 export function notifySessionExpired(): void {
   sessionExpiredListener?.();
 }
+

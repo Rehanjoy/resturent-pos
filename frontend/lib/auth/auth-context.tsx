@@ -2,7 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authApi } from "./api";
-import { onSessionExpired, setAccessToken } from "./token-store";
+import {
+  getAccessToken,
+  getStoredUser,
+  onSessionExpired,
+  setAccessToken,
+  setStoredUser,
+} from "./token-store";
 import type { AuthUser } from "./types";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -21,18 +27,36 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Owns the client-side auth state for the whole app (mounted once in
- * `app/providers.tsx`, above both `/login` and `/admin`). On mount it
- * silently calls `/api/auth/refresh` — the httpOnly refresh cookie is the
- * only thing that survives a hard page reload, since the access token is
- * held in memory only (see `token-store.ts`).
+ * Owns client-side auth state with 1-day session persistence.
+ * Initializes synchronously from storage when an unexpired token exists,
+ * preventing false unauthenticated bounces on page reloads or tab switches.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>("loading");
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [status, setStatus] = useState<AuthStatus>(() => {
+    if (typeof window !== "undefined") {
+      const token = getAccessToken();
+      const storedUser = getStoredUser<AuthUser>();
+      if (token && storedUser) {
+        return "authenticated";
+      }
+    }
+    return "loading";
+  });
+
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window !== "undefined") {
+      const token = getAccessToken();
+      const storedUser = getStoredUser<AuthUser>();
+      if (token && storedUser) {
+        return storedUser;
+      }
+    }
+    return null;
+  });
 
   const setSession = useCallback((accessToken: string, nextUser: AuthUser) => {
     setAccessToken(accessToken);
+    setStoredUser(nextUser);
     setUser(nextUser);
     setStatus("authenticated");
   }, []);
@@ -41,10 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } catch {
-      // Best-effort: clear local state even if the network call fails —
-      // the user still expects to be signed out on this device.
+      // Best-effort: clear local state even if the network call fails
     } finally {
       setAccessToken(null);
+      setStoredUser(null);
       setUser(null);
       setStatus("unauthenticated");
     }
@@ -52,11 +76,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     const currentUser = await authApi.me();
+    setStoredUser(currentUser);
     setUser(currentUser);
   }, []);
 
   useEffect(() => {
     onSessionExpired(() => {
+      setAccessToken(null);
+      setStoredUser(null);
       setUser(null);
       setStatus("unauthenticated");
     });
@@ -66,20 +93,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    authApi
-      .refresh()
-      .then((result) => {
-        if (cancelled) return;
-        setAccessToken(result.accessToken);
-        setUser(result.user);
-        setStatus("authenticated");
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setAccessToken(null);
-        setUser(null);
-        setStatus("unauthenticated");
-      });
+    const token = getAccessToken();
+    if (token) {
+      // Valid token is already present in storage (valid for 1 day).
+      // Background verify current user state:
+      authApi
+        .me()
+        .then((currentUser) => {
+          if (cancelled) return;
+          setStoredUser(currentUser);
+          setUser(currentUser);
+          setStatus("authenticated");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          // me() failed: attempt silent refresh from cookie
+          authApi
+            .refresh()
+            .then((result) => {
+              if (cancelled) return;
+              setAccessToken(result.accessToken);
+              setStoredUser(result.user);
+              setUser(result.user);
+              setStatus("authenticated");
+            })
+            .catch(() => {
+              if (cancelled) return;
+              setAccessToken(null);
+              setStoredUser(null);
+              setUser(null);
+              setStatus("unauthenticated");
+            });
+        });
+    } else {
+      // No token in storage: attempt silent refresh from cookie
+      authApi
+        .refresh()
+        .then((result) => {
+          if (cancelled) return;
+          setAccessToken(result.accessToken);
+          setStoredUser(result.user);
+          setUser(result.user);
+          setStatus("authenticated");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setAccessToken(null);
+          setStoredUser(null);
+          setUser(null);
+          setStatus("unauthenticated");
+        });
+    }
 
     return () => {
       cancelled = true;

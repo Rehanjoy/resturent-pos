@@ -4,23 +4,28 @@ import { env } from "../config/env";
 import * as authService from "../services/auth.service";
 
 const REFRESH_COOKIE_NAME = "refreshToken";
-// Scoped to /api/auth so the browser only ever sends this cookie to the
-// auth endpoints that need it (refresh/logout) — not every API call.
-const REFRESH_COOKIE_PATH = "/api/auth";
+const REFRESH_COOKIE_PATH = "/";
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function setRefreshCookie(res: Response, refreshToken: string): void {
+  const isProduction = env.nodeEnv === "production";
   res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
     httpOnly: true,
-    secure: env.nodeEnv === "production",
-    sameSite: "strict",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     path: REFRESH_COOKIE_PATH,
     maxAge: REFRESH_COOKIE_MAX_AGE_MS,
   });
 }
 
 function clearRefreshCookie(res: Response): void {
-  res.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+  const isProduction = env.nodeEnv === "production";
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: REFRESH_COOKIE_PATH,
+  });
 }
 
 function readRefreshCookie(req: Request): string | undefined {

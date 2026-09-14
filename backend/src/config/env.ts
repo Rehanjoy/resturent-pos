@@ -49,7 +49,7 @@ export const env: EnvConfig = {
   // must fail to start rather than sign tokens with a guessable default.
   jwtAccessSecret: requireEnv("JWT_ACCESS_SECRET"),
   jwtRefreshSecret: requireEnv("JWT_REFRESH_SECRET"),
-  jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY ?? "15m",
+  jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY ?? "1d",
   jwtRefreshExpiry: process.env.JWT_REFRESH_EXPIRY ?? "7d",
   // Marketing module secrets-at-rest (Meta WhatsApp access token now, a
   // Gemini API key in Part 3) — real secret, no fallback, same reasoning as
