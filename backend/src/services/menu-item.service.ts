@@ -13,6 +13,7 @@ import {
 export interface IngredientMappingDto {
   inventoryItemId: string;
   quantityPerUnit: number;
+  quantityPerRecipe?: number;
 }
 
 export interface MenuItemDto {
@@ -26,7 +27,9 @@ export interface MenuItemDto {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable: boolean;
+  prepMinutes?: number;
   ingredientMapping: IngredientMappingDto[];
+  recipeYield: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,10 +46,13 @@ function toDto(item: HydratedDocument<MenuItemDocument>): MenuItemDto {
     spiceLevel: item.spiceLevel,
     imageUrl: item.imageUrl,
     isAvailable: item.isAvailable,
+    prepMinutes: item.prepMinutes,
     ingredientMapping: (item.ingredientMapping ?? []).map((entry) => ({
       inventoryItemId: entry.inventoryItemId.toString(),
       quantityPerUnit: entry.quantityPerUnit,
+      quantityPerRecipe: entry.quantityPerRecipe,
     })),
+    recipeYield: item.recipeYield ?? 1,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };

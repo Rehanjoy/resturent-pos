@@ -27,8 +27,8 @@ export interface TableDocument {
 
 /**
  * A physical table on the floor. `qrToken` is generated at creation time so
- * the field exists for the Phase 2 QR self-ordering PWA (PRD §3.6) — no
- * QR-ordering endpoint reads it yet, this module only produces the token.
+ * the field is the unguessable table component used to generate one QR per
+ * numbered chair for the public dining flow (PRD §3.6).
  */
 const tableSchema = new Schema<TableDocument>(
   {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { ApiError } from "@/lib/api";
@@ -22,8 +22,18 @@ import {
 } from "./inventory-table";
 import { InventoryItemFormModal } from "./inventory-item-form-modal";
 import { InventoryCategoryModal } from "./inventory-category-modal";
-import { InventoryAdjustModal } from "./inventory-adjust-modal";
+import { InventoryAdjustModal, type InventoryMovementInput } from "./inventory-adjust-modal";
 import { SupplierQuickAddModal } from "./supplier-quick-add-modal";
+import { menuItemsApi } from "@/lib/menu/api";
+import dynamic from "next/dynamic";
+import { formatStockQuantity } from "@/lib/inventory/units";
+import { IngredientHistoryModal } from "./ingredient-history-modal";
+
+const CostingWorkspace = dynamic(() => import("./costing-workspace").then(module => module.CostingWorkspace), { loading: () => <p role="status">Loading dish profitability…</p> });
+
+const ProductionPlanner = dynamic(() => import("./production-planner").then(module => module.ProductionPlanner), {
+  loading: () => <div className="h-20 animate-pulse rounded-3xl bg-white" aria-label="Loading production planner" />,
+});
 
 // PRD §2 Inventory column: Owner/Manager/Inventory Manager "Full"; Chef
 // "View (deduction only)"; Cashier/Server have no access at all (no nav
@@ -43,22 +53,20 @@ export function InventoryScreen() {
   const canManage = !!user && MANAGE_ROLES.has(user.role);
 
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const search = searchInput.trim();
+  const [section, setSection] = useState("ingredients");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [stockFilter, setStockFilter] = useState("all");
+  const [sort, setSort] = useState("name");
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [itemModal, setItemModal] = useState<{ mode: "add" | "edit"; item: InventoryItem | null } | null>(
     null,
   );
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
   const [supplierQuickAddOpen, setSupplierQuickAddOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
-
-  // Debounced search — avoids a request per keystroke against
-  // GET /api/inventory/items?search=.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
   const categoriesQuery = useQuery({
     queryKey: ["inventory-categories"],
@@ -67,8 +75,9 @@ export function InventoryScreen() {
   });
 
   const itemsQuery = useQuery({
-    queryKey: ["inventory-items", search],
-    queryFn: () => inventoryItemsApi.list({ search: search || undefined }),
+    queryKey: ["inventory-items"],
+    queryFn: () => inventoryItemsApi.list(),
+    refetchInterval: 30_000,
     enabled: canView,
   });
 
@@ -77,8 +86,20 @@ export function InventoryScreen() {
     queryFn: () => suppliersApi.list(),
     enabled: canView,
   });
+  const menuQuery = useQuery({ queryKey: ["menu-items"], queryFn: () => menuItemsApi.list(), enabled: canView });
 
   const items = itemsQuery.data?.inventoryItems;
+
+  const visibleItems = useMemo(() => (items ?? []).filter(item =>
+    (!categoryFilter || item.categoryId === categoryFilter) &&
+    (!search || item.name.toLowerCase().includes(search.toLowerCase())) &&
+    (stockFilter === "all" || (stockFilter === "low" ? item.currentStock <= item.reorderThreshold : stockFilter === "critical" ? item.currentStock <= 0 : item.currentStock > item.reorderThreshold))
+  ).sort((a, b) => sort === "value" ? b.currentStock * b.costPerUnit - a.currentStock * a.costPerUnit : sort === "stock" ? a.currentStock - b.currentStock : a.name.localeCompare(b.name)), [items, categoryFilter, search, stockFilter, sort]);
+  const linkedDishCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const dish of menuQuery.data?.menuItems ?? []) for (const id of new Set((dish.ingredientMapping ?? []).map(row => row.inventoryItemId))) counts[id] = (counts[id] ?? 0) + 1;
+    return counts;
+  }, [menuQuery.data]);
 
   const categories = useMemo(() => categoriesQuery.data?.categories ?? [], [categoriesQuery.data]);
   const suppliers = useMemo(() => suppliersQuery.data?.suppliers ?? [], [suppliersQuery.data]);
@@ -150,7 +171,7 @@ export function InventoryScreen() {
   });
 
   const adjustMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: { quantityDelta: number; reason: string } }) =>
+    mutationFn: ({ id, input }: { id: string; input: InventoryMovementInput }) =>
       inventoryItemsApi.adjust(id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
@@ -162,19 +183,7 @@ export function InventoryScreen() {
 
   const toggleReorderMutation = useMutation({
     mutationFn: (id: string) => inventoryItemsApi.toggleReorderRequested(id),
-    onSuccess: (result) => {
-      queryClient.setQueryData<{ inventoryItems: InventoryItem[] } | undefined>(
-        ["inventory-items", search],
-        (current) => {
-          if (!current) return current;
-          return {
-            inventoryItems: current.inventoryItems.map((entry) =>
-              entry.id === result.inventoryItem.id ? result.inventoryItem : entry,
-            ),
-          };
-        },
-      );
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory-items"] }),
     onError: (error) => window.alert(errorMessageOf(error, "Could not update reorder status.")),
   });
 
@@ -198,8 +207,8 @@ export function InventoryScreen() {
     );
   }
 
-  const isLoading = categoriesQuery.isLoading || itemsQuery.isLoading || suppliersQuery.isLoading;
-  const isError = categoriesQuery.isError || itemsQuery.isError || suppliersQuery.isError;
+  const isLoading = categoriesQuery.isLoading || itemsQuery.isLoading || suppliersQuery.isLoading || menuQuery.isLoading;
+  const isError = categoriesQuery.isError || itemsQuery.isError || suppliersQuery.isError || menuQuery.isError;
 
   // Reorder = swap `displayOrder` with the adjacent row (two direct API
   // calls, not the rename mutation above — no optimistic UI needed here,
@@ -219,20 +228,20 @@ export function InventoryScreen() {
   }
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
+    <main className="mx-auto flex max-w-7xl flex-col gap-6 px-3 py-5 sm:px-6 sm:py-8">
       <PageHeader
-        title="Inventory"
-        subtitle="Stock levels, suppliers, and reorder status."
+        title="Inventory & food cost"
+        subtitle="One ingredient register. Linked recipes. Clear dish costs and daily stock control."
         action={
           canManage && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setCategoryError(null);
                   setCategoryModalOpen(true);
                 }}
-                className="rounded-lg border border-border px-4 py-2 text-button text-text-muted transition-colors hover:text-text"
+                className="min-h-11 rounded-lg border border-border px-4 py-2 text-button text-text-muted transition-colors hover:text-text"
               >
                 Categories
               </button>
@@ -244,7 +253,7 @@ export function InventoryScreen() {
                 }}
                 disabled={categories.length === 0}
                 title={categories.length === 0 ? "Add a category first" : undefined}
-                className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
+                className="flex min-h-11 items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
               >
                 <PlusIcon className="h-4 w-4" />
                 Add Item
@@ -258,7 +267,7 @@ export function InventoryScreen() {
 
       {isError && (
         <p className="text-small text-error">
-          Could not load inventory — check your connection and try again.
+          Could not load inventory — check your connection. <button className="min-h-11 underline" onClick={() => { void itemsQuery.refetch(); void categoriesQuery.refetch(); void suppliersQuery.refetch(); void menuQuery.refetch(); }}>Retry loading</button>
         </p>
       )}
 
@@ -275,13 +284,41 @@ export function InventoryScreen() {
             <StatCard label="Inventory Value" value={formatMoney(kpis.value)} icon={WalletIcon} />
           </div>
 
+          {items && items.some((item) => item.currentStock <= item.reorderThreshold) && (
+            <section aria-label="Stock alerts" className="rounded-2xl border border-warning/30 bg-warning/10 p-4">
+              <h2 className="font-semibold text-text">Restock attention needed</h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {items.filter((item) => item.currentStock <= item.reorderThreshold).map((item) => (
+                  <span key={item.id} className={`rounded-full bg-surface px-3 py-2 text-small ${item.currentStock <= 0 ? "text-error" : "text-text"}`}>
+                    {item.currentStock <= 0 ? "Critical" : "Low stock"}: {item.name} · {formatStockQuantity(item.currentStock, item.unit)}
+                    {item.reorderRequested ? " · delivery pending" : " · reorder now"}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+          <nav aria-label="Inventory workspaces" className="flex flex-wrap gap-2 rounded-2xl border border-border bg-surface p-2">
+            {[["ingredients", "Ingredients"], ["recipes", "Recipes & production"], ["costing", "Dish profitability"]].map(([value, label]) => <button key={value} type="button" aria-current={section === value ? "page" : undefined} onClick={() => setSection(value)} className={`min-h-11 rounded-xl px-4 font-semibold ${section === value ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-background"}`}>{label}</button>)}
+          </nav>
+          {section === "recipes" && items && menuQuery.data && <ProductionPlanner menu={menuQuery.data.menuItems} inventory={items} canManage={canManage || user.role === "chef"} />}
+          {section === "costing" && <CostingWorkspace />}
+          {section === "ingredients" && <>
+          <div className="flex flex-wrap gap-2" aria-label="Ingredient categories">
+            <button type="button" onClick={() => setCategoryFilter("")} aria-pressed={!categoryFilter} className={`min-h-11 rounded-full border px-4 text-sm ${!categoryFilter ? "border-primary text-primary" : "border-border"}`}>All ingredients ({items?.length ?? 0})</button>
+            {categories.map(category => <button key={category.id} type="button" onClick={() => setCategoryFilter(category.id)} aria-pressed={categoryFilter === category.id} className={`min-h-11 rounded-full border px-4 text-sm ${categoryFilter === category.id ? "border-primary text-primary" : "border-border"}`}>{category.name} ({items?.filter(item => item.categoryId === category.id).length ?? 0})</button>)}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm">Stock status<select value={stockFilter} onChange={event => setStockFilter(event.target.value)} className="ml-2 min-h-11 rounded-xl border border-border bg-surface px-3"><option value="all">All stock</option><option value="low">Low stock</option><option value="critical">Out of stock</option><option value="healthy">Healthy</option></select></label>
+            <label className="text-sm">Sort<select value={sort} onChange={event => setSort(event.target.value)} className="ml-2 min-h-11 rounded-xl border border-border bg-surface px-3"><option value="name">Name A–Z</option><option value="value">Highest stock value</option><option value="stock">Lowest base-unit quantity</option></select></label>
+          </div>
           <div className="relative max-w-sm">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
             <input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
+              aria-label="Search inventory items"
               placeholder="Search inventory items…"
-              className="w-full rounded-lg border border-border py-2 pl-9 pr-3 text-body text-text"
+              className="min-h-11 w-full rounded-lg border border-border py-2 pl-9 pr-3 text-body text-text"
             />
           </div>
 
@@ -290,6 +327,8 @@ export function InventoryScreen() {
               <p className="text-body text-text-muted">
                 No inventory categories yet. Add your first category to start tracking stock.
               </p>
+              {canManage && <div className="mt-4 flex flex-wrap justify-center gap-2">{["Grains & rice", "Vegetables", "Meat & seafood", "Dairy", "Oil & fats", "Spices"].map(name => <button type="button" key={name} disabled={createCategoryMutation.isPending} onClick={() => createCategoryMutation.mutate(name)} className="min-h-11 rounded-full border border-border px-3 text-sm">+ {name}</button>)}</div>}
+              {categoryError && <p role="alert" className="mt-2 text-error">{categoryError}</p>}
               {canManage && (
                 <button
                   type="button"
@@ -302,12 +341,12 @@ export function InventoryScreen() {
             </div>
           )}
 
-          {categories.length > 0 && items && items.length === 0 && (
+          {categories.length > 0 && visibleItems.length === 0 && (
             <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
               <p className="text-body text-text-muted">
                 {search
                   ? `No items match "${search}".`
-                  : "No inventory items yet. Add your first item to start tracking stock."}
+                  : items?.length ? "No ingredients match these filters. Change category or stock status." : "No inventory items yet. Add your first item to start tracking stock."}
               </p>
               {canManage && !search && (
                 <button
@@ -321,9 +360,10 @@ export function InventoryScreen() {
             </div>
           )}
 
-          {items && items.length > 0 && (
+          {visibleItems.length > 0 && (
             <InventoryTable
-              items={items}
+              items={visibleItems}
+              linkedDishCounts={linkedDishCounts}
               categoryNameById={categoryNameById}
               supplierNameById={supplierNameById}
               canManage={canManage}
@@ -331,6 +371,7 @@ export function InventoryScreen() {
                 toggleReorderMutation.isPending && toggleReorderMutation.variables === target.id
               }
               onToggleReorderRequested={(target) => toggleReorderMutation.mutate(target.id)}
+              onOpenHistory={setHistoryItem}
               onAdjust={(target) => {
                 setFormError(null);
                 setAdjustItem(target);
@@ -346,6 +387,7 @@ export function InventoryScreen() {
               }}
             />
           )}
+          </>}
         </>
       )}
 
@@ -371,7 +413,7 @@ export function InventoryScreen() {
           item={itemModal.item}
           categories={categories}
           suppliers={suppliers}
-          defaultCategoryId={null}
+          defaultCategoryId={categoryFilter || null}
           onClose={() => {
             setItemModal(null);
             setFormError(null);
@@ -413,6 +455,8 @@ export function InventoryScreen() {
           errorMessage={formError}
         />
       )}
+
+      {historyItem && <IngredientHistoryModal item={historyItem} onClose={() => setHistoryItem(null)} />}
     </main>
   );
 }

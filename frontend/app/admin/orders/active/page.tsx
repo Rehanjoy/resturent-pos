@@ -13,9 +13,9 @@ import { PageHeader } from "@/components/ui/page-header";
 export default async function ActiveOrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tableId?: string }>;
+  searchParams: Promise<{ tableId?: string; orderId?: string }>;
 }) {
-  const { tableId } = await searchParams;
+  const { tableId, orderId } = await searchParams;
 
   if (!tableId) {
     return (
@@ -26,5 +26,5 @@ export default async function ActiveOrderPage({
     );
   }
 
-  return <OrderWorkspace tableId={tableId} mode="active" />;
+  return <OrderWorkspace key={orderId ?? tableId} tableId={tableId} initialOrderId={orderId} mode="active" />;
 }

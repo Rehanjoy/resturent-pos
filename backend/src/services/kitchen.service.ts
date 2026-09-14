@@ -77,6 +77,7 @@ export async function markItemReady(
   kotItem.itemStatus = "ready";
 
   const order = await findOrderOrThrow(restaurantId, kot.orderId.toString());
+  if (order.cancellation || ["closed", "void", "billed"].includes(order.status)) throw new AppError("This order is no longer active.", 409, "ORDER_NOT_ACTIVE");
   const orderItem = order.items.id(orderItemId);
   if (orderItem && orderItem.itemStatus !== "served") {
     orderItem.itemStatus = "ready";
@@ -105,6 +106,7 @@ export async function markItemReady(
 export async function markAllReady(restaurantId: string, kotId: string): Promise<KotDto> {
   const kot = await findKotOrThrow(restaurantId, kotId);
   const order = await findOrderOrThrow(restaurantId, kot.orderId.toString());
+  if (order.cancellation || ["closed", "void", "billed"].includes(order.status)) throw new AppError("This order is no longer active.", 409, "ORDER_NOT_ACTIVE");
 
   for (const kotItem of kot.items) {
     if (kotItem.itemStatus === "served") continue;

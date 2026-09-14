@@ -25,6 +25,7 @@ export interface OrderItem {
   notes?: string;
   itemStatus: OrderItemStatus;
   sentAt?: string;
+  estimatedReadyAt?: string;
 }
 
 /** Mirrors `backend/src/services/order.service.ts` `OrderDto`. */
@@ -33,6 +34,11 @@ export interface Order {
   restaurantId: string;
   tableId: string;
   status: OrderStatus;
+  source?: "staff" | "qr";
+  diningSessionId?: string;
+  placedAt?: string;
+  customerTotal?: number;
+  cancellation?: { chargePercent: number; amountDue: number; cancelledAt: string; reason: string };
   items: OrderItem[];
   /** Sum of `priceSnapshot * qty`, paise. Tax/discount/total belong to the
    * Billing module (not built yet). */
@@ -55,6 +61,7 @@ export interface KotItem {
   addOns: string[];
   notes?: string;
   itemStatus: OrderItemStatus;
+  estimatedReadyAt?: string;
 }
 
 /** Mirrors `backend/src/services/order.service.ts` `KotDto`. */

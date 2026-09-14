@@ -1,5 +1,51 @@
 # QA & Test Report — Saffron (Phase 6)
 
+## 2026-09-14 food-cost engineering addendum
+
+- Focused costing suite: **7/7 passed** using the real Express routes and in-memory MongoDB.
+- Exact money tests cover three fractional ingredient costs summed before rounding and a one-gram recipe
+  contribution. Wastage, ingredient-based overhead, monthly overhead, per-dish extras, break-even and the
+  price required to satisfy both configured targets are tested.
+- Behaviour tests distinguish estimated loss, below-target margin, healthy and incomplete recipes; verify
+  preferred seasonal months; and prove scenario comparison does not mutate live ingredient rates.
+- Security tests cover authentication, Owner/Manager configuration permissions, invalid settings, tenant
+  isolation, linked-unit protection and rate-change history.
+- Sales-volume tests include only served, billed and closed non-cancelled orders and require the response
+  to identify the result as a current-cost estimate rather than historical net profit.
+- Complete backend regression: **212/212 passed** across **14 test files**. The focused costing suite is
+  included in that result.
+- Frontend ESLint and no-write TypeScript checks pass. Backend TypeScript and both production builds pass;
+  Next.js generated all **21 routes**.
+
+## 2026-09-13 customer, service and production addendum
+
+- Complete backend regression run: **205/205 passed** across 13 test files.
+- New integration coverage verifies required guest identity and Indian mobile normalisation, duplicate
+  service-request prevention, chair ownership, the staff acknowledge/complete flow, and customer search.
+- Recipe tests verify that a 10-portion batch using 2 kg rice and 0.5 L oil scales to exactly 5 kg and
+  1.25 L for 25 portions, including ingredient cost and shortage calculation.
+- Closed-day measured-use reconciliation is tested as an exactly-once operation: a repeated request does
+  not change stock or add a duplicate ledger entry.
+- Backend typecheck and production build pass. Frontend ESLint, no-write TypeScript check and production
+  build pass; Next.js generated all **21 routes**, including Customers and the guest ordering route.
+
+## 2026-09-10 dining and inventory addendum
+
+- Business-critical integration run: **58/58 passed** across dining, ordering, billing, inventory and
+  inventory reporting. It covers concurrent multi-table chair claims, hold expiry, staff sessions,
+  exact 8/10-minute cancellation boundaries, partial-charge invoices, counter settlement, KDS ETA,
+  whole-table conflicts, tenant isolation, validation, daily inventory reporting and retry-safe stock.
+- Complete regression run: **203/203 passed** across all 12 backend test files. After the final
+  public-rate-limit adjustment, the focused dining and inventory-reporting rerun passed **15/15**.
+- Frontend TypeScript and ESLint passed. Backend TypeScript and production build passed. The frontend
+  production build passed and generated all 20 routes.
+- Manual mobile smoke test at 390 × 844: scanned a chair QR; selected six chairs across two tables;
+  confirmed the five-minute countdown; opened the photo menu; customized an item; reviewed the
+  ₹0 / 50% / 100% cancellation timeline and counter-payment message; placed the order.
+- The responsive desktop/tablet layouts were checked through the browser accessibility tree. The tested
+  customer flow had no overlapping controls, missing labels, or console errors after the public-route
+  provider fix.
+
 **Date:** 2026-08-18
 **Scope:** Automated test suite for business-critical logic + full build/typecheck/lint verification across both apps.
 
@@ -22,7 +68,7 @@ cd backend && npm test
 | Order lifecycle & KDS | `backend/tests/orders.test.ts` | 13 | Table occupancy on create/void, draft→sent→in_kitchen→ready→served state machine, split orders (multiple KOTs per order), KDS queue clearing on Serve (not Mark Ready), edit-lock on sent items, sold-out rejection, audit logging on void |
 | RBAC (cross-module) | `backend/tests/rbac.test.ts` | 38 | Every role against Staff/Orders/Kitchen/Billing/Reports/Settings; the Manager-vs-Owner privilege boundary; the Cashier-vs-Staff-Performance carve-out; tenant isolation; unauthenticated/malformed-token rejection |
 
-Per PRD §9 ("unit tests for business logic — billing calculations, inventory deduction, tax computation — these must be 100% covered given financial impact"): billing and tax computation are covered end-to-end above. Inventory deduction has no coverage because the Inventory module itself doesn't exist yet (Phase 2 per the brief) — there is nothing to test.
+Per PRD §9 ("unit tests for business logic — billing calculations, inventory deduction, tax computation — these must be 100% covered given financial impact"): billing and tax computation are covered end-to-end above. Inventory and QR deduction coverage was added in the 2026-09-10 addendum.
 
 ### Bugs found and fixed during this pass
 Two issues surfaced by the suite, both in test fixtures/expectations, not application code:
@@ -41,7 +87,7 @@ Run clean, both apps, after every feature module and again at the end of this QA
 | Lint | n/a (no separate lint script) | `npm run lint` — clean, 0 warnings |
 | Production build | `npm run build` — clean | `npm run build` — clean, all 15 routes generated |
 
-## 3. Manual QA checklist — not performed this session
+## 3. Manual QA checklist — latest automated pass only
 
 The skill's Phase 6 process also calls for walking a manual checklist against every MVP screen in a real browser. **That walkthrough was not performed in this session** — this pass was scoped to automated coverage of financial logic and cross-role access control, which carries the highest risk of a costly bug going unnoticed. Recommend running a manual pass (Login → Table Grid → New Order → KDS → Settle Bill → Menu → Staff → Settings → Dashboard → Reports, on both desktop and a tablet-width viewport per the PRD's device-support requirement) before Phase 8 deployment.
 

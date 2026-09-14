@@ -1,3 +1,5 @@
+import { inventoryQuantitySchema } from "./inventory-quantity.validators";
+import { quantityToMicros } from "../services/inventory-quantity.service";
 import { z } from "zod";
 
 // Cost arrives already converted to paise (integer, smallest currency
@@ -13,8 +15,9 @@ export const createInventoryItemSchema = z.object({
   unit: z.string().trim().min(1, "Unit is required.").max(20),
   costPerUnit: costPerUnitSchema,
   // Opening balance, defaults to 0 — can be fractional (e.g. 4.5 kg).
-  currentStock: z.number().min(0, "Starting stock can't be negative.").optional(),
-  reorderThreshold: z.number().min(0, "Reorder threshold can't be negative.").optional(),
+  currentStock: inventoryQuantitySchema.optional(),
+  expectedDailyUsage: inventoryQuantitySchema.optional(),
+  reorderThreshold: inventoryQuantitySchema.optional(),
   supplierId: z.string().min(1).optional(),
 });
 
@@ -28,8 +31,9 @@ export const updateInventoryItemSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   unit: z.string().trim().min(1).max(20).optional(),
   costPerUnit: costPerUnitSchema.optional(),
-  currentStock: z.number().optional(),
-  reorderThreshold: z.number().min(0, "Reorder threshold can't be negative.").optional(),
+  currentStock: inventoryQuantitySchema.optional(),
+  expectedDailyUsage: inventoryQuantitySchema.optional(),
+  reorderThreshold: inventoryQuantitySchema.optional(),
   supplierId: z.string().min(1).optional(),
 });
 
@@ -44,10 +48,13 @@ export const inventoryItemListQuerySchema = z.object({
 });
 
 export const adjustInventoryItemSchema = z.object({
+  movementType: z.enum(["restock", "usage", "wastage", "adjustment"]).optional(),
   quantityDelta: z
-    .number()
+    .number().finite().refine((value) => { try { quantityToMicros(value); return true; } catch { return false; } }, "Use at most 6 decimal places, within 1,000,000 units.")
     .refine((value) => value !== 0, "Adjustment quantity can't be zero."),
   // Required — PRD §3.9 "Stock adjustment log (wastage, manual
   // correction) — fully audited."
   reason: z.string().trim().min(1, "A reason is required for a stock adjustment.").max(300),
-});
+}).refine((input) => input.movementType === "restock" ? input.quantityDelta > 0
+  : input.movementType === "usage" || input.movementType === "wastage" ? input.quantityDelta < 0 : true,
+  "Receipts must add stock; usage and wastage must remove stock.");

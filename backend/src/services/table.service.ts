@@ -8,6 +8,18 @@ import {
   type TableStatus,
 } from "../models/table.model";
 import { emitToRestaurant } from "../sockets";
+import { changeFloor } from "./dining.service";
+import { DiningFloor } from "../models/dining-floor.model";
+
+async function assertNoDiningParty(restaurantId: string, tableId: string, block?: string, requireFree = false) {
+  await changeFloor(restaurantId, floor => {
+    if (floor.sessions.some(s => (s.status === "held" || s.status === "occupied") && s.seats.some(seat => seat.tableId === tableId))) {
+      throw new AppError("This table has active dining parties. Release each party from Seating first.", 409, "CHAIR_SESSION_ACTIVE");
+    }
+    if (requireFree && floor.tableBlocks[tableId]) throw new AppError("This table was just taken.", 409, "TABLE_NOT_FREE");
+    if (block) floor.tableBlocks[tableId] = block;
+  });
+}
 
 export interface TableDto {
   id: string;
@@ -74,7 +86,13 @@ export async function listTables(
     restaurantId,
     ...(filters.areaId ? { areaId: filters.areaId } : {}),
   }).sort({ name: 1 });
-  return tables.map(toDto);
+  const floor = await DiningFloor.findOne({ restaurantId }).lean();
+  return tables.map(table => {
+    const dto = toDto(table);
+    const parties = floor?.sessions.filter(s => (s.status === "occupied" || (s.status === "held" && (!s.expiresAt || Date.parse(s.expiresAt) > Date.now()))) && s.seats.some(seat => seat.tableId === dto.id)) ?? [];
+    if (parties.length) dto.status = parties.some(s => s.status === "occupied") ? "occupied" : "reserved";
+    return dto;
+  });
 }
 
 export async function createTable(
@@ -116,10 +134,17 @@ export async function updateTable(
     table.areaId = new Types.ObjectId(input.areaId);
   }
   if (input.name !== undefined) table.name = input.name;
-  if (input.seatingCapacity !== undefined) table.seatingCapacity = input.seatingCapacity;
+  if (input.seatingCapacity !== undefined) {
+    await assertNoDiningParty(restaurantId, tableId, "maintenance");
+    table.seatingCapacity = input.seatingCapacity;
+  }
   if (input.shape !== undefined) table.shape = input.shape;
 
   await table.save();
+  if (input.seatingCapacity !== undefined) await changeFloor(restaurantId, floor => {
+    if (table.status === "free") delete floor.tableBlocks[tableId];
+    else floor.tableBlocks[tableId] = table.status;
+  });
   return toDto(table);
 }
 
@@ -128,6 +153,7 @@ export async function deleteTable(
   tableId: string,
 ): Promise<void> {
   const table = await findTableOrThrow(restaurantId, tableId);
+  await assertNoDiningParty(restaurantId, tableId, "deleted");
   await table.deleteOne();
 }
 
@@ -143,10 +169,14 @@ export async function updateTableStatus(
   restaurantId: string,
   tableId: string,
   status: TableStatus,
+  requireFree = false,
 ): Promise<TableDto> {
   const table = await findTableOrThrow(restaurantId, tableId);
+  if (requireFree && table.status !== "free") throw new AppError("This table is not free.", 409, "TABLE_NOT_FREE");
+  await assertNoDiningParty(restaurantId, tableId, status === "free" ? undefined : status, requireFree);
   table.status = status;
   await table.save();
+  if (status === "free") await changeFloor(restaurantId, floor => { delete floor.tableBlocks[tableId]; });
 
   const dto = toDto(table);
   const event: TableStatusChangedEvent = { table: dto };

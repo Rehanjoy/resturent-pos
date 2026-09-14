@@ -17,6 +17,7 @@ export type SpiceLevel = "none" | "mild" | "medium" | "spicy";
 export interface IngredientMapping {
   inventoryItemId: string;
   quantityPerUnit: number;
+  quantityPerRecipe?: number;
 }
 
 /** Mirrors `backend/src/services/menu-item.service.ts` `MenuItemDto`. */
@@ -32,7 +33,9 @@ export interface MenuItem {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable: boolean;
+  prepMinutes?: number;
   ingredientMapping: IngredientMapping[];
+  recipeYield: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,3 +1,6 @@
+import { recipeRequirementMicros, quantityFromMicros, stockMovementPipeline } from "./inventory-quantity.service";
+import { createHash } from "node:crypto";
+import { InventoryDeductionBatch } from "../models/inventory-deduction-batch.model";
 import { Types } from "mongoose";
 import { MenuItem } from "../models/menu-item.model";
 import { InventoryItem } from "../models/inventory-item.model";
@@ -56,69 +59,57 @@ export interface SentItemForDeduction {
  *    swallowed rather than propagated, so a problem in this side effect can
  *    never fail the "send to kitchen" request that triggered it.
  */
+/** A batchKey enables durable replay: snapshot recipe, atomic per-item key + stock,
+ * and deterministic ledger upsert. Keyed failures propagate so the caller can retry. */
 export async function deductInventoryForSentItems(
   restaurantId: string,
-  staffId: string,
+  staffId: string | undefined,
   orderId: string,
   items: SentItemForDeduction[],
+  batchKey?: string,
 ): Promise<void> {
   try {
-    const menuItemIds = [...new Set(items.map((item) => item.menuItemId))].filter((id) =>
-      Types.ObjectId.isValid(id),
-    );
-    if (menuItemIds.length === 0) return;
-
-    const menuItems = await MenuItem.find({ _id: { $in: menuItemIds }, restaurantId })
-      .select("ingredientMapping")
-      .lean();
-    const mappingByMenuItemId = new Map(
-      menuItems.map((menuItem) => [menuItem._id.toString(), menuItem.ingredientMapping ?? []]),
-    );
-
+    const menuItemIds = [...new Set(items.map((item) => item.menuItemId))].filter(Types.ObjectId.isValid);
+    const menuItems = await MenuItem.find({ _id: { $in: menuItemIds }, restaurantId }).select("ingredientMapping recipeYield").lean();
+    const mappings = new Map(menuItems.map((item) => [item._id.toString(), item]));
+    const totals = new Map<string, number>();
     for (const item of items) {
-      const mapping = mappingByMenuItemId.get(item.menuItemId);
-      if (!mapping || mapping.length === 0) continue;
-
-      for (const ingredient of mapping) {
-        const inventoryItemId = ingredient.inventoryItemId.toString();
-        if (!Types.ObjectId.isValid(inventoryItemId)) continue;
-
-        const quantityToDeduct = ingredient.quantityPerUnit * item.qty;
-        if (!(quantityToDeduct > 0)) continue;
-
-        // Atomic per-document decrement — see judgment call #2 above. No
-        // floor at zero: negative stock is an allowed, visible state (call
-        // #3), not an error condition.
-        const updated = await InventoryItem.findOneAndUpdate(
-          { _id: inventoryItemId, restaurantId },
-          { $inc: { currentStock: -quantityToDeduct } },
-          { new: true },
-        );
-        if (!updated) continue; // mapped ingredient no longer exists — nothing to deduct against
-
-        if (updated.currentStock < 0) {
-          console.error(
-            `[inventory] "${updated.name}" (${updated._id.toString()}) went negative — ` +
-              `${updated.currentStock} ${updated.unit} remaining after order ${orderId} ` +
-              `(restaurant ${restaurantId}) was sent to the kitchen. Order was not blocked.`,
-          );
-        }
-
-        await InventoryTransaction.create({
-          restaurantId,
-          itemId: updated._id,
-          type: "deduction",
-          quantityDelta: -quantityToDeduct,
-          staffId,
-          relatedOrderId: orderId,
-        });
+      const recipe = mappings.get(item.menuItemId);
+      for (const ingredient of recipe?.ingredientMapping ?? []) {
+        const itemId = ingredient.inventoryItemId.toString();
+        const quantity = recipeRequirementMicros(ingredient.quantityPerRecipe ?? ingredient.quantityPerUnit, item.qty, ingredient.quantityPerRecipe === undefined ? 1 : recipe?.recipeYield ?? 1);
+        if (Types.ObjectId.isValid(itemId) && Number.isFinite(quantity) && quantity > 0) totals.set(itemId, (totals.get(itemId) ?? 0) + quantity);
+      }
+    }
+    let ingredients = [...totals].map(([itemId, quantity]) => ({ itemId, quantity: quantityFromMicros(quantity) }));
+    const batchId = batchKey ? new Types.ObjectId(createHash("sha256").update(`${restaurantId}:${batchKey}`).digest("hex").slice(0, 24)) : undefined;
+    if (batchId) {
+      // Save the plan before any stock movement. Concurrent retries all read the winning snapshot.
+      const batch = await InventoryDeductionBatch.findOneAndUpdate(
+        { _id: batchId }, { $setOnInsert: { restaurantId, orderId, ingredients } },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+      );
+      ingredients = batch.ingredients;
+    }
+    for (const { itemId, quantity } of ingredients) {
+      const deductionKey = batchId ? createHash("sha256").update(`${batchId.toString()}:${itemId}`).digest("hex").slice(0, 24) : undefined;
+      const updated = await InventoryItem.findOneAndUpdate(
+        { _id: itemId, restaurantId, ...(deductionKey ? { processedDeductionKeys: { $ne: deductionKey } } : {}) },
+        stockMovementPipeline(-recipeRequirementMicros(quantity, 1), deductionKey),
+        { returnDocument: "after", updatePipeline: true },
+      );
+      if (!updated && (!deductionKey || !await InventoryItem.exists({ _id: itemId, restaurantId, processedDeductionKeys: deductionKey }))) continue;
+      if (updated && updated.currentStock < 0) console.error(`[inventory] ${updated.name}: ${updated.currentStock} ${updated.unit} remaining after order ${orderId}.`);
+      const transaction = { restaurantId, itemId, type: "deduction" as const, quantityDelta: -quantity, staffId, relatedOrderId: orderId };
+      if (deductionKey) {
+        // If stock was committed but the process stopped before ledger insertion, replay repairs the ledger.
+        await InventoryTransaction.updateOne({ _id: new Types.ObjectId(deductionKey) }, { $setOnInsert: transaction }, { upsert: true });
+      } else {
+        await InventoryTransaction.create(transaction);
       }
     }
   } catch (error) {
-    console.error(
-      `[inventory] Ingredient stock deduction failed for order ${orderId} ` +
-        `(restaurant ${restaurantId}) — the order was still sent to the kitchen.`,
-      error,
-    );
+    if (batchKey) throw error; // QR request can recover by replaying its saved batch.
+    console.error(`[inventory] Ingredient stock deduction failed for order ${orderId} (restaurant ${restaurantId}).`, error);
   }
 }

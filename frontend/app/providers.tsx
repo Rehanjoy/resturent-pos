@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/lib/auth/auth-context";
 
@@ -12,6 +13,7 @@ import { AuthProvider } from "@/lib/auth/auth-context";
  * `/login` and `/admin/*` share one auth session instance.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -26,7 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      {pathname.startsWith("/order/") ? children : <AuthProvider>{children}</AuthProvider>}
     </QueryClientProvider>
   );
 }

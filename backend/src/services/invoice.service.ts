@@ -260,7 +260,15 @@ export async function generateInvoice(
     throw new AppError("Restaurant not found.", 404, "NOT_FOUND");
   }
 
-  const items = order.items.map((item) => ({
+  if (order.cancellation && input.discount) {
+    throw new AppError("Cancellation charges are fixed by the accepted policy.", 400, "CANCELLATION_DISCOUNT_NOT_ALLOWED");
+  }
+  const items = order.cancellation ? [{
+    menuItemId: order.items[0]!.menuItemId,
+    nameSnapshot: `Cancellation charge (${order.cancellation.chargePercent}%) — includes original applicable taxes`,
+    priceSnapshot: order.cancellation.amountDue,
+    qty: 1,
+  }] : order.items.map((item) => ({
     menuItemId: item.menuItemId,
     nameSnapshot: item.nameSnapshot,
     priceSnapshot: item.priceSnapshot,
@@ -298,7 +306,7 @@ export async function generateInvoice(
   }
 
   const postDiscountSubtotal = subtotal - (discount?.amountApplied ?? 0);
-  const taxLines = restaurant.taxConfig.map((tax) => ({
+  const taxLines = (order.cancellation ? [] : restaurant.taxConfig).map((tax) => ({
     name: tax.name,
     ratePercent: tax.ratePercent,
     amount: Math.round((postDiscountSubtotal * tax.ratePercent) / 100),

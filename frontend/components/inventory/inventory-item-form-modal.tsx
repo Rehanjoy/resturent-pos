@@ -37,6 +37,7 @@ export function InventoryItemFormModal({
     costPerUnit: number;
     currentStock?: number;
     reorderThreshold?: number;
+    expectedDailyUsage?: number;
     supplierId?: string;
   }) => void;
   onRequestAddSupplier: () => void;
@@ -55,6 +56,7 @@ export function InventoryItemFormModal({
   const [reorderThreshold, setReorderThreshold] = useState(
     item ? String(item.reorderThreshold) : "0",
   );
+  const [expectedDailyUsage, setExpectedDailyUsage] = useState(String(item?.expectedDailyUsage ?? 0));
   const [supplierId, setSupplierId] = useState(item?.supplierId ?? "");
 
   return (
@@ -69,6 +71,7 @@ export function InventoryItemFormModal({
             costPerUnit: rupeesToPaise(Number(costRupees)),
             currentStock: item ? undefined : Number(openingStock),
             reorderThreshold: Number(reorderThreshold),
+            expectedDailyUsage: Number(expectedDailyUsage),
             supplierId: supplierId || undefined,
           });
         }}
@@ -80,7 +83,7 @@ export function InventoryItemFormModal({
             value={categoryId}
             onChange={(event) => setCategoryId(event.target.value)}
             required
-            className="rounded-lg border border-border px-3 py-2 text-body text-text"
+            className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text"
           >
             {categories.length === 0 && <option value="">No categories yet</option>}
             {categories.map((category) => (
@@ -98,24 +101,26 @@ export function InventoryItemFormModal({
             onChange={(event) => setName(event.target.value)}
             required
             placeholder="e.g. Basmati Rice"
-            className="rounded-lg border border-border px-3 py-2 text-body text-text"
+            className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text"
           />
         </label>
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-small font-medium text-text">Unit</span>
+            <span className="text-small font-medium text-text">Stock base unit</span>
             <input
               value={unit}
               onChange={(event) => setUnit(event.target.value)}
               required
               placeholder="kg, L, pcs…"
-              className="rounded-lg border border-border px-3 py-2 text-body text-text"
+              list="inventory-base-units"
+              readOnly={!!item}
+              className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text"
             />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-small font-medium text-text">Cost per unit (₹)</span>
+            <span className="text-small font-medium text-text">Purchase cost / {unit || "unit"} (₹)</span>
             <input
               type="number"
               min={0}
@@ -123,16 +128,18 @@ export function InventoryItemFormModal({
               value={costRupees}
               onChange={(event) => setCostRupees(event.target.value)}
               required
-              className="rounded-lg border border-border px-3 py-2 text-body text-text"
+              className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text"
             />
           </label>
         </div>
 
+        <datalist id="inventory-base-units"><option value="kg" /><option value="L" /><option value="pcs" /></datalist>
+        <p className="text-small text-text-muted">Stock and purchase cost use this same base unit. Recipes can enter grams for kg or ml for L. 1 g = 0.001 kg; quantities support six decimal places.{item ? " Existing base units stay fixed so linked recipes remain consistent." : ""}</p>
         <div className="grid grid-cols-2 gap-3">
           {item ? (
             <div className="flex flex-col gap-1">
               <span className="text-small font-medium text-text">Current stock</span>
-              <p className="rounded-lg border border-dashed border-border px-3 py-2 text-body text-text-muted">
+              <p className="min-h-11 rounded-lg border border-dashed border-border px-3 py-2 text-body text-text-muted">
                 {item.currentStock} {item.unit}
               </p>
               <span className="text-small text-text-muted">Use “Adjust” to change this.</span>
@@ -142,10 +149,10 @@ export function InventoryItemFormModal({
               <span className="text-small font-medium text-text">Opening stock</span>
               <input
                 type="number"
-                step="0.01"
+                step="0.000001"
                 value={openingStock}
                 onChange={(event) => setOpeningStock(event.target.value)}
-                className="rounded-lg border border-border px-3 py-2 text-body text-text"
+                className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text"
               />
             </label>
           )}
@@ -155,14 +162,21 @@ export function InventoryItemFormModal({
             <input
               type="number"
               min={0}
-              step="0.01"
+              step="0.000001"
               value={reorderThreshold}
               onChange={(event) => setReorderThreshold(event.target.value)}
-              className="rounded-lg border border-border px-3 py-2 text-body text-text"
+              className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text"
             />
           </label>
         </div>
 
+        <label className="flex flex-col gap-1">
+          <span className="text-small font-medium text-text">Expected daily usage ({unit})</span>
+          <input type="number" min={0} step="0.000001" value={expectedDailyUsage}
+            onChange={(event) => setExpectedDailyUsage(event.target.value)}
+            className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text" />
+          <span className="text-small text-text-muted">Used to estimate days remaining. Set 0 if unknown; this does not deduct stock.</span>
+        </label>
         <label className="flex flex-col gap-1">
           <span className="text-small font-medium text-text">Supplier</span>
           <select
@@ -174,7 +188,7 @@ export function InventoryItemFormModal({
               }
               setSupplierId(event.target.value);
             }}
-            className="rounded-lg border border-border px-3 py-2 text-body text-text"
+            className="min-h-11 rounded-lg border border-border px-3 py-2 text-body text-text"
           >
             <option value="">No supplier</option>
             {suppliers.map((supplier) => (
@@ -192,14 +206,14 @@ export function InventoryItemFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-border px-4 py-2 text-button text-text-muted hover:text-text"
+            className="min-h-11 rounded-lg border border-border px-4 py-2 text-button text-text-muted hover:text-text"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !name.trim() || !categoryId || !costRupees}
-            className="rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
+            className="min-h-11 rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
           >
             {isSubmitting ? "Saving…" : "Save"}
           </button>

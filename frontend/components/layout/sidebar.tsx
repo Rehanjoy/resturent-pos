@@ -58,6 +58,7 @@ const NAV_ITEMS: {
   // PRD §2 Dashboard column: Owner/Manager "Full", Cashier "View" — Server/
   // Chef/Inventory Manager get no nav entry at all (not even view).
   { href: "/admin", label: "Dashboard", roles: ["owner", "manager", "cashier"], icon: DashboardIcon },
+  { href: "/admin/customers", label: "Customers", roles: ["owner", "manager", "cashier", "server"], icon: StaffIcon },
   {
     href: "/admin/tables",
     label: "Tables",
@@ -177,18 +178,18 @@ export function Sidebar({
         // would scroll away with it. Sticky + capped to viewport height
         // keeps the rail pinned while the content column beside it scrolls
         // independently.
-        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-24 lg:translate-x-0 ${
           isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center gap-3 px-5 pb-5 pt-6">
+        <div className="flex items-center gap-3 px-5 pb-5 pt-6 lg:justify-center lg:px-2">
           {/* Plain <img>, not next/image — the built-in optimizer blocks SVG
               content-type by default (`images.dangerouslyAllowSVG`), and a
               fixed 32px decorative mark gets nothing from the optimizer
               anyway. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-mark.svg" alt="" width={32} height={32} className="h-8 w-8" />
-          <div className="leading-tight">
+          <div className="leading-tight lg:hidden">
             <p className="font-heading text-h4 font-semibold text-sidebar-foreground">Saffron POS</p>
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-sidebar-muted">
               Modern Kitchen
@@ -198,12 +199,13 @@ export function Sidebar({
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
           {visibleItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                title={item.label}
                 aria-current={isActive ? "page" : undefined}
                 // Closes the mobile drawer on navigation — harmless on the
                 // docked desktop rail (`isMobileNavOpen` has no visual
@@ -215,7 +217,7 @@ export function Sidebar({
                 // AA-large at 16px SemiBold minimum (docs/02-brand-kit.md
                 // contrast notes); a smaller label here would fall below that
                 // documented threshold.
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-button font-semibold transition-colors ${
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-button font-semibold transition-colors lg:flex-col lg:gap-1.5 lg:px-1 lg:text-[10px] ${
                   isActive
                     ? "bg-sidebar-active text-white shadow-sm"
                     : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground"
@@ -229,11 +231,11 @@ export function Sidebar({
         </nav>
 
         <div className="border-t border-sidebar-border px-3 py-3">
-          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-hover text-small font-semibold text-sidebar-foreground">
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2 lg:flex-col">
+            <span title={user.name} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-hover text-small font-semibold text-sidebar-foreground">
               {initialsOf(user.name)}
             </span>
-            <div className="min-w-0 flex-1 leading-tight">
+            <div className="min-w-0 flex-1 leading-tight lg:hidden">
               <p className="truncate text-small font-medium text-sidebar-foreground">{user.name}</p>
               <p className="truncate text-[11px] capitalize text-sidebar-muted">
                 {user.role.replace("_", " ")}

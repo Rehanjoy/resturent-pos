@@ -14,6 +14,7 @@ export type SpiceLevel = (typeof SPICE_LEVELS)[number];
 export interface IngredientMappingEntry {
   inventoryItemId: Types.ObjectId;
   quantityPerUnit: number;
+  quantityPerRecipe?: number;
 }
 
 export interface MenuItemDocument {
@@ -28,7 +29,9 @@ export interface MenuItemDocument {
   spiceLevel?: SpiceLevel;
   imageUrl?: string;
   isAvailable: boolean;
+  prepMinutes?: number;
   ingredientMapping: IngredientMappingEntry[];
+  recipeYield?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +40,7 @@ const ingredientMappingSchema = new Schema<IngredientMappingEntry>(
   {
     inventoryItemId: { type: Schema.Types.ObjectId, ref: "InventoryItem", required: true },
     quantityPerUnit: { type: Number, required: true, min: 0 },
+    quantityPerRecipe: { type: Number, min: 0 },
   },
   { _id: false },
 );
@@ -69,6 +73,8 @@ const menuItemSchema = new Schema<MenuItemDocument>(
     spiceLevel: { type: String, enum: SPICE_LEVELS },
     imageUrl: { type: String, trim: true },
     isAvailable: { type: Boolean, required: true, default: true },
+    prepMinutes: { type: Number, min: 1, max: 240 },
+    recipeYield: { type: Number, min: 1, default: 1 },
     ingredientMapping: { type: [ingredientMappingSchema], default: [] },
   },
   { timestamps: true },

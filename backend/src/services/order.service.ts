@@ -14,6 +14,7 @@ import { emitToRestaurant } from "../sockets";
 import { recordAuditLog } from "./audit-log.service";
 import * as tableService from "./table.service";
 import { deductInventoryForSentItems } from "./inventory-deduction.service";
+import { DiningFloor } from "../models/dining-floor.model";
 
 export interface OrderItemDto {
   id: string;
@@ -26,6 +27,7 @@ export interface OrderItemDto {
   notes?: string;
   itemStatus: OrderItemStatus;
   sentAt?: Date;
+  estimatedReadyAt?: Date;
 }
 
 export interface OrderDto {
@@ -39,6 +41,12 @@ export interface OrderDto {
    * deliberately not computed here. */
   subtotal: number;
   createdByStaffId: string;
+  source?: string;
+  diningSessionId?: string;
+  seats?: OrderDocument["seats"];
+  placedAt?: Date;
+  cancellation?: OrderDocument["cancellation"];
+  customerTotal?: number;
   servedByStaffId?: string;
   voidReason?: string;
   createdAt: Date;
@@ -55,6 +63,7 @@ export interface KotItemDto {
   addOns: string[];
   notes?: string;
   itemStatus: OrderItemStatus;
+  estimatedReadyAt?: Date;
 }
 
 export interface KotDto {
@@ -99,6 +108,7 @@ export function toOrderDto(order: HydratedDocument<OrderDocument>): OrderDto {
     notes: item.notes,
     itemStatus: item.itemStatus,
     sentAt: item.sentAt,
+    estimatedReadyAt: item.estimatedReadyAt,
   }));
 
   return {
@@ -108,7 +118,13 @@ export function toOrderDto(order: HydratedDocument<OrderDocument>): OrderDto {
     status: order.status,
     items,
     subtotal: items.reduce((sum, item) => sum + item.priceSnapshot * item.qty, 0),
-    createdByStaffId: order.createdByStaffId.toString(),
+    createdByStaffId: order.createdByStaffId?.toString() ?? "",
+    source: order.source,
+    diningSessionId: order.diningSessionId,
+    seats: order.seats,
+    placedAt: order.placedAt,
+    cancellation: order.cancellation,
+    customerTotal: order.customerTotal,
     servedByStaffId: order.servedByStaffId?.toString(),
     voidReason: order.voidReason,
     createdAt: order.createdAt,
@@ -132,6 +148,7 @@ export function toKotDto(kot: HydratedDocument<KotDocument>): KotDto {
       addOns: item.addOns,
       notes: item.notes,
       itemStatus: item.itemStatus,
+      estimatedReadyAt: item.estimatedReadyAt,
     })),
     sentAt: kot.sentAt,
     allReadyAt: kot.allReadyAt,
@@ -156,6 +173,7 @@ export async function findOrderOrThrow(
 }
 
 function assertEditable(order: HydratedDocument<OrderDocument>): void {
+  if (order.cancellation) throw new AppError("Cancelled orders cannot be edited.", 409, "ORDER_CANCELLED");
   if (!EDITABLE_STATUSES.includes(order.status)) {
     throw new AppError("This order can no longer be edited.", 400, "ORDER_NOT_EDITABLE");
   }
@@ -205,6 +223,11 @@ export async function createOrder(
     throw new AppError("Table not found.", 404, "TABLE_NOT_FOUND");
   }
 
+  const floor = await DiningFloor.findOne({ restaurantId }).lean();
+  const chairSession = floor?.sessions.some(s =>
+    (s.status === "occupied" || (s.status === "held" && (!s.expiresAt || Date.parse(s.expiresAt) > Date.now()))) && s.seats.some(seat => seat.tableId === tableId));
+  if (chairSession) throw new AppError("This table has separate dining parties. Open the party's order from Seating.", 409, "CHAIR_SESSION_ACTIVE");
+
   if (table.status !== "free") {
     const existing = await Order.findOne({
       restaurantId,
@@ -217,6 +240,9 @@ export async function createOrder(
     throw new AppError("This table is not free.", 409, "TABLE_NOT_FREE");
   }
 
+  // Claim the table in the same seating aggregate used by chair holds before
+  // creating a draft; concurrent QR scans cannot overtake this claim.
+  await tableService.updateTableStatus(restaurantId, tableId, "occupied", true);
   const order = await Order.create({
     restaurantId,
     tableId,
@@ -228,7 +254,6 @@ export async function createOrder(
   // Reuses the existing table-status service so the table grid's socket
   // subscription (`table:status-changed`) picks this up for free — no
   // duplicate table-status-change logic here.
-  await tableService.updateTableStatus(restaurantId, tableId, "occupied");
 
   const dto = toOrderDto(order);
   emitToRestaurant(restaurantId, "order:created", { order: dto });
@@ -273,6 +298,7 @@ export async function editOrderItems(
 ): Promise<OrderDto> {
   const order = await findOrderOrThrow(restaurantId, orderId);
   assertEditable(order);
+  if (order.source === "qr") throw new AppError("This guest confirmed a fixed order and cancellation quote. Place additional items as a separate staff order.", 409, "CUSTOMER_ORDER_FIXED");
 
   for (const removeId of input.removeItemIds ?? []) {
     const item = order.items.id(removeId);
@@ -380,11 +406,17 @@ export async function sendToKitchen(
   }));
 
   const sentAt = new Date();
+  const [preparationMenu, diningFloor] = await Promise.all([
+    MenuItem.find({ restaurantId, _id: { $in: pendingItems.map(i => i.menuItemId) } }).lean(),
+    DiningFloor.findOne({ restaurantId }).lean(),
+  ]);
   const hasExistingKot = await Kot.exists({ restaurantId, orderId: order._id });
 
   const kotItems = pendingItems.map((item) => {
     item.itemStatus = "sent";
     item.sentAt = sentAt;
+    const preparationMinutes = preparationMenu.find(m => m._id.equals(item.menuItemId))?.prepMinutes ?? diningFloor?.policy.defaultPrepMinutes ?? 15;
+    item.estimatedReadyAt = new Date(sentAt.getTime() + preparationMinutes * 60000);
     return {
       orderItemId: item._id,
       menuItemId: item.menuItemId,
@@ -395,6 +427,7 @@ export async function sendToKitchen(
       addOns: item.addOns,
       notes: item.notes,
       itemStatus: "sent" as const,
+      estimatedReadyAt: item.estimatedReadyAt,
     };
   });
 
@@ -416,7 +449,7 @@ export async function sendToKitchen(
   // socket events below.
   await deductInventoryForSentItems(
     restaurantId,
-    order.createdByStaffId.toString(),
+    order.createdByStaffId?.toString(),
     order._id.toString(),
     itemsForDeduction,
   );
@@ -529,7 +562,7 @@ export async function voidOrder(
     tableId: order.tableId,
     status: { $in: ACTIVE_ORDER_STATUSES },
   });
-  if (!stillActive) {
+  if (!stillActive && !order.diningSessionId) {
     await tableService.updateTableStatus(restaurantId, order.tableId.toString(), "free");
   }
 

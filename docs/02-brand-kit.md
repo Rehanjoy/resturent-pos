@@ -12,14 +12,14 @@ The palette is built around the client's coral/red reference. Everything else (s
 
 | Role | Hex | Usage rule |
 |---|---|---|
-| **Primary** | `#E8564A` | Brand identity color — active nav-rail icon, active category-tab outline, links, focus rings, logo mark. Do not use as a background for body-copy-sized text (fails small-text contrast — see note below). |
+| **Primary** | `#E53E15` | Brand identity color — active navigation, category-tab outline, links, focus rings, logo mark. |
 | **Secondary** | `#1F7A8C` | Supporting/cool counterweight to the warm primary — secondary buttons (Cancel, Save Draft), informational tags/chips (table-area labels, order-status pills that aren't financial), non-primary UI accents. Never used for CTAs or urgency/error states. |
-| **Accent (CTA only)** | `#F0665A` | Reserved exclusively for the one primary action per screen: "Add to Billing," "Send to Kitchen," "Settle Payment," "Save." Same hue family as Primary (per the client's reference, where the coral doubles as both brand color and CTA) but a lighter, more vivid step so devs can bind it to a distinct token. Never used for passive/structural UI — the eye should always land on exactly one accent button per view. |
-| **Background** | `#FAF7F5` | App canvas — warm off-white, not stark white (matches "soft neutral" in the reference, easier on eyes for all-day POS/KDS use). |
+| **Accent (CTA only)** | `#FF4B24` | Reserved for the primary action per screen: add, send, settle, save. |
+| **Background** | `#FFF3F0` | Soft blush app canvas, matching the approved visual reference. |
 | **Surface** | `#FFFFFF` | Cards, panels, the right-hand Bills rail, modals — sits on top of Background with a soft shadow + rounded corners, per the reference screenshot's card language. |
-| **Text** | `#2B2420` | Primary text color — warm dark charcoal (not pure black), matches the "dark charcoal text" in the reference. Contrast vs Background = **14.3:1**, vs Surface = **15.8:1** (WCAG AAA). |
-| **Text Muted** | `#6B6058` | Secondary text — timestamps, helper text, placeholder copy, table meta rows. Contrast vs Background = **5.7:1**, vs Surface = **6.1:1** (passes WCAG AA for normal text). |
-| **Border** | `#E5DDD8` | Card borders, table dividers, input outlines (bonus token, not part of the required 4-step scale but needed for the card-based UI). |
+| **Text** | `#191919` | Primary charcoal text for strong contrast. |
+| **Text Muted** | `#706B69` | Secondary text — timestamps, helper text, placeholder copy, table meta rows. |
+| **Border** | `#EEE7E4` | Quiet card borders, dividers and input outlines. |
 
 ### Semantic colors (also power the KDS urgency escalation)
 
@@ -35,16 +35,16 @@ The palette is built around the client's coral/red reference. Everything else (s
 ```css
 :root {
   /* Brand */
-  --color-primary: #E8564A;
+  --color-primary: #E53E15;
   --color-secondary: #1F7A8C;
-  --color-accent: #F0665A;
+  --color-accent: #FF4B24;
 
   /* Neutrals */
-  --color-bg: #FAF7F5;
+  --color-bg: #FFF3F0;
   --color-surface: #FFFFFF;
-  --color-text: #2B2420;
-  --color-text-muted: #6B6058;
-  --color-border: #E5DDD8;
+  --color-text: #191919;
+  --color-text-muted: #706B69;
+  --color-border: #EEE7E4;
 
   /* Semantic (also drives KDS ticket urgency: success -> warning -> error) */
   --color-success: #15803D;

@@ -31,6 +31,7 @@ export interface OrderItemSubdocument {
   itemStatus: OrderItemStatus;
   /** Set the moment this specific item is included in a "send to kitchen" batch. */
   sentAt?: Date;
+  estimatedReadyAt?: Date;
 }
 
 export interface OrderDocument {
@@ -39,7 +40,13 @@ export interface OrderDocument {
   tableId: Types.ObjectId;
   status: OrderStatus;
   items: Types.DocumentArray<OrderItemSubdocument>;
-  createdByStaffId: Types.ObjectId;
+  createdByStaffId?: Types.ObjectId;
+  source?: "qr" | "staff";
+  diningSessionId?: string;
+  seats?: { tableId: string; chairNumber: number }[];
+  placedAt?: Date;
+  customerTotal?: number;
+  cancellation?: { chargePercent: number; amountDue: number; cancelledAt: Date; reason: string };
   servedByStaffId?: Types.ObjectId;
   /** Required audit reason when an order is voided (PRD §3.3, §3.10). */
   voidReason?: string;
@@ -63,6 +70,7 @@ const orderItemSchema = new Schema<OrderItemSubdocument>(
       default: "pending",
     },
     sentAt: { type: Date },
+    estimatedReadyAt: { type: Date },
   },
   { _id: true },
 );
@@ -90,7 +98,13 @@ const orderSchema = new Schema<OrderDocument>(
       default: "draft",
     },
     items: { type: [orderItemSchema], default: [] },
-    createdByStaffId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    createdByStaffId: { type: Schema.Types.ObjectId, ref: "User" },
+    source: { type: String, enum: ["qr", "staff"], default: "staff" },
+    diningSessionId: { type: String, index: true },
+    seats: { type: Schema.Types.Mixed },
+    placedAt: { type: Date },
+    customerTotal: { type: Number, min: 0 },
+    cancellation: { type: Schema.Types.Mixed },
     servedByStaffId: { type: Schema.Types.ObjectId, ref: "User" },
     voidReason: { type: String, trim: true },
   },

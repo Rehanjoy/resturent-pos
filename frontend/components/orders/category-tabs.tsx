@@ -17,17 +17,17 @@ export function CategoryTabs({
   onSelect: (categoryId: string | null) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1 [&>button]:min-h-11 [&>button]:shrink-0">
       <button
         type="button"
         onClick={() => onSelect(null)}
         className={`rounded-full px-4 py-1.5 text-small font-medium transition-colors ${
           activeCategoryId === null
-            ? "bg-primary text-white shadow-sm"
+            ? "border border-primary bg-primary/5 text-primary"
             : "border border-border text-text-muted hover:border-primary hover:text-primary"
         }`}
       >
-        All
+        All Menu
       </button>
       {categories.map((category) => (
         <button
@@ -36,7 +36,7 @@ export function CategoryTabs({
           onClick={() => onSelect(category.id)}
           className={`rounded-full px-4 py-1.5 text-small font-medium transition-colors ${
             activeCategoryId === category.id
-              ? "bg-primary text-white shadow-sm"
+              ? "border border-primary bg-primary/5 text-primary"
               : "border border-border text-text-muted hover:border-primary hover:text-primary"
           }`}
         >

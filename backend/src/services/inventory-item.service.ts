@@ -1,9 +1,11 @@
+import { quantityToMicros, stockMovementPipeline } from "./inventory-quantity.service";
 import { Types, type HydratedDocument } from "mongoose";
 import { AppError } from "../utils/app-error";
 import { InventoryCategory } from "../models/inventory-category.model";
 import { Supplier } from "../models/supplier.model";
 import { InventoryItem, type InventoryItemDocument } from "../models/inventory-item.model";
 import { InventoryTransaction } from "../models/inventory-transaction.model";
+import { getDailyInventoryActivity, type DailyInventoryActivity } from "./inventory-reporting.service";
 import { MenuItem } from "../models/menu-item.model";
 
 export interface InventoryItemDto {
@@ -15,12 +17,15 @@ export interface InventoryItemDto {
   costPerUnit: number;
   currentStock: number;
   reorderThreshold: number;
+  expectedDailyUsage: number;
+  daysRemaining: number | null;
+  stockAlert: "healthy" | "warning" | "critical";
+  today?: DailyInventoryActivity;
   supplierId?: string;
   reorderRequested: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
-
 function toDto(item: HydratedDocument<InventoryItemDocument>): InventoryItemDto {
   return {
     id: item._id.toString(),
@@ -31,6 +36,9 @@ function toDto(item: HydratedDocument<InventoryItemDocument>): InventoryItemDto 
     costPerUnit: item.costPerUnit,
     currentStock: item.currentStock,
     reorderThreshold: item.reorderThreshold,
+    expectedDailyUsage: item.expectedDailyUsage ?? 0,
+    daysRemaining: item.expectedDailyUsage > 0 ? Math.max(0, item.currentStock) / item.expectedDailyUsage : null,
+    stockAlert: item.currentStock <= 0 ? "critical" : item.currentStock <= item.reorderThreshold ? "warning" : "healthy",
     supplierId: item.supplierId?.toString(),
     reorderRequested: item.reorderRequested,
     createdAt: item.createdAt,
@@ -99,7 +107,8 @@ export async function listInventoryItems(
   }
 
   const items = await InventoryItem.find(query).sort({ name: 1 });
-  return items.map(toDto);
+  const activity = await getDailyInventoryActivity(restaurantId);
+  return items.map((item) => ({ ...toDto(item), today: activity.get(item.id) ?? { received: 0, used: 0, wasted: 0, corrected: 0 } }));
 }
 
 export interface InventoryItemInput {
@@ -109,6 +118,7 @@ export interface InventoryItemInput {
   costPerUnit: number;
   currentStock?: number;
   reorderThreshold?: number;
+  expectedDailyUsage?: number;
   supplierId?: string;
 }
 
@@ -127,6 +137,7 @@ export async function createInventoryItem(
     costPerUnit: input.costPerUnit,
     currentStock: input.currentStock ?? 0,
     reorderThreshold: input.reorderThreshold ?? 0,
+    expectedDailyUsage: input.expectedDailyUsage ?? 0,
     supplierId: input.supplierId || undefined,
     reorderRequested: false,
   });
@@ -158,9 +169,20 @@ export async function updateInventoryItem(
     if (input.supplierId) await assertSupplierExists(restaurantId, input.supplierId);
     item.supplierId = input.supplierId ? new Types.ObjectId(input.supplierId) : undefined;
   }
+  if (input.expectedDailyUsage !== undefined) item.expectedDailyUsage = input.expectedDailyUsage;
   if (input.name !== undefined) item.name = input.name;
-  if (input.unit !== undefined) item.unit = input.unit;
-  if (input.costPerUnit !== undefined) item.costPerUnit = input.costPerUnit;
+  if (input.unit !== undefined && input.unit !== item.unit) {
+    if (await MenuItem.exists({ restaurantId, "ingredientMapping.inventoryItemId": item._id })) {
+      throw new AppError("This unit is used by a recipe. Create a new inventory item in the required unit and relink measured recipes.", 409, "INGREDIENT_UNIT_LOCKED");
+    }
+    item.unit = input.unit;
+  }
+  if (input.costPerUnit !== undefined && input.costPerUnit !== item.costPerUnit) {
+    item.priceHistory ??= [];
+    item.priceHistory.push({ oldCostPerUnit: item.costPerUnit, costPerUnit: input.costPerUnit, changedAt: new Date() });
+    if (item.priceHistory.length > 120) item.priceHistory.splice(0, item.priceHistory.length - 120);
+    item.costPerUnit = input.costPerUnit;
+  }
   if (input.reorderThreshold !== undefined) item.reorderThreshold = input.reorderThreshold;
 
   let restockDelta = 0;
@@ -211,6 +233,7 @@ export async function deleteInventoryItem(restaurantId: string, itemId: string):
 }
 
 export interface AdjustInventoryItemInput {
+  movementType?: "restock" | "usage" | "wastage" | "adjustment";
   quantityDelta: number;
   reason: string;
 }
@@ -234,19 +257,33 @@ export async function adjustInventoryItem(
   if (!input.reason || !input.reason.trim()) {
     throw new AppError("A reason is required for a stock adjustment.", 400, "REASON_REQUIRED");
   }
-  if (!input.quantityDelta) {
+  if (!Number.isFinite(input.quantityDelta) || !input.quantityDelta) {
     throw new AppError("Adjustment quantity can't be zero.", 400, "VALIDATION_ERROR");
   }
 
-  const item = await findInventoryItemOrThrow(restaurantId, itemId);
-  item.currentStock += input.quantityDelta;
-  maybeClearReorderRequested(item);
-  await item.save();
+  const movementType = input.movementType ?? "adjustment";
+  if ((movementType === "restock" && input.quantityDelta < 0) ||
+      ((movementType === "usage" || movementType === "wastage") && input.quantityDelta > 0)) {
+    throw new AppError("Receipts must add stock; usage and wastage must remove stock.", 400, "VALIDATION_ERROR");
+  }
+  await findInventoryItemOrThrow(restaurantId, itemId);
+  // Atomic increment preserves concurrent kitchen deductions and deliveries.
+  const item = await InventoryItem.findOneAndUpdate(
+    { _id: itemId, restaurantId }, stockMovementPipeline(quantityToMicros(input.quantityDelta)), { returnDocument: "after", updatePipeline: true },
+  );
+  if (!item) throw new AppError("Inventory item not found.", 404, "NOT_FOUND");
+  if (input.quantityDelta > 0) {
+    await InventoryItem.updateOne(
+      { _id: itemId, restaurantId, $expr: { $gt: ["$currentStock", "$reorderThreshold"] } },
+      { $set: { reorderRequested: false } },
+    );
+    maybeClearReorderRequested(item);
+  }
 
   await InventoryTransaction.create({
     restaurantId,
     itemId: item._id,
-    type: "adjustment",
+    type: movementType,
     quantityDelta: input.quantityDelta,
     reason: input.reason.trim(),
     staffId,

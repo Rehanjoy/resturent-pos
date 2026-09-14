@@ -243,7 +243,7 @@ export function OrdersOverview() {
                   <button
                     key={order.id}
                     type="button"
-                    onClick={() => router.push(`/admin/orders/active?tableId=${order.tableId}`)}
+                    onClick={() => router.push(`/admin/orders/active?tableId=${order.tableId}&orderId=${order.id}`)}
                     className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:border-primary"
                   >
                     <div className="flex min-w-0 flex-col gap-1">

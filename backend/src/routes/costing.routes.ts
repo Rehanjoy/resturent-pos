@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize";
+import { validate } from "../middleware/validate";
+import * as controller from "../controllers/costing.controller";
+import * as schema from "../validators/costing.validators";
+const router = Router();
+router.use(authenticate);
+const view = authorize("owner", "manager", "inventory_manager", "chef");
+const manage = authorize("owner", "manager");
+router.get("/", view, validate(schema.costingQuerySchema, "query"), controller.overview);
+router.patch("/settings", manage, validate(schema.costingSettingsSchema), controller.settings);
+router.patch("/dishes/:id", manage, validate(schema.costingParamsSchema, "params"), validate(schema.dishCostConfigSchema), controller.dish);
+router.post("/simulate", view, validate(schema.costingSimulationSchema), controller.simulate);
+router.get("/ingredients/:id/history", view, validate(schema.costingParamsSchema, "params"), controller.history);
+export default router;

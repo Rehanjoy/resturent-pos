@@ -5,6 +5,7 @@ import type {
   InventoryTransaction,
   InventoryTransactionType,
   Supplier,
+  ProductionPlanDetail,
 } from "./types";
 
 export const inventoryCategoriesApi = {
@@ -19,6 +20,13 @@ export const inventoryCategoriesApi = {
   remove: (id: string) => api.delete<{ message: string }>(`/api/inventory/categories/${id}`),
 };
 
+export const productionApi = {
+  get: (day: string) => api.get<ProductionPlanDetail>(`/api/inventory/production?day=${encodeURIComponent(day)}`),
+  savePlan: (day: string, dishes: { menuItemId: string; portions: number }[]) => api.post<ProductionPlanDetail>("/api/inventory/production/plans", { day, dishes }),
+  saveRecipe: (id: string, yieldPortions: number, ingredients: { inventoryItemId: string; quantity: number }[]) => api.patch<{ id: string; name: string; yieldPortions: number }>(`/api/inventory/production/recipes/${id}`, { yieldPortions, ingredients }),
+  reconcile: (planId: string, itemId: string, input: { actualUsed: number; actualWasted: number; expectedStock: number; recordedUsed: number; recordedWasted: number }) => api.post<ProductionPlanDetail>(`/api/inventory/production/plans/${planId}/items/${itemId}/reconcile`, input),
+};
+
 export interface InventoryItemInput {
   categoryId: string;
   name: string;
@@ -27,6 +35,7 @@ export interface InventoryItemInput {
   costPerUnit: number;
   currentStock?: number;
   reorderThreshold?: number;
+  expectedDailyUsage?: number;
   supplierId?: string;
 }
 
@@ -49,7 +58,7 @@ export const inventoryItemsApi = {
 
   remove: (id: string) => api.delete<{ message: string }>(`/api/inventory/items/${id}`),
 
-  adjust: (id: string, input: { quantityDelta: number; reason: string }) =>
+  adjust: (id: string, input: { quantityDelta: number; reason: string; movementType?: "restock" | "usage" | "wastage" | "adjustment" }) =>
     api.post<{ inventoryItem: InventoryItem }>(`/api/inventory/items/${id}/adjust`, input),
 
   toggleReorderRequested: (id: string) =>

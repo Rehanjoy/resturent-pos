@@ -16,6 +16,7 @@ import { ProfileForm } from "./profile-form";
 import { TaxConfigForm } from "./tax-config-form";
 import { DiscountPolicyForm } from "./discount-policy-form";
 import { PaymentModesForm } from "./payment-modes-form";
+import { DiningPolicyForm } from "./dining-policy-form";
 
 const VIEW_ROLES = new Set(["owner", "manager"]);
 
@@ -103,6 +104,7 @@ export function SettingsScreen() {
         title="Settings"
         subtitle="Restaurant profile, tax configuration, discount policy, and payment modes."
       />
+      <DiningPolicyForm />
 
       {settingsQuery.isLoading && <p className="text-small text-text-muted">Loading settings…</p>}
 

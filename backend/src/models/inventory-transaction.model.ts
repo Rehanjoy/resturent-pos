@@ -1,6 +1,6 @@
 import { Schema, model, type Types } from "mongoose";
 
-export const INVENTORY_TRANSACTION_TYPES = ["deduction", "restock", "adjustment"] as const;
+export const INVENTORY_TRANSACTION_TYPES = ["deduction", "restock", "adjustment", "usage", "wastage", "usage_correction", "waste_correction"] as const;
 export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPES)[number];
 
 export interface InventoryTransactionDocument {
@@ -16,10 +16,12 @@ export interface InventoryTransactionDocument {
    * defensively in `inventory-item.service.ts` so the rule holds even for
    * direct service-level callers. */
   reason?: string;
-  staffId: Types.ObjectId;
+  staffId?: Types.ObjectId;
   /** Set when `type: "deduction"` and it was triggered by an order being
    * sent to the kitchen (PRD §3.9 auto-deduction). */
   relatedOrderId?: Types.ObjectId;
+  reportingDay?: string;
+  reconciliationKey?: string;
   createdAt: Date;
 }
 
@@ -43,7 +45,9 @@ const inventoryTransactionSchema = new Schema<InventoryTransactionDocument>(
     type: { type: String, enum: INVENTORY_TRANSACTION_TYPES, required: true },
     quantityDelta: { type: Number, required: true },
     reason: { type: String, trim: true },
-    staffId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    staffId: { type: Schema.Types.ObjectId, ref: "User" },
+    reportingDay: { type: String },
+    reconciliationKey: { type: String },
     relatedOrderId: { type: Schema.Types.ObjectId, ref: "Order" },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
@@ -51,6 +55,9 @@ const inventoryTransactionSchema = new Schema<InventoryTransactionDocument>(
 
 inventoryTransactionSchema.index({ restaurantId: 1, itemId: 1, createdAt: -1 });
 inventoryTransactionSchema.index({ restaurantId: 1, type: 1, createdAt: -1 });
+inventoryTransactionSchema.index({ restaurantId: 1, createdAt: -1, itemId: 1 });
+inventoryTransactionSchema.index({ restaurantId: 1, reportingDay: 1 });
+inventoryTransactionSchema.index({ restaurantId: 1, reconciliationKey: 1 }, { unique: true, partialFilterExpression: { reconciliationKey: { $type: "string" } } });
 
 export const InventoryTransaction = model<InventoryTransactionDocument>(
   "InventoryTransaction",

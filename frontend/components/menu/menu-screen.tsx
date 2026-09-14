@@ -12,6 +12,7 @@ import { CategorySidebar } from "./category-sidebar";
 import { buildCategoryNameMap, DishTable } from "./dish-table";
 import { CategoryFormModal } from "./category-form-modal";
 import { DishFormModal } from "./dish-form-modal";
+import { PreparationTimes } from "./preparation-times";
 
 const MANAGE_ROLES = new Set(["owner", "manager"]);
 
@@ -262,6 +263,8 @@ export function MenuScreen() {
           </div>
         </div>
       )}
+
+      {user && ["owner", "manager", "chef"].includes(user.role) && menuItems && <PreparationTimes items={menuItems} />}
 
       {categoryModal && (
         <CategoryFormModal

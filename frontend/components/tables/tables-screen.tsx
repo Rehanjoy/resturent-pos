@@ -21,6 +21,7 @@ import { TableCard } from "./table-card";
 import { TableStatChips } from "./table-stat-chips";
 import { AreaFormModal } from "./area-form-modal";
 import { TableFormModal } from "./table-form-modal";
+import { SeatingFloor } from "./seating-floor";
 
 const VIEW_ROLES = new Set(["owner", "manager", "cashier", "server"]);
 const MANAGE_ROLES = new Set(["owner", "manager"]);
@@ -55,6 +56,8 @@ export function TablesScreen() {
   const canChangeStatus = !!user && STATUS_CHANGE_ROLES.has(user.role);
 
   const [activeAreaId, setActiveAreaId] = useState<string | null>(null);
+  const [view, setView] = useState<"chairs" | "manage">("chairs");
+  const [search, setSearch] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
   const [areaModal, setAreaModal] = useState<{ mode: "add" | "edit"; area: Area | null } | null>(
     null,
   );
@@ -103,8 +106,8 @@ export function TablesScreen() {
 
   const visibleTables = useMemo(() => {
     const all = tables ?? [];
-    return activeAreaId ? all.filter((table) => table.areaId === activeAreaId) : all;
-  }, [tables, activeAreaId]);
+    return all.filter(table => (!activeAreaId || table.areaId === activeAreaId) && table.name.toLowerCase().includes(search.toLowerCase()));
+  }, [tables, activeAreaId, search]);
 
   // Real-time table-status sync (PRD §3.5) — every connected terminal
   // patches its local cache in place when any terminal changes a table's
@@ -254,7 +257,7 @@ export function TablesScreen() {
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
       <PageHeader
         title="Tables"
-        subtitle="Live floor status — tap a table to open its order."
+        subtitle="A place for every guest. Manage chairs, shared tables and group bookings."
         action={
           canManage && (
             <button
@@ -269,6 +272,8 @@ export function TablesScreen() {
           )
         }
       />
+
+      <div className="flex flex-wrap items-center gap-3"><div className="flex rounded-full bg-white p-1"><button onClick={() => setView("chairs")} className={`min-h-11 rounded-full px-5 text-sm font-semibold ${view === "chairs" ? "bg-primary text-white" : "text-text-muted"}`}>Chairs & groups</button><button onClick={() => setView("manage")} className={`min-h-11 rounded-full px-5 text-sm font-semibold ${view === "manage" ? "bg-primary text-white" : "text-text-muted"}`}>Manage tables</button></div><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search tables…" aria-label="Search tables" className="min-w-0 flex-1 rounded-full border border-border bg-white px-4 py-2" /></div>
 
       {!isLoading && !isError && tables && tables.length > 0 && <TableStatChips tables={tables} />}
 
@@ -334,7 +339,9 @@ export function TablesScreen() {
         </div>
       )}
 
-      {!isLoading && !isError && visibleTables.length > 0 && (
+      {view === "chairs" && <SeatingFloor areaId={activeAreaId} search={search} canManage={canManage} canBook={canChangeStatus} />}
+
+      {view === "manage" && !isLoading && !isError && visibleTables.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {visibleTables.map((table) => (
             <TableCard

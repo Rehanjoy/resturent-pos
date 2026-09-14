@@ -110,10 +110,11 @@ async function request<TResponse>(
 }
 
 export const api = {
-  get: <TResponse>(path: string) => request<TResponse>(path, { method: "GET" }),
-  post: <TResponse>(path: string, body?: unknown) =>
+  get: <TResponse>(path: string, headers?: Record<string, string>) => request<TResponse>(path, { method: "GET", headers }),
+  post: <TResponse>(path: string, body?: unknown, headers?: Record<string, string>) =>
     request<TResponse>(path, {
       method: "POST",
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
   patch: <TResponse>(path: string, body?: unknown) =>

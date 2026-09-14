@@ -1,5 +1,64 @@
 # Product Brief — Saffron (Restaurant POS & Management System)
 
+## Food-cost and menu-profit engineering — implemented 2026-09-14
+
+Inventory is organised as one category-based ingredient register with stock, purchase rate, supplier,
+reorder point, daily movement, total stock value, linked-dish count and a rate-change history. Standard
+recipes link those ingredients to a measured batch yield. Kg recipes can be entered in grams and litre
+recipes in millilitres; the saved base quantity retains up to six decimal places. The system never
+infers a conversion between mass and volume.
+
+Each dish receives a live cost sheet: exact ingredient contribution, configurable wastage allowance,
+shared overhead allocation, packaging, direct labour, utilities, other per-portion costs, total cost,
+contribution, food-cost percentage, margin, break-even price and a suggested price that satisfies the
+restaurant's own targets. Missing recipes or zero purchase rates are shown as incomplete. A positive but
+below-target dish is labelled low margin; loss is reserved for a selling price below estimated full cost.
+
+Owners can test a different pre-tax selling price and supplier/seasonal rates without changing live data,
+then explicitly apply only the selling price if desired. Preferred seasonal months are staff-entered local
+knowledge rather than a weather forecast. Recent fulfilled portions are valued at current prices and rates
+and clearly labelled as a current-cost estimate, because historical recipe-cost snapshots are not available.
+
+## Guest service and production intelligence — implemented 2026-09-13
+
+Every QR booking now captures the guest's name and mobile number before seating. A visit record tracks
+party size, selected chairs, time spent, order value and paid value. The Customers workspace lets
+authorised staff recognise returning guests and apply a factual Normal, Good guest, VIP or Service
+attention label with private notes. Labels are staff decisions; the system does not automatically give
+a guest a negative label.
+
+Guests can request water, the bill or staff help from their active QR session. The floor receives the
+request in real time with a polling fallback, highlights the relevant table and chair, and supports
+acknowledged and completed states. Kitchen item changes appear as accessible in-app notifications, so
+the guest can follow each dish from queued through preparation to ready with its current ETA.
+
+Inventory now includes standard batch recipes and a daily production worksheet. For example, a biryani
+recipe records the measured rice, oil and other ingredients used by one batch plus the number of
+portions it yields. Planned portions calculate exact ingredient needs, cost and shortage before service;
+actual kitchen orders remain the stock-deduction source to prevent double counting. A closed-day
+reconciliation compares recorded use and waste with weighed actual values and posts only the difference,
+once. Quantities retain up to six decimal places; real-world 10 g accuracy depends on staff entering
+weighed measurements in the source unit.
+
+## Dining operations enhancement — implemented 2026-09-10
+
+The floor now works at chair level. Each chair has its own QR code; a guest can scan one chair,
+enter the party size, and select available chairs across one or more tables. Different parties can
+occupy different chairs at the same table without sharing an order or bill. Customer selections are
+held for a configurable five-minute default and released when no order is placed. Staff-created seating
+has no countdown and stays occupied until staff releases it after settlement.
+
+Customer QR orders show a server-time countdown, menu photos, customization, counter-payment guidance,
+item preparation estimates and live kitchen state. The cancellation policy is stored with each order:
+by default cancellation is free before 8 minutes, charged at 50% from 8 to under 10 minutes, and charged
+in full from 10 minutes. The guest reviews the current server-calculated amount before confirming.
+Managers can change future-order policy values and per-dish preparation times; kitchen staff can revise
+a live item's ETA.
+
+Inventory records receipts, use, waste and corrections separately, shows daily movements in India
+Standard Time, accepts planned daily usage, calculates projected days remaining, and raises low or
+critical alerts at the configured reorder threshold.
+
 **Client:** digitecweb
 **Source:** `00-prd-source.md` (client-provided PRD, v1.0)
 **Status:** Draft — awaiting client approval
@@ -56,7 +115,6 @@ Enforcement: JWT claims (`role`, `restaurantId`, `staffId`) checked server-side 
 - **Website builder module** — admin content editor (Owner: full, Manager: view-only per the RBAC matrix) plus a real public, unauthenticated, rate-limited restaurant site with SEO metadata and Schema.org structured data. Shipped.
 
 ### Still Phase 2/3 (not yet built)
-- QR self-ordering PWA (pending-approval gate before kitchen)
 - WhatsApp/SMS notifications (reservation confirmations, low-stock alerts) — no provider integration exists yet
 - Multi-station KDS routing, shift scheduling, advanced analytics/forecasting, delivery aggregator integrations, multi-branch support
 
@@ -69,7 +127,7 @@ Enforcement: JWT claims (`role`, `restaurantId`, `staffId`) checked server-side 
 
 ## 5. Data Entities (MongoDB collections)
 
-`restaurants`, `users` (staff), `areas`, `tables`, `categories`, `menuItems`, `orders` (with embedded/denormalized order items), `kots`, `inventoryItems`, `inventoryTransactions`, `suppliers`, `reservations`, `invoices`, `payments`, `auditLogs`, `websiteContent`.
+`restaurants`, `users` (staff), `areas`, `tables`, `diningFloors`, `customerVisits`, `serviceRequests`, `categories`, `menuItems`, `productionPlans`, `productionReconciliations`, `orders` (with embedded/denormalized order items), `kots`, `inventoryItems`, `inventoryTransactions`, `suppliers`, `reservations`, `invoices`, `payments`, `auditLogs`, `websiteContent`.
 
 All restaurant-scoped collections carry `restaurantId` with compound indexes for tenant isolation — architecture is multi-tenant-ready even though Phase 1 ships single-tenant/self-hosted per restaurant.
 

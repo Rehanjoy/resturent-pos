@@ -1,0 +1,15 @@
+import { Router } from "express";
+import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize";
+import { validate } from "../middleware/validate";
+import * as controller from "../controllers/production.controller";
+import * as validators from "../validators/production.validators";
+const router = Router();
+router.use(authenticate);
+const view = authorize("owner", "manager", "inventory_manager", "chef");
+const manage = authorize("owner", "manager", "inventory_manager", "chef");
+router.get("/", view, validate(validators.productionQuerySchema, "query"), controller.getPlan);
+router.post("/plans", manage, validate(validators.productionPlanInputSchema), controller.savePlan);
+router.patch("/recipes/:id", manage, validate(validators.recipeParamsSchema, "params"), validate(validators.recipeInputSchema), controller.saveRecipe);
+router.post("/plans/:id/items/:itemId/reconcile", manage, validate(validators.reconciliationParamsSchema, "params"), validate(validators.reconciliationConfirmSchema), controller.reconcile);
+export default router;

@@ -12,7 +12,7 @@ export interface InventoryTransactionDto {
   type: InventoryTransactionType;
   quantityDelta: number;
   reason?: string;
-  staffId: string;
+  staffId?: string;
   relatedOrderId?: string;
   createdAt: Date;
 }
@@ -27,7 +27,7 @@ function toDto(
     type: transaction.type,
     quantityDelta: transaction.quantityDelta,
     reason: transaction.reason,
-    staffId: transaction.staffId.toString(),
+    staffId: transaction.staffId?.toString(),
     relatedOrderId: transaction.relatedOrderId?.toString(),
     createdAt: transaction.createdAt,
   };

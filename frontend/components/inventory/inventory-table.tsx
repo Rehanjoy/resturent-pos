@@ -1,6 +1,7 @@
 "use client";
 
 import { EditIcon, TrashIcon } from "@/components/icons";
+import { formatQuantity, formatStockQuantity } from "@/lib/inventory/units";
 import { formatMoney } from "@/lib/format";
 import type { InventoryCategory, InventoryItem, Supplier } from "@/lib/inventory/types";
 
@@ -40,8 +41,7 @@ const BAR_TONE_CLASS: Record<"error" | "warning" | "success", string> = {
 };
 
 function formatStock(item: InventoryItem): string {
-  const rounded = Math.round(item.currentStock * 100) / 100;
-  return `${rounded} ${item.unit}`;
+  return formatStockQuantity(item.currentStock, item.unit);
 }
 
 /**
@@ -54,39 +54,45 @@ function formatStock(item: InventoryItem): string {
  */
 export function InventoryTable({
   items,
+  linkedDishCounts,
   categoryNameById,
   supplierNameById,
   canManage,
   isTogglingReorder,
   onToggleReorderRequested,
+  onOpenHistory,
   onAdjust,
   onEdit,
   onDelete,
 }: {
   items: InventoryItem[];
+  linkedDishCounts: Record<string, number>;
   categoryNameById: Map<string, string>;
   supplierNameById: Map<string, string>;
   canManage: boolean;
   isTogglingReorder: (item: InventoryItem) => boolean;
   onToggleReorderRequested: (item: InventoryItem) => void;
+  onOpenHistory: (item: InventoryItem) => void;
   onAdjust: (item: InventoryItem) => void;
   onEdit: (item: InventoryItem) => void;
   onDelete: (item: InventoryItem) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
-      <table className="w-full text-left text-body">
-        <thead>
+      <table className="block w-full text-left text-body lg:table">
+        <thead className="hidden lg:table-header-group">
           <tr className="border-b border-border text-small font-medium text-text-muted">
             <th className="px-4 py-3">Item</th>
             <th className="px-4 py-3">Stock Level</th>
+            <th className="px-4 py-3">Today (IST)</th>
+            <th className="px-4 py-3">Daily plan</th>
             <th className="px-4 py-3">Supplier</th>
             <th className="px-4 py-3">Value</th>
             <th className="px-4 py-3">Status</th>
             <th className="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="grid gap-3 p-3 sm:grid-cols-2 lg:table-row-group lg:p-0">
           {items.map((item) => {
             const tone = stockLevelTone(item);
             const percent = stockLevelPercent(item);
@@ -94,14 +100,15 @@ export function InventoryTable({
             const value = Math.round(item.currentStock * item.costPerUnit);
 
             return (
-              <tr key={item.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3">
+              <tr key={item.id} className="block rounded-xl border border-border p-2 lg:table-row lg:rounded-none lg:border-x-0 lg:border-t-0 lg:p-0 lg:last:border-0">
+                <td className="block lg:table-cell px-4 py-3">
                   <p className="font-medium text-text">{item.name}</p>
                   <p className="text-small text-text-muted">
                     {categoryNameById.get(item.categoryId) ?? "—"}
                   </p>
+                  <p className="text-xs text-text-muted">Used in {linkedDishCounts[item.id] ?? 0} dishes</p>
                 </td>
-                <td className="px-4 py-3">
+                <td className="block lg:table-cell px-4 py-3">
                   <div className="flex w-40 flex-col gap-1">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-background">
                       <div
@@ -116,13 +123,26 @@ export function InventoryTable({
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-text-muted">
+                <td className="block lg:table-cell px-4 py-3 text-small text-text-muted">
+                  <p className="font-medium text-text lg:hidden">Today (IST)</p>
+                  <p>Received: {formatQuantity(item.today?.received ?? 0)} {item.unit}</p>
+                  <p>Used: {formatQuantity(item.today?.used ?? 0)} {item.unit}</p>
+                  <p>Wasted: {formatQuantity(item.today?.wasted ?? 0)} {item.unit}</p>
+                  {!!item.today?.corrected && <p>Correction: {formatQuantity(item.today.corrected)} {item.unit}</p>}
+                </td>
+                <td className="block lg:table-cell px-4 py-3 text-small text-text-muted">
+                  <p>{item.expectedDailyUsage || 0} {item.unit} / day planned</p>
+                  <p className="font-medium text-text">{item.daysRemaining == null ? "Set usage to estimate" : `${Number(item.daysRemaining.toFixed(1))} days remaining`}</p>
+                  <span className="text-small">Estimate from current stock</span>
+                </td>
+                <td className="block lg:table-cell px-4 py-3 text-text-muted">
                   {item.supplierId ? (supplierNameById.get(item.supplierId) ?? "—") : "—"}
                 </td>
-                <td className="px-4 py-3 text-numeric font-semibold text-text">
+                <td className="block lg:table-cell px-4 py-3 text-numeric font-semibold text-text">
                   {formatMoney(value)}
+                  <p className="text-xs font-normal text-text-muted">{formatMoney(item.costPerUnit)} / {item.unit}</p>
                 </td>
-                <td className="px-4 py-3">
+                <td className="block lg:table-cell px-4 py-3">
                   {isLow ? (
                     <button
                       type="button"
@@ -135,13 +155,13 @@ export function InventoryTable({
                             : "Mark as reordered"
                           : undefined
                       }
-                      className={`rounded-full px-2.5 py-1 text-small font-medium transition-colors disabled:cursor-default ${
+                      className={`min-h-11 rounded-full px-2.5 py-1 text-small font-medium transition-colors disabled:cursor-default ${
                         item.reorderRequested
                           ? "bg-secondary/10 text-secondary"
                           : "bg-warning/10 text-warning"
                       } ${canManage ? "hover:opacity-80" : ""}`}
                     >
-                      {item.reorderRequested ? "Reordered" : "Reorder"}
+                      {item.currentStock <= 0 ? "Critical · " : "Low stock · "}{item.reorderRequested ? "Reordered" : "Reorder"}
                     </button>
                   ) : (
                     <span className="rounded-full bg-success/10 px-2.5 py-1 text-small font-medium text-success">
@@ -149,24 +169,31 @@ export function InventoryTable({
                     </span>
                   )}
                 </td>
-                {canManage ? (
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1.5">
+                <td className="block lg:table-cell px-4 py-3">
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onOpenHistory(item)}
+                        className="min-h-11 rounded-lg px-2.5 py-1.5 text-small font-medium text-text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+                      >
+                        Rate history
+                      </button>
+                      {canManage && <>
                       <button
                         type="button"
                         onClick={() => onAdjust(item)}
                         title={`Adjust stock: ${item.name}`}
                         aria-label={`Adjust stock: ${item.name}`}
-                        className="rounded-lg px-2.5 py-1.5 text-small font-medium text-text-muted transition-colors hover:bg-secondary/10 hover:text-secondary"
+                        className="min-h-11 rounded-lg px-2.5 py-1.5 text-small font-medium text-text-muted transition-colors hover:bg-secondary/10 hover:text-secondary"
                       >
-                        Adjust
+                        Stock entry
                       </button>
                       <button
                         type="button"
                         onClick={() => onEdit(item)}
                         title={`Edit ${item.name}`}
                         aria-label={`Edit ${item.name}`}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-secondary/10 hover:text-secondary"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-secondary/10 hover:text-secondary"
                       >
                         <EditIcon className="h-4 w-4" />
                       </button>
@@ -175,15 +202,13 @@ export function InventoryTable({
                         onClick={() => onDelete(item)}
                         title={`Delete ${item.name}`}
                         aria-label={`Delete ${item.name}`}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-error/10 hover:text-error"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-error/10 hover:text-error"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
+                      </>}
                     </div>
                   </td>
-                ) : (
-                  <td className="px-4 py-3" />
-                )}
               </tr>
             );
           })}

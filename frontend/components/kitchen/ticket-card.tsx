@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Kot } from "@/lib/orders/types";
+import { ItemEtaControl } from "./item-eta-control";
 
 // Configurable SLA per PRD §3.4 example ("e.g. 15 min"). Below the warning
 // threshold reads as on-time (success/green); between the two thresholds
@@ -136,6 +137,7 @@ export function TicketCard({
                     .join(", ")}
                 </p>
                 {item.notes && <p className="text-small italic text-text-muted">{item.notes}</p>}
+                {canManage && item.itemStatus !== "ready" && item.itemStatus !== "served" && <ItemEtaControl orderId={kot.orderId} itemId={item.orderItemId} name={item.nameSnapshot} estimatedReadyAt={item.estimatedReadyAt} />}
               </div>
             </div>
 
@@ -144,7 +146,7 @@ export function TicketCard({
                 type="button"
                 disabled={isMarkingItem}
                 onClick={() => onMarkItemReady(item.orderItemId)}
-                className="shrink-0 rounded-md border border-border px-2 py-1 text-small text-text hover:border-success hover:text-success disabled:opacity-60"
+                className="min-h-11 shrink-0 rounded-full border border-border px-3 py-2 text-xs text-text hover:border-success hover:text-success disabled:opacity-60"
               >
                 Mark Ready
               </button>

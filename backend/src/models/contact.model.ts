@@ -14,6 +14,8 @@ export interface ContactDocument {
   source: ContactSource;
   optedIn: boolean;
   notes?: string;
+  serviceTag?: "normal" | "good" | "vip" | "needs_attention";
+  serviceNotes?: string;
   createdByStaffId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -64,6 +66,8 @@ const contactSchema = new Schema<ContactDocument>(
     // mechanism that ships alongside that send flow.
     optedIn: { type: Boolean, required: true, default: true },
     notes: { type: String, trim: true },
+    serviceTag: { type: String, enum: ["normal", "good", "vip", "needs_attention"], default: "normal" },
+    serviceNotes: { type: String, trim: true, maxlength: 2000 },
     // Null/absent for auto-synced contacts (Part 2's `reservation`/`order`
     // sources) — only set when a staff member added the contact themselves.
     createdByStaffId: { type: Schema.Types.ObjectId, ref: "User" },

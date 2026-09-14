@@ -15,6 +15,7 @@ export interface KotItemSubdocument {
   addOns: string[];
   notes?: string;
   itemStatus: OrderItemStatus;
+  estimatedReadyAt?: Date;
 }
 
 export interface KotDocument {
@@ -50,6 +51,7 @@ const kotItemSchema = new Schema<KotItemSubdocument>(
     addOns: { type: [String], default: [] },
     notes: { type: String, trim: true },
     itemStatus: { type: String, enum: ORDER_ITEM_STATUSES, required: true },
+    estimatedReadyAt: { type: Date },
   },
   { _id: false },
 );

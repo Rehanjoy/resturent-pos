@@ -62,3 +62,32 @@ export const publicRateLimiter = rateLimit({
     code: "RATE_LIMITED",
   },
 });
+
+/** Dining screens poll live seat/order state. Restaurant Wi-Fi commonly
+ * places every guest behind one public IP, so the generic 100-request limit
+ * would block legitimate guests after a few minutes. Reads get NAT-aware
+ * headroom; writes retain a much tighter cap and still require a valid QR or
+ * dining-session token before they can change state. */
+export const diningReadRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 6000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Live updates are temporarily busy. Try again shortly.",
+    code: "RATE_LIMITED",
+  },
+});
+
+export const diningWriteRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many booking requests. Try again shortly.",
+    code: "RATE_LIMITED",
+  },
+});

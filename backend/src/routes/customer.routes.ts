@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize";
+import { validate } from "../middleware/validate";
+import * as controller from "../controllers/customer.controller";
+import * as validators from "../validators/customer.validators";
+const router = Router();
+router.use(authenticate, authorize("owner", "manager", "cashier", "server"));
+router.get("/", validate(validators.customerListQuery, "query"), controller.list);
+router.get("/:id", validate(validators.customerIdParams, "params"), controller.detail);
+router.patch("/:id", authorize("owner", "manager"), validate(validators.customerIdParams, "params"), validate(validators.customerUpdateBody), controller.update);
+export default router;

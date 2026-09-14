@@ -1,3 +1,4 @@
+import { inventoryQuantitySchema } from "./inventory-quantity.validators";
 import { z } from "zod";
 import { MENU_ITEM_TYPES, SPICE_LEVELS } from "../models/menu-item.model";
 
@@ -17,7 +18,7 @@ const priceSchema = z
 // `categoryId`), not here.
 const ingredientMappingSchema = z.object({
   inventoryItemId: z.string().min(1, "Select an ingredient."),
-  quantityPerUnit: z.number().positive("Quantity used must be greater than zero."),
+  quantityPerUnit: inventoryQuantitySchema.refine((value) => value > 0, "Quantity used must be greater than zero."),
 });
 
 export const createMenuItemSchema = z.object({

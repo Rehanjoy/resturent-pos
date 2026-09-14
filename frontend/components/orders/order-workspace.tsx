@@ -36,7 +36,7 @@ function errorMessageOf(error: unknown, fallback: string): string {
  * succeeds (see `mode` below); everything else (menu browsing,
  * customization, cart, KOT history, serve, void) is identical.
  */
-export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new" | "active" }) {
+export function OrderWorkspace({ tableId, mode, initialOrderId }: { tableId: string; mode: "new" | "active"; initialOrderId?: string }) {
   const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -45,7 +45,7 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
   const canVoid = !!user && VOID_ROLES.has(user.role);
   const canBill = !!user && BILLING_ROLES.has(user.role);
 
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(initialOrderId ?? null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [customizeItem, setCustomizeItem] = useState<MenuItem | null>(null);
@@ -88,9 +88,9 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
   });
 
   useEffect(() => {
-    openOrderMutation.mutate();
+    if (!initialOrderId) openOrderMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableId]);
+  }, [tableId, initialOrderId]);
 
   const orderQuery = useQuery({
     queryKey: ["order", orderId],
@@ -99,6 +99,7 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
   });
 
   const order = orderQuery.data;
+  const canEditCurrentOrder = canBuild && order?.source !== "qr";
 
   // The New Order screen assumes a fresh draft. If the table already has
   // an order that's progressed past draft (e.g. reached via a stale link
@@ -188,7 +189,7 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
   const isVoidable = !!order && !NON_VOIDABLE.includes(order.status);
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
+    <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-6 pb-24 sm:px-6 lg:pb-6">
       <PageHeader
         title={table ? table.name : "Order"}
         action={
@@ -244,10 +245,17 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
         />
       )}
 
+      {!isLoading && !isError && order?.source === "qr" && (
+        <div className="rounded-2xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-text">
+          This guest confirmed a QR order with a cancellation-price snapshot. Its items are locked;
+          kitchen status, ETA, billing and payment remain available to staff.
+        </div>
+      )}
+
       {!isLoading && !isError && order && (
         <div className="flex flex-col gap-6 lg:flex-row">
-          <div className="flex flex-1 flex-col gap-6">
-            <div className="flex flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-5">
+            <div className="flex min-w-0 flex-col-reverse gap-3 rounded-2xl bg-surface p-3">
               <CategoryTabs
                 categories={categories}
                 activeCategoryId={activeCategoryId}
@@ -272,13 +280,14 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
                   {searchTerm ? "No dishes match your search." : "No dishes in this category yet."}
                 </p>
               ) : (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
                   {visibleItems.map((item) => (
                     <OrderItemTile
                       key={item.id}
                       item={item}
+                      disabled={!canEditCurrentOrder}
                       onSelect={(selected) => {
-                        if (!canBuild) return;
+                        if (!canEditCurrentOrder) return;
                         setCartError(null);
                         setCustomizeItem(selected);
                       }}
@@ -294,7 +303,7 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
             order={order}
             pendingItems={pendingItems}
             sentItems={sentItems}
-            canBuild={canBuild}
+            canBuild={canEditCurrentOrder}
             isSending={sendToKitchenMutation.isPending}
             isUpdating={updateItemMutation.isPending || removeItemMutation.isPending}
             onIncrement={(item) =>
@@ -313,7 +322,8 @@ export function OrderWorkspace({ tableId, mode }: { tableId: string; mode: "new"
         </div>
       )}
 
-      {cartError && <p className="text-small text-error">{cartError}</p>}
+      {order && <a href="#order-cart" className="fixed inset-x-4 bottom-4 z-30 rounded-full bg-primary px-6 py-4 text-center font-semibold text-white shadow-lg lg:hidden">View Order · {order.items.reduce((total, item) => total + item.qty, 0)} items</a>}
+      {cartError && <p role="alert" className="text-small text-error">{cartError}</p>}
 
       {customizeItem && (
         <ItemCustomizationModal

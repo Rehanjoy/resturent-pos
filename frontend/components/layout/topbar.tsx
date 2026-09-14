@@ -97,15 +97,16 @@ export function Topbar({ user }: { user: AuthUser }) {
         <MenuIcon className="h-5 w-5" />
       </button>
 
-      <div className="relative hidden flex-1 max-w-sm sm:block">
+      <form action="/admin/tables" className="relative hidden flex-1 max-w-sm sm:block">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
         <input
           type="search"
-          placeholder="Search orders, tables..."
-          aria-label="Search orders, tables"
+          name="q"
+          placeholder="Find a table…"
+          aria-label="Find a table, press Enter to search"
           className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-small text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
-      </div>
+      </form>
 
       <div className="ml-auto flex items-center gap-3">
         <ConnectionStatus />
@@ -115,14 +116,14 @@ export function Topbar({ user }: { user: AuthUser }) {
           <span>{clock}</span>
         </div>
 
-        <button
-          type="button"
-          title="Notifications"
-          aria-label="Notifications"
+        <Link
+          href="/admin/kitchen"
+          title="Live kitchen queue"
+          aria-label="Open live kitchen queue"
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-primary hover:text-primary"
         >
           <BellIcon className="h-4 w-4" />
-        </button>
+        </Link>
 
         {canStartOrder && (
           <Link

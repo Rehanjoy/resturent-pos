@@ -1,5 +1,68 @@
 # Security Audit Report — Saffron (Phase 7)
 
+## 2026-09-14 costing security addendum
+
+Every costing route requires JWT authentication and derives `restaurantId` from the token. Owner and
+Manager can change costing rules, dish extras/seasons and live menu prices; Inventory Manager and Chef can
+view cost sheets, history and run non-mutating scenarios. Request parameters and bodies are validated with
+strict Zod schemas, bounded arrays, ObjectId checks, integer-paise money and capped percentages/periods.
+
+Costing reads and writes are tenant scoped. Scenario ingredient IDs must belong to both the restaurant and
+the selected dish, and simulations do not save their rate overrides. Ingredient base units cannot change
+while linked recipes exist, preventing silent kg/g recipe corruption. Purchase-rate history is bounded to
+the latest 120 changes per ingredient to prevent unbounded document growth.
+
+Cost calculations use rational integer arithmetic and round totals in paise only after ingredient fractions
+are summed. Reports identify sales profitability as a current-rate estimate and do not present inventory
+variance as proof of theft. No secret, external API, new environment variable or new package dependency was
+introduced by this module.
+
+## 2026-09-13 customer, service-request and production addendum
+
+Guest name and phone are validated at the public boundary and normalised server-side. The active QR
+session response returns only that guest's name and phone; it never exposes the internal contact ID,
+visit history, staff notes or service label. Creating a visit does not opt the person into marketing or
+overwrite an existing marketing preference. Customer search, history and profile updates require an
+authenticated restaurant-scoped role; profile labels and notes are limited to Owner and Manager.
+
+Public water, bill and help requests require the active dining token and are scoped to its restaurant,
+session and selected seats. An open request of the same type is deduplicated. Staff status changes are
+role guarded and restaurant scoped. The public response contains no staff identity.
+
+Production plans and recipe edits are authenticated and tenant scoped. Ingredient quantities reject
+more than six decimal places. Stock movement uses scaled integer arithmetic and an atomic update; closed
+day reconciliation verifies that the ingredient belongs to the plan and uses a unique reconciliation
+key, so retries cannot apply the stock difference twice. Planning itself never deducts stock, preventing
+the production estimate and kitchen order from consuming the same ingredient twice.
+
+The full backend regression suite passes **205/205** after these changes. Backend and frontend type
+checks, frontend lint, and both production builds pass. No new package dependency was added by this
+enhancement.
+
+## 2026-09-10 dining security addendum
+
+The chair-ordering endpoints are the only new anonymous write surface. They use separate read/write
+rate limits sized for many guests behind one restaurant Wi-Fi address, resolve the restaurant only
+from a 128-bit table QR token, and authenticate an active
+party with a separate 256-bit random token whose SHA-256 hash is stored. Responses exclude token hashes,
+staff identifiers and the durable retry journal.
+
+Chair claims use a database revision compare-and-swap so a multi-table party is seated completely or
+not seated. The same ledger blocks conflicting legacy table orders, reservations and status changes.
+Public order submission has an idempotency key, durable journal and deterministic order/KOT IDs;
+inventory deduction has a persistent processed key and recipe snapshot for crash recovery.
+
+Cancellation tiers use server time and integer paise. Each order stores its policy snapshot and total
+including tax. The client confirms the current percentage; a tier change returns a conflict and requires
+fresh review. Charged cancellations create a non-discountable invoice. Owner/manager roles change policy;
+owner/manager/chef roles change preparation estimates. Tenant IDs come from the JWT or QR lookup rather
+than request bodies. Targeted tests verify cross-tenant rejection and privileged-route guards. No open
+high-severity issue was found in this enhancement.
+
+Production dependency audit initially found patched advisories in Next.js, Sharp, Multer and qs.
+Next.js was upgraded to 16.3.4, Sharp to 0.35.4, Multer to 2.3.0 and qs to 6.16.0. Final production
+audits report **0 vulnerabilities** in both frontend and backend dependency trees.
+
 **Date:** 2026-08-18
 **Scope:** Full codebase audit against `references/security-checklist.md` and PRD §7 — auth/session handling, input validation, injection, access control per role, rate limiting, dependency audit, secrets scan.
 
@@ -53,7 +116,7 @@ Both fixes verified: backend still builds/typechecks clean, and all 69 automated
 
 ## 7. Accepted trade-offs / follow-ups (not blocking)
 
-- **Rate limiting scope**: only `/api/auth/*` is rate-limited. PRD §7 also calls for it on "public QR-ordering endpoints" — those don't exist yet (Phase 2), so there's nothing to limit there yet. Other authenticated routes (e.g. invoice PDF generation, report export) have no per-route limiter; abuse there requires a valid staff session already, which lowers the risk to an internal-tool level. Flagged for revisit once Redis is introduced (planned for the Inventory/Reservations build, per the PRD's own architecture).
+- **Rate limiting scope (historical finding, resolved 2026-09-10)**: public website and QR dining endpoints now have rate limiters. Dining reads and writes have separate thresholds so guests sharing restaurant Wi-Fi do not exhaust a single low per-IP allowance.
 - **In-memory rate limiting & lockout state**: both `middleware/rate-limit.ts` and `utils/login-attempt-tracker.ts` are per-Node-process. Correct for this MVP's single-instance self-hosted deployment model; must move to a shared Redis store before any horizontal scaling (documented in both files already).
 - **Body size limits**: `express.json()`/`express.urlencoded()` use Express's default 100kb limit — not explicitly overridden. Adequate given Zod's own per-field `max()` constraints already cap realistic payload sizes; no change made.
 

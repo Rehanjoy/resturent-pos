@@ -5,6 +5,7 @@ import * as reservationService from "../src/services/reservation.service";
 import * as orderService from "../src/services/order.service";
 import { AppError } from "../src/utils/app-error";
 import { Table } from "../src/models/table.model";
+import { updateTableStatus } from "../src/services/table.service";
 import request from "supertest";
 import { createApp } from "../src/app";
 
@@ -271,7 +272,8 @@ describe("Reservation management & table-hold logic", () => {
     // Table is "reserved" (not "free"), so this simulates staff manually
     // walking a party in and starting an order on it directly — an edge
     // case, but one the release logic must not clobber.
-    await Table.updateOne({ _id: table._id }, { status: "free" });
+    // Use the staff status path so the whole-table seating lock is released too.
+    await updateTableStatus(restaurantId, table._id.toString(), "free");
     await orderService.createOrder(restaurantId, server._id.toString(), table._id.toString());
 
     await reservationService.updateReservation(restaurantId, reservation.id, { status: "cancelled" });

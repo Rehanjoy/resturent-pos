@@ -1,4 +1,14 @@
 @import "tailwindcss";
+
+.floor-table { border-color: #e4c9b5; background: repeating-linear-gradient(3deg, transparent 0 13px, #be94740a 14px 15px), linear-gradient(120deg, #f9ecdc, #eddbc5); box-shadow: 0 6px 0 #d4b599, 0 10px 16px #58321b12; }
+.floor-chair::before { content: ""; position: absolute; border: 2px solid currentColor; opacity: .22; border-radius: 5px; }
+.floor-chair-top::before { top: 3px; left: 5px; right: 5px; height: 4px; }
+.floor-chair-bottom::before { bottom: 3px; left: 5px; right: 5px; height: 4px; }
+.floor-chair-left::before { left: 3px; top: 5px; bottom: 5px; width: 4px; }
+.floor-chair-right::before { right: 3px; top: 5px; bottom: 5px; width: 4px; }
+@keyframes service-attention { 50% { box-shadow: 0 0 0 6px #f59e0b30; } }
+.service-pulse { animation: service-attention 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .service-pulse { animation: none; } }
 @config "../tailwind.config.ts";
 
 /*
@@ -8,16 +18,16 @@
  */
 :root {
   /* Brand */
-  --color-primary: #e8564a;
+  --color-primary: #e53e15;
   --color-secondary: #1f7a8c;
-  --color-accent: #f0665a;
+  --color-accent: #ff4b24;
 
   /* Neutrals */
-  --color-bg: #faf7f5;
+  --color-bg: #fff3f0;
   --color-surface: #ffffff;
-  --color-text: #2b2420;
-  --color-text-muted: #6b6058;
-  --color-border: #e5ddd8;
+  --color-text: #191919;
+  --color-text-muted: #706b69;
+  --color-border: #eee7e4;
 
   /* Semantic (also drives KDS ticket urgency: success -> warning -> error) */
   --color-success: #15803d;
@@ -36,12 +46,12 @@
    * #2B2420) rather than a true neutral black, so it still reads as part
    * of this warm palette rather than a generic dark-mode panel.
    */
-  --color-sidebar: #201b17;
-  --color-sidebar-hover: #2c2620;
-  --color-sidebar-active: #e8564a;
-  --color-sidebar-border: #362f28;
-  --color-sidebar-foreground: #faf7f5;
-  --color-sidebar-muted: #a89c90;
+  --color-sidebar: #ffffff;
+  --color-sidebar-hover: #fff3f0;
+  --color-sidebar-active: #e53e15;
+  --color-sidebar-border: #eee7e4;
+  --color-sidebar-foreground: #191919;
+  --color-sidebar-muted: #706b69;
 }
 
 @theme inline {
@@ -100,4 +110,16 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-inter), "Segoe UI", sans-serif;
+}
+
+button:not(:disabled), a, select { cursor: pointer; }
+button, input, select, textarea, a { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid #e53e15; outline-offset: 3px; }
+input, select, textarea { min-height: 44px; }
+@media (max-width: 639px) {
+  input, select, textarea { font-size: 16px; }
+  main { padding-left: 1rem; padding-right: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

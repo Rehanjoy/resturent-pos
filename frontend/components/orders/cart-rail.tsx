@@ -45,7 +45,7 @@ export function CartRail({
   canBuild: boolean;
 }) {
   return (
-    <aside className="flex w-full max-w-sm shrink-0 flex-col self-start rounded-2xl border border-border bg-surface shadow-sm lg:sticky lg:top-6">
+    <aside id="order-cart" className="flex w-full shrink-0 flex-col self-start rounded-2xl border border-border bg-surface shadow-sm lg:sticky lg:top-20 lg:w-80 xl:w-96">
       <div className="border-b border-border px-4 py-3">
         <h2 className="font-heading text-h3 font-semibold text-text">
           {table ? table.name : "Order"}
@@ -94,7 +94,7 @@ export function CartRail({
                         type="button"
                         disabled={isUpdating}
                         onClick={() => onDecrement(item)}
-                        className="h-7 w-7 rounded-md border border-border text-text hover:bg-background disabled:opacity-60"
+                        className="h-11 w-11 rounded-full border border-border text-text hover:bg-background disabled:opacity-60"
                         aria-label={`Decrease quantity of ${item.nameSnapshot}`}
                       >
                         −
@@ -104,7 +104,7 @@ export function CartRail({
                         type="button"
                         disabled={isUpdating}
                         onClick={() => onIncrement(item)}
-                        className="h-7 w-7 rounded-md border border-border text-text hover:bg-background disabled:opacity-60"
+                        className="h-11 w-11 rounded-full bg-text text-white disabled:opacity-60"
                         aria-label={`Increase quantity of ${item.nameSnapshot}`}
                       >
                         +

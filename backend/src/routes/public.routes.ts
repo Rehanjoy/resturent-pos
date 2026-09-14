@@ -4,6 +4,8 @@ import { validate } from "../middleware/validate";
 import { publicRateLimiter } from "../middleware/rate-limit";
 import { restaurantSlugParamsSchema } from "../validators/website.validators";
 import whatsappWebhookRoutes from "./whatsapp-webhook.routes";
+import { publicDiningRoutes } from "./dining.routes";
+import { publicServiceRequestRoutes } from "./service-request.routes";
 
 const router = Router();
 
@@ -22,6 +24,8 @@ const router = Router();
 // additionally verifies Meta's own request signature
 // (`middleware/verify-meta-signature.ts`) — that, not this rate limiter, is
 // its real security boundary.
+router.use("/dining", publicDiningRoutes);
+router.use("/dining", publicServiceRequestRoutes);
 router.use(publicRateLimiter);
 
 router.get(

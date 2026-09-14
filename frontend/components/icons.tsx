@@ -180,6 +180,14 @@ export function ReceiptIcon({ className }: IconProps) {
   );
 }
 
+export function WaterIcon({ className }: IconProps) {
+  return <svg {...BASE_PROPS} className={className}><path d="M12 3.5S6.5 10 6.5 14.2a5.5 5.5 0 0 0 11 0C17.5 10 12 3.5 12 3.5Z" /><path d="M9.5 15.2c.4 1.2 1.2 1.8 2.5 2" /></svg>;
+}
+
+export function HelpIcon({ className }: IconProps) {
+  return <svg {...BASE_PROPS} className={className}><path d="M7.5 11V7.5a1.5 1.5 0 0 1 3 0V10M10.5 10V5.8a1.5 1.5 0 0 1 3 0V10M13.5 10V7a1.5 1.5 0 0 1 3 0v4M16.5 11V9.5a1.5 1.5 0 0 1 3 0V14c0 4-2.7 6.5-6.5 6.5h-.7c-2.1 0-3.4-.7-4.7-2.2L4.8 15a1.6 1.6 0 0 1 2.3-2.2l2.2 2.1" /></svg>;
+}
+
 export function PercentIcon({ className }: IconProps) {
   return (
     <svg {...BASE_PROPS} className={className}>

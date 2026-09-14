@@ -20,42 +20,46 @@ const TYPE_INDICATOR: Record<MenuItem["type"], { label: string; className: strin
 export function OrderItemTile({
   item,
   onSelect,
+  disabled = false,
 }: {
   item: MenuItem;
   onSelect: (item: MenuItem) => void;
+  disabled?: boolean;
 }) {
   const typeIndicator = TYPE_INDICATOR[item.type];
 
   return (
     <button
       type="button"
-      disabled={!item.isAvailable}
+      disabled={!item.isAvailable || disabled}
       onClick={() => onSelect(item)}
       className={`flex flex-col overflow-hidden rounded-2xl border border-border bg-surface text-left shadow-sm transition-shadow ${
-        item.isAvailable ? "hover:shadow-md" : "cursor-not-allowed opacity-60"
+        item.isAvailable && !disabled ? "hover:shadow-md" : "cursor-not-allowed opacity-60"
       }`}
     >
-      <div className="relative flex h-28 items-center justify-center bg-background text-small text-text-muted">
+      <div className="relative flex aspect-[4/3] w-full items-center justify-center bg-background text-small text-text-muted">
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- admin-supplied external URL, not part of the optimized asset pipeline yet.
           <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
         ) : (
-          "No image"
+          <span className="text-4xl" aria-label="Dish photo unavailable">♨</span>
         )}
-        {!item.isAvailable && (
+        {(!item.isAvailable || disabled) && (
           <span className="absolute right-2 top-2 rounded-full bg-text/80 px-2 py-0.5 text-small font-semibold text-white">
-            Sold out
+            {disabled ? "Order locked" : "Sold out"}
           </span>
         )}
       </div>
 
       <div className="flex flex-1 flex-col gap-1 p-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-heading text-base font-semibold text-text">{item.name}</h3>
+          <h3 className="font-heading text-sm font-semibold text-text sm:text-base">{item.name}</h3>
           <span
-            className={`shrink-0 rounded border px-1.5 py-0.5 text-small font-medium ${typeIndicator.className}`}
+            title={typeIndicator.label}
+            aria-label={typeIndicator.label}
+            className={`shrink-0 rounded border px-1 text-xs font-medium ${typeIndicator.className}`}
           >
-            {typeIndicator.label}
+            ●
           </span>
         </div>
 
@@ -63,7 +67,10 @@ export function OrderItemTile({
           <p className="line-clamp-2 text-small text-text-muted">{item.description}</p>
         )}
 
-        <p className="mt-auto pt-1 text-numeric font-semibold text-text">{formatMoney(item.price)}</p>
+        <div className="mt-auto flex items-center justify-between gap-1 pt-3">
+          <p className="font-semibold tabular-nums text-text">{formatMoney(item.price)}</p>
+          <span className="rounded-full bg-primary px-3 py-2 text-xs font-semibold text-white">+ Add</span>
+        </div>
       </div>
     </button>
   );
