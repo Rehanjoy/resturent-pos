@@ -19,5 +19,5 @@ export const release = asyncHandler(async (req, res) => { res.json(await dining.
 export const policy = asyncHandler(async (req, res) => { res.json(await dining.updatePolicy(req.user!.restaurantId, req.body)); });
 export const preparation = asyncHandler(async (req, res) => { res.json(await dining.updatePreparation(req.user!.restaurantId, String(req.params.id), req.body.prepMinutes)); });
 export const eta = asyncHandler(async (req, res) => { res.json(await dining.updateEta(req.user!.restaurantId, String(req.params.id), String(req.params.itemId), req.body.minutes)); });
-export const qr = asyncHandler(async (req, res) => { res.json(await dining.chairQrCodes(req.user!.restaurantId, String(req.params.id))); });
+export const qr = asyncHandler(async (req, res) => { res.json(await dining.chairQrCodes(req.user!.restaurantId, String(req.params.id), req.get("origin"))); });
 export const staffOrder = asyncHandler(async (req, res) => { res.json(await dining.staffSessionOrder(req.user!.restaurantId, String(req.params.id), req.user!.userId)); });

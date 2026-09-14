@@ -12,6 +12,7 @@ import { DiningFloor, DEFAULT_DINING_POLICY } from "../src/models/dining-floor.m
 import { Order } from "../src/models/order.model";
 import { Kot } from "../src/models/kot.model";
 import { createApp } from "../src/app";
+import { env } from "../src/config/env";
 
 describe("Chair dining, kitchen and counter settlement", () => {
   beforeAll(connectTestDb);
@@ -31,6 +32,22 @@ describe("Chair dining, kitchen and counter settlement", () => {
       const quote = dining.cancellationQuote(start, 101, DEFAULT_DINING_POLICY, start.getTime() + elapsed!);
       expect(quote.chargePercent).toBe(percent);
       expect(quote.amountDue).toBe(percent === 50 ? 51 : percent === 0 ? 0 : 101);
+    }
+  });
+  it("generates chair QR codes for the deployed frontend origin", async () => {
+    const { table, user } = await setup();
+    const deployedOrigin = "https://restaurant-pos-fontend.vercel.app";
+    env.corsOrigins.push(deployedOrigin);
+    try {
+      const response = await request(createApp())
+        .get(`/api/dining/tables/${table.id}/qr`)
+        .set("Authorization", `Bearer ${tokenFor(user)}`)
+        .set("Origin", deployedOrigin);
+      expect(response.status).toBe(200);
+      expect(response.body.codes[0].url).toBe(`${deployedOrigin}/order/${table.qrToken}~1`);
+      expect(response.body.codes[0].url).not.toContain("localhost");
+    } finally {
+      env.corsOrigins.splice(env.corsOrigins.indexOf(deployedOrigin), 1);
     }
   });
   it("atomically claims all selected chairs across two tables under contention", async () => {

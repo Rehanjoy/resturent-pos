@@ -264,13 +264,31 @@ export async function updateEta(restaurantId: string, id: string, itemId: string
   emitToRestaurant(restaurantId, "order:updated", { order: toOrderDto(order) });
   return { order: toOrderDto(order) };
 }
-export async function chairQrCodes(restaurantId: string, id: string) {
+function qrAppOrigin(requestOrigin?: string) {
+  const normalizedRequestOrigin = requestOrigin?.trim().replace(/\/$/, "");
+  if (normalizedRequestOrigin && env.corsOrigins.includes(normalizedRequestOrigin)) {
+    return normalizedRequestOrigin;
+  }
+
+  const deployedOrigin = env.corsOrigins.find((origin) => {
+    try {
+      const hostname = new URL(origin).hostname;
+      return hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "::1";
+    } catch {
+      return false;
+    }
+  });
+  return (deployedOrigin ?? env.corsOrigins[0]!).replace(/\/$/, "");
+}
+
+export async function chairQrCodes(restaurantId: string, id: string, requestOrigin?: string) {
   const table = await Table.findOne({ _id: id, restaurantId });
   if (!table) throw new AppError("Table not found.", 404, "NOT_FOUND");
+  const appOrigin = qrAppOrigin(requestOrigin);
   const codes = await Promise.all(Array.from({ length: table.seatingCapacity }, async (_, index) => {
     const chairNumber = index + 1;
     const token = `${table.qrToken}~${chairNumber}`;
-    const url = `${env.corsOrigins[0]}/order/${token}`;
+    const url = `${appOrigin}/order/${token}`;
     return { chairNumber, token, url, svg: await QRCode.toString(url, { type: "svg", margin: 2 }) };
   }));
   return { table: { id, name: table.name }, codes };
