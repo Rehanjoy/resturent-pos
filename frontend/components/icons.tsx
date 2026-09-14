@@ -436,3 +436,41 @@ export function BotIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function MinusIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function HistoryIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+export function ChefHatIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="M6 13.8a4.5 4.5 0 0 1-.5-8.8 5 5 0 0 1 9.5-1.5 5 5 0 0 1 3.5 3.5 4.5 4.5 0 0 1-.5 6.8" />
+      <path d="M6 17h12" />
+      <path d="M6 21h12" />
+      <path d="M6 14v7M18 14v7" />
+    </svg>
+  );
+}
+
+export function SparklesIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <path d="m12 3 1.9 4.8L18.7 9.7 13.9 11.6 12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9L12 3Z" />
+      <path d="M19 15l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z" />
+    </svg>
+  );
+}

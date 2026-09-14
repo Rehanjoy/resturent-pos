@@ -25,6 +25,11 @@ export interface OrderItemSubdocument {
   /** Denormalized price at the time it was added, integer paise. */
   priceSnapshot: number;
   qty: number;
+  /** Quantity cancelled from the original line. The original quantity is
+   * retained so staff can see what was ordered and what was cancelled. */
+  cancelledQty: number;
+  /** Public QR submission that created this line; used for durable replay. */
+  guestSubmissionKey?: string;
   spiceLevel?: SpiceLevel;
   addOns: string[];
   notes?: string;
@@ -43,10 +48,24 @@ export interface OrderDocument {
   createdByStaffId?: Types.ObjectId;
   source?: "qr" | "staff";
   diningSessionId?: string;
+  assignedWaiter?: { id: string; name: string };
   seats?: { tableId: string; chairNumber: number }[];
   placedAt?: Date;
   customerTotal?: number;
   cancellation?: { chargePercent: number; amountDue: number; cancelledAt: Date; reason: string };
+  guestSubmissions?: { key: string; fingerprint: string; placedAt: Date }[];
+  cancellations?: {
+    _id: Types.ObjectId;
+    idempotencyKey?: string;
+    fingerprint?: string;
+    reason: string;
+    cancelledAt: Date;
+    lines: { orderItemId: Types.ObjectId; nameSnapshot: string; qty: number; unitPrice: number; subtotal: number; chargePercent: number; baseCharge: number; taxLines: { name: string; ratePercent: number; amount: number }[]; amountDue: number }[];
+    selectedSubtotal: number;
+    baseCharge: number;
+    taxLines: { name: string; ratePercent: number; amount: number }[];
+    amountDue: number;
+  }[];
   servedByStaffId?: Types.ObjectId;
   /** Required audit reason when an order is voided (PRD §3.3, §3.10). */
   voidReason?: string;
@@ -60,6 +79,8 @@ const orderItemSchema = new Schema<OrderItemSubdocument>(
     nameSnapshot: { type: String, required: true, trim: true },
     priceSnapshot: { type: Number, required: true, min: 0 },
     qty: { type: Number, required: true, min: 1 },
+    cancelledQty: { type: Number, required: true, min: 0, default: 0 },
+    guestSubmissionKey: { type: String, trim: true },
     spiceLevel: { type: String, enum: SPICE_LEVELS },
     addOns: { type: [String], default: [] },
     notes: { type: String, trim: true },
@@ -101,10 +122,13 @@ const orderSchema = new Schema<OrderDocument>(
     createdByStaffId: { type: Schema.Types.ObjectId, ref: "User" },
     source: { type: String, enum: ["qr", "staff"], default: "staff" },
     diningSessionId: { type: String, index: true },
+    assignedWaiter: { type: Schema.Types.Mixed },
     seats: { type: Schema.Types.Mixed },
     placedAt: { type: Date },
     customerTotal: { type: Number, min: 0 },
     cancellation: { type: Schema.Types.Mixed },
+    guestSubmissions: { type: Schema.Types.Mixed, default: () => [] },
+    cancellations: { type: Schema.Types.Mixed, default: () => [] },
     servedByStaffId: { type: Schema.Types.ObjectId, ref: "User" },
     voidReason: { type: String, trim: true },
   },

@@ -18,11 +18,14 @@ Email + password login (JWT access token, 15 min, held in browser memory only; r
 ### Tables & Areas
 Owner/Manager create Areas (e.g. "AC Indoor", "Terrace") and Tables within them. The Table Grid shows live status — free / occupied / reserved / needs cleaning — synced instantly across every open terminal over WebSocket. Server role can change a table's status (e.g. mark it free after cleaning) but can't add/delete tables themselves.
 
-The **Chairs & groups** view shows every numbered chair. Owner/Manager can generate and download one
-QR per chair; floor staff can seat a party on chosen chairs across tables or select a whole table.
+The unified floor workspace shows every numbered chair, table controls, QR codes, bookings and active
+visits in one place. Owner/Manager can generate and download one QR per chair; floor staff can click the
+table centre to seat a whole table or click individual chairs, including chairs across multiple tables.
 Separate parties can share a physical table while keeping separate orders and bills. Customer QR holds
 expire after the policy countdown (five minutes by default); staff bookings have no timer and must be
-released after settlement and cleaning. A group with an unpaid order cannot be released.
+released after settlement and cleaning. A group with an unpaid order cannot be released. A whole-table
+booking colours and pulses the full table in red; a chair booking colours only those occupied chairs.
+After payment the seating changes to Cleaning, then staff tap **Cleaning done · Mark available**.
 
 Both guest and staff seating flows capture a name and mobile number. The responsive floor uses a
 physical table-and-chair layout rather than abstract table tiles. A water, bill or help request marks
@@ -37,14 +40,19 @@ Tap a free table → New Order screen: pick a category, add dishes with customiz
 
 Guests open `/order/<tableQrToken>~<chairNumber>`, enter party size, choose available seating, and get a
 server-time countdown. Placing an order makes those seats occupied and sends one real order/KOT to the
-kitchen. Guests see every item's ETA and status and pay at the counter. Settings controls the hold,
+kitchen. The system assigns an active waiter when available. Guests can return to the menu and submit
+additional batches; each batch is retry-safe and appears as a separate KOT while inventory deducts once.
+Guests see every item's ETA and status and pay at the counter. Settings controls the hold,
 default preparation time, and cancellation windows. The default policy is free before 8 minutes, 50%
-from 8 to under 10 minutes, and full charge from 10 minutes. Each order keeps the policy that was shown
-when it was placed. A charged cancellation becomes a non-discountable counter invoice.
+from 8 to under 10 minutes, and full charge from 10 minutes. Guests choose exact items and quantities to
+cancel, and the charge window uses each line's kitchen-send time. The original lines remain in the audit,
+while guest, staff Orders and KDS show cancelled quantities and the applicable free/half/full charge. A
+charged cancellation becomes part of the non-discountable counter invoice.
 
 The guest screen refreshes item status and ETA continuously and announces meaningful changes in-app.
 Guests can request water, the bill or staff help; the staff floor queue acknowledges and completes each
-request so the guest can see that it is being handled.
+request so the guest can see that it is being handled. The floor shows the assigned waiter and exact
+table/chair context for every open request.
 
 ### Customers
 The Customers screen combines returning visits by normalised mobile number. It shows visit count, time
@@ -54,6 +62,11 @@ alone, and creating a dining visit never grants marketing consent.
 
 ### Billing & Settlement
 Once every item on an order is served, Owner/Manager/Cashier can generate the bill: it computes GST (CGST/SGST, or whatever tax slabs are configured in Settings) on the post-discount subtotal, supports flat or percentage discounts, and **requires a manager's password to approve any discount above the configured threshold** (default 15%) — this can't be bypassed from the UI, it's enforced by the server. Payment can be split across cash/card/UPI; the amounts must sum exactly to the bill total. Invoice numbers are sequential and never reused, even under concurrent settlements. A bill can be voided with a mandatory reason (Owner/Manager only, fully logged) — voiding an unpaid bill reopens the order for correction; voiding an already-paid bill does not undo the payment, it's a logged record only.
+
+Guest bills expose the taxable item subtotal, every configured tax name/rate/amount, cancellation base,
+cancellation tax and final amount due. Thus ₹260 with CGST 9% and SGST 9% is explicitly displayed as
+₹260 + ₹23.40 + ₹23.40 = ₹306.80. The same cancellation history and payable charge are visible in staff
+Orders, so the cashier and guest work from the same figures.
 
 ### Staff
 Owner/Manager add, edit, and deactivate staff accounts. **A Manager can fully manage frontline roles (Cashier/Server/Chef/Inventory Manager) but can never create, edit, or deactivate an Owner or another Manager account** — this stops a Manager from ever escalating privileges. Every staff member has an activity log (their orders, voids, discounts) and a list of active login sessions that can be individually revoked.

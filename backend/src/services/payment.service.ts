@@ -9,6 +9,7 @@ import { toOrderDto } from "./order.service";
 import * as tableService from "./table.service";
 import { emitToRestaurant } from "../sockets";
 import { recordVisitPayment } from "./customer.service";
+import { markDiningSessionCleaning } from "./dining.service";
 
 export interface PaymentDto {
   id: string;
@@ -108,8 +109,8 @@ export async function createPayment(
   // checkout response. It remains recoverable from the payment ledger.
   await recordVisitPayment(restaurantId, order.id, invoice.id).catch(() => undefined);
 
-  // Chair sessions remain occupied until staff explicitly release this party.
-  if (!order.diningSessionId) await tableService.updateTableStatus(restaurantId, order.tableId.toString(), "needs_cleaning");
+  if (order.diningSessionId) await markDiningSessionCleaning(restaurantId, order.diningSessionId);
+  else await tableService.updateTableStatus(restaurantId, order.tableId.toString(), "needs_cleaning");
 
   const orderDto = toOrderDto(order);
   emitToRestaurant(restaurantId, "order:updated", { order: orderDto });

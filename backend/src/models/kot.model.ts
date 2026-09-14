@@ -11,6 +11,7 @@ export interface KotItemSubdocument {
   nameSnapshot: string;
   priceSnapshot: number;
   qty: number;
+  cancelledQty: number;
   spiceLevel?: SpiceLevel;
   addOns: string[];
   notes?: string;
@@ -47,6 +48,7 @@ const kotItemSchema = new Schema<KotItemSubdocument>(
     nameSnapshot: { type: String, required: true, trim: true },
     priceSnapshot: { type: Number, required: true, min: 0 },
     qty: { type: Number, required: true, min: 1 },
+    cancelledQty: { type: Number, required: true, min: 0, default: 0 },
     spiceLevel: { type: String, enum: SPICE_LEVELS },
     addOns: { type: [String], default: [] },
     notes: { type: String, trim: true },

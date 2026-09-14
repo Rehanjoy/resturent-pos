@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { connectTestDb, disconnectTestDb, clearTestDb } from "./utils/test-db";
-import { createTestRestaurant, createTestStaff, createTestTable, createTestMenuItem, tokenFor } from "./utils/fixtures";
+import { createTestInventoryItem, createTestRestaurant, createTestStaff, createTestTable, createTestMenuItem, tokenFor } from "./utils/fixtures";
 import * as dining from "../src/services/dining.service";
 import * as orders from "../src/services/order.service";
 import * as tables from "../src/services/table.service";
@@ -13,6 +13,8 @@ import { Order } from "../src/models/order.model";
 import { Kot } from "../src/models/kot.model";
 import { createApp } from "../src/app";
 import { env } from "../src/config/env";
+import { InventoryItem } from "../src/models/inventory-item.model";
+import { InventoryTransaction } from "../src/models/inventory-transaction.model";
 
 describe("Chair dining, kitchen and counter settlement", () => {
   beforeAll(connectTestDb);
@@ -70,7 +72,7 @@ describe("Chair dining, kitchen and counter settlement", () => {
     await expect(dining.submitOrder(restaurantId, guest.sessionToken, { idempotencyKey: "test-request", items: [{ menuItemId: dish.id, qty: 1 }] })).rejects.toMatchObject({ code: "HOLD_EXPIRED" });
     await expect(dining.holdSeats(restaurantId, { partySize: 1, seats: [{ tableId: table.id, chairNumber: 1 }], customer: { name: "Aarav", phone: "9876543210" } })).resolves.toBeDefined();
   });
-  it("creates one real order and KOT on retried submit with ETA; counter payment does not free another party", async () => {
+  it("creates one real order and KOT on retried submit with ETA; paid chairs wait for cleaning", async () => {
     const { restaurantId, table, dish, user } = await setup();
     const guest = await dining.holdSeats(restaurantId, { partySize: 1, seats: [{ tableId: table.id, chairNumber: 1 }], customer: { name: "Aarav", phone: "9876543210" } });
     await dining.holdSeats(restaurantId, { partySize: 1, seats: [{ tableId: table.id, chairNumber: 2 }], customer: { name: "Diya", phone: "9876543211" } });
@@ -85,8 +87,8 @@ describe("Chair dining, kitchen and counter settlement", () => {
     await orders.serveOrder(restaurantId, user.id, submitted.order!.id);
     const bill = await invoices.generateInvoice(restaurantId, user.id, submitted.order!.id, {});
     await payments.createPayment(restaurantId, { invoiceId: bill.id, payments: [{ mode: "cash", amount: bill.total }] });
-    expect((await dining.listSeating(restaurantId)).tables[0]!.chairs[0]!.status).toBe("occupied");
-    await dining.releaseSession(restaurantId, guest.session.id, user.id, "Guest paid and left");
+    expect((await dining.listSeating(restaurantId)).tables[0]!.chairs[0]!.status).toBe("cleaning");
+    await dining.markDiningSessionAvailable(restaurantId, guest.session.id, user.id);
     const floor = await dining.listSeating(restaurantId);
     expect(floor.tables[0]!.chairs[0]!.status).toBe("available");
     expect(floor.tables[0]!.chairs[1]!.status).toBe("held");
@@ -95,15 +97,92 @@ describe("Chair dining, kitchen and counter settlement", () => {
     const { restaurantId, table, dish, user } = await setup();
     const hold = await dining.holdSeats(restaurantId, { partySize: 1, seats: [{ tableId: table.id, chairNumber: 1 }], customer: { name: "Aarav", phone: "9876543210" } });
     const result = await dining.submitOrder(restaurantId, hold.sessionToken, { idempotencyKey: "cancel-test", items: [{ menuItemId: dish.id, qty: 1 }] });
-    await Order.updateOne({ _id: result.order!.id }, { $set: { placedAt: new Date(Date.now() - 9 * 60000) } });
+    await Order.updateOne({ _id: result.order!.id }, { $set: { placedAt: new Date(Date.now() - 9 * 60000), "items.$[].sentAt": new Date(Date.now() - 9 * 60000) } });
     await expect(dining.cancelOrder(restaurantId, hold.sessionToken, { reason: "Changed plans", acceptedChargePercent: 0 })).rejects.toMatchObject({ code: "CANCELLATION_QUOTE_CHANGED" });
     const cancelled = await dining.cancelOrder(restaurantId, hold.sessionToken, { reason: "Changed plans", acceptedChargePercent: 50 });
     expect(cancelled.order!.cancellation!.amountDue).toBe(5900);
     expect(await kitchen.listActiveTickets(restaurantId)).toHaveLength(0);
     const bill = await invoices.generateInvoice(restaurantId, user.id, result.order!.id, {});
     expect(bill.total).toBe(5900);
-    expect(bill.taxLines).toHaveLength(0);
+    expect(bill.subtotal).toBe(5000);
+    expect(bill.taxLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "CGST", amount: 450 }),
+      expect.objectContaining({ name: "SGST", amount: 450 }),
+    ]));
     await expect(dining.releaseSession(restaurantId, hold.session.id, user.id, "Leave")).rejects.toMatchObject({ code: "PAYMENT_PENDING" });
+  });
+  it("adds independent QR batches idempotently and assigns an active waiter", async () => {
+    const { restaurantId, table, dish } = await setup();
+    const secondDish = await createTestMenuItem(restaurantId, { name: "Dessert", price: 16000 });
+    const ingredient = await createTestInventoryItem(restaurantId, { currentStock: 10 });
+    dish.ingredientMapping = [{ inventoryItemId: ingredient._id, quantityPerUnit: 0.5 }];
+    secondDish.ingredientMapping = [{ inventoryItemId: ingredient._id, quantityPerUnit: 0.25 }];
+    await Promise.all([dish.save(), secondDish.save()]);
+    const { user: waiter } = await createTestStaff(restaurantId, "server");
+    const hold = await dining.holdSeats(restaurantId, { partySize: 1, seats: [{ tableId: table.id, chairNumber: 1 }], customer: { name: "Aarav", phone: "9876543210" } });
+    const first = await dining.submitOrder(restaurantId, hold.sessionToken, { idempotencyKey: "first-batch", items: [{ menuItemId: dish.id, qty: 1 }] });
+    const addInput = { idempotencyKey: "dessert-batch", items: [{ menuItemId: secondDish.id, qty: 1 }] };
+    await dining.submitOrder(restaurantId, hold.sessionToken, addInput);
+    const repeated = await dining.submitOrder(restaurantId, hold.sessionToken, addInput);
+    expect(await Order.countDocuments({ restaurantId })).toBe(1);
+    expect(await Kot.countDocuments({ restaurantId })).toBe(2);
+    expect((await InventoryItem.findById(ingredient.id))!.currentStock).toBe(9.25);
+    expect(await InventoryTransaction.countDocuments({ restaurantId, itemId: ingredient.id, type: "deduction" })).toBe(2);
+    expect(repeated.order!.items).toHaveLength(2);
+    expect(repeated.session.assignedWaiter).toEqual({ id: waiter.id, name: waiter.name });
+    expect(repeated.order!.assignedWaiter).toEqual({ id: waiter.id, name: waiter.name });
+    expect(repeated.bill).toMatchObject({ itemsSubtotal: 26000, activeItemsSubtotal: 26000, totalDue: 30680, paymentDue: 30680 });
+    expect(repeated.bill!.taxLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "CGST", ratePercent: 9, amount: 2340 }),
+      expect.objectContaining({ name: "SGST", ratePercent: 9, amount: 2340 }),
+    ]));
+    await expect(dining.submitOrder(restaurantId, hold.sessionToken, { ...addInput, items: [{ menuItemId: dish.id, qty: 1 }] })).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+    expect(first.canAddItems).toBe(true);
+  });
+  it("cancels selected quantities using each line's own clock and retains staff-visible history", async () => {
+    const { restaurantId, table, dish, user } = await setup();
+    const newDish = await createTestMenuItem(restaurantId, { name: "Fresh add-on", price: 16000 });
+    const hold = await dining.holdSeats(restaurantId, { partySize: 1, seats: [{ tableId: table.id, chairNumber: 1 }], customer: { name: "Aarav", phone: "9876543210" } });
+    await dining.submitOrder(restaurantId, hold.sessionToken, { idempotencyKey: "older-batch", items: [{ menuItemId: dish.id, qty: 1 }] });
+    await dining.submitOrder(restaurantId, hold.sessionToken, { idempotencyKey: "newer-batch", items: [{ menuItemId: newDish.id, qty: 1 }] });
+    const stored = await Order.findOne({ restaurantId })!;
+    stored!.items[0]!.sentAt = new Date(Date.now() - 9 * 60000);
+    await stored!.save();
+    const selections = stored!.items.map((item) => ({ orderItemId: item.id, qty: 1 }));
+    const quote = await dining.quoteCancellation(restaurantId, hold.sessionToken, { items: selections });
+    expect(quote.lines.map((line) => line.chargePercent)).toEqual([50, 0]);
+    expect(quote.totals).toMatchObject({ selectedSubtotal: 26000, baseCharge: 5000, amountDue: 5900 });
+    const cancellationInput = { idempotencyKey: "cancel-selection", reason: "Only cancel selected dishes", items: quote.lines.map((line) => ({ orderItemId: line.orderItemId, qty: line.qty, acceptedChargePercent: line.chargePercent })) };
+    const cancelled = await dining.cancelOrder(restaurantId, hold.sessionToken, cancellationInput);
+    await dining.cancelOrder(restaurantId, hold.sessionToken, cancellationInput);
+    expect(cancelled.order!.items.every((item) => item.cancelledQty === 1)).toBe(true);
+    expect(cancelled.order!.cancellations).toHaveLength(1);
+    expect((await Order.findById(cancelled.order!.id))!.cancellations).toHaveLength(1);
+    expect(cancelled.bill).toMatchObject({ activeItemsSubtotal: 0, cancelledItemsSubtotal: 26000, cancellationBaseCharge: 5000, cancellationCharge: 5900, totalDue: 5900 });
+    const staffOrder = await orders.getOrder(restaurantId, cancelled.order!.id);
+    expect(staffOrder.cancellations?.[0]?.lines).toHaveLength(2);
+    const invoice = await invoices.generateInvoice(restaurantId, user.id, cancelled.order!.id, {});
+    expect(invoice.total).toBe(5900);
+    expect(invoice.subtotal).toBe(5000);
+  });
+  it("marks complete table bookings distinctly and keeps every chair blocked while cleaning", async () => {
+    const { restaurantId, table, dish, user } = await setup();
+    const seats = Array.from({ length: table.seatingCapacity }, (_, index) => ({ tableId: table.id, chairNumber: index + 1 }));
+    const hold = await dining.holdSeats(restaurantId, { partySize: 4, seats, bookingMode: "whole_table", customer: { name: "Family", phone: "9876543210" } });
+    let seating = await dining.listSeating(restaurantId);
+    expect(seating.tables[0]).toMatchObject({ bookingMode: "whole_table", wholeTableOccupied: false });
+    const submitted = await dining.submitOrder(restaurantId, hold.sessionToken, { idempotencyKey: "family-order", items: [{ menuItemId: dish.id, qty: 1 }] });
+    seating = await dining.listSeating(restaurantId);
+    expect(seating.tables[0]).toMatchObject({ wholeTableOccupied: true });
+    await kitchen.markAllReady(restaurantId, submitted.order!.id);
+    await orders.serveOrder(restaurantId, user.id, submitted.order!.id);
+    const invoice = await invoices.generateInvoice(restaurantId, user.id, submitted.order!.id, {});
+    await payments.createPayment(restaurantId, { invoiceId: invoice.id, payments: [{ mode: "cash", amount: invoice.total }] });
+    seating = await dining.listSeating(restaurantId);
+    expect(seating.tables[0]).toMatchObject({ wholeTableCleaning: true });
+    expect(seating.tables[0]!.chairs.every((chair) => chair.status === "cleaning")).toBe(true);
+    await dining.markDiningSessionAvailable(restaurantId, hold.session.id, user.id);
+    expect((await dining.listSeating(restaurantId)).tables[0]!.chairs.every((chair) => chair.status === "available")).toBe(true);
   });
   it("protects chair parties from legacy table mutations and orders, and supports staff session drafts", async () => {
     const { restaurantId, table, user } = await setup();

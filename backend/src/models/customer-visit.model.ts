@@ -8,7 +8,7 @@ export interface CustomerVisitDocument {
   partySize: number;
   seats: { tableId: string; chairNumber: number }[];
   source: "customer" | "staff";
-  status: "held" | "occupied" | "expired" | "released";
+  status: "held" | "occupied" | "cleaning" | "expired" | "released";
   startedAt: Date;
   expiresAt?: Date | null;
   endedAt?: Date;
@@ -23,7 +23,7 @@ const schema = new Schema<CustomerVisitDocument>({
   nameSnapshot: { type: String, required: true }, phoneSnapshot: { type: String, required: true },
   partySize: { type: Number, required: true, min: 1 }, seats: { type: Schema.Types.Mixed, required: true },
   source: { type: String, enum: ["customer", "staff"], required: true },
-  status: { type: String, enum: ["held", "occupied", "expired", "released"], required: true },
+  status: { type: String, enum: ["held", "occupied", "cleaning", "expired", "released"], required: true },
   startedAt: { type: Date, required: true }, expiresAt: { type: Date }, endedAt: { type: Date },
   orderId: { type: Schema.Types.ObjectId, ref: "Order" },
   amountPaid: { type: Number, default: 0, min: 0 }, paidAt: { type: Date },

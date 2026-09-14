@@ -17,6 +17,7 @@ import { toOrderDto } from "./order.service";
 import { toPaymentDto, type PaymentDto } from "./payment.service";
 import { emitToRestaurant } from "../sockets";
 import { recordAuditLog } from "./audit-log.service";
+import { calculateOrderBill } from "./dining-billing.service";
 
 export interface InvoiceItemDto {
   menuItemId: string;
@@ -260,20 +261,29 @@ export async function generateInvoice(
     throw new AppError("Restaurant not found.", 404, "NOT_FOUND");
   }
 
-  if (order.cancellation && input.discount) {
+  if ((order.cancellation || order.cancellations?.length) && input.discount) {
     throw new AppError("Cancellation charges are fixed by the accepted policy.", 400, "CANCELLATION_DISCOUNT_NOT_ALLOWED");
   }
-  const items = order.cancellation ? [{
+  const legacyCancellation = !!order.cancellation && !(order.cancellations?.length);
+  const policyBill = calculateOrderBill(order, restaurant.taxConfig);
+  const activeItems = order.items.flatMap((item) => {
+    const qty = item.qty - (item.cancelledQty ?? 0);
+    return qty > 0 ? [{ menuItemId: item.menuItemId, nameSnapshot: item.nameSnapshot, priceSnapshot: item.priceSnapshot, qty }] : [];
+  });
+  const items = legacyCancellation ? [{
     menuItemId: order.items[0]!.menuItemId,
-    nameSnapshot: `Cancellation charge (${order.cancellation.chargePercent}%) — includes original applicable taxes`,
-    priceSnapshot: order.cancellation.amountDue,
+    nameSnapshot: `Cancellation charge (${order.cancellation!.chargePercent}%) — includes original applicable taxes`,
+    priceSnapshot: order.cancellation!.amountDue,
     qty: 1,
-  }] : order.items.map((item) => ({
-    menuItemId: item.menuItemId,
-    nameSnapshot: item.nameSnapshot,
-    priceSnapshot: item.priceSnapshot,
-    qty: item.qty,
-  }));
+  }] : [
+    ...activeItems,
+    ...(policyBill.cancellationBaseCharge > 0 ? [{
+      menuItemId: order.items[0]!.menuItemId,
+      nameSnapshot: "Cancellation policy charge",
+      priceSnapshot: policyBill.cancellationBaseCharge,
+      qty: 1,
+    }] : []),
+  ];
   const subtotal = items.reduce((sum, item) => sum + item.priceSnapshot * item.qty, 0);
 
   let discount:
@@ -306,11 +316,15 @@ export async function generateInvoice(
   }
 
   const postDiscountSubtotal = subtotal - (discount?.amountApplied ?? 0);
-  const taxLines = (order.cancellation ? [] : restaurant.taxConfig).map((tax) => ({
-    name: tax.name,
-    ratePercent: tax.ratePercent,
-    amount: Math.round((postDiscountSubtotal * tax.ratePercent) / 100),
-  }));
+  const taxLines = legacyCancellation
+    ? []
+    : order.cancellations?.length
+      ? policyBill.taxLines
+      : restaurant.taxConfig.map((tax) => ({
+          name: tax.name,
+          ratePercent: tax.ratePercent,
+          amount: Math.round((postDiscountSubtotal * tax.ratePercent) / 100),
+        }));
   const total = postDiscountSubtotal + taxLines.reduce((sum, tax) => sum + tax.amount, 0);
 
   const invoiceNumber = await getNextSequence(restaurantId, "invoice");

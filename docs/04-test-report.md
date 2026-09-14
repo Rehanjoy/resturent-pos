@@ -1,5 +1,16 @@
 # QA & Test Report — Saffron (Phase 6)
 
+## 2026-09-14 unified dining lifecycle addendum
+
+- Complete backend regression: **216/216 passed** across **14 test files**.
+- Dining coverage verifies repeat guest order batches, idempotent retries, selected item/quantity
+  cancellation, per-line cancellation clocks and charges, transparent tax totals, whole-table booking,
+  automatic waiter context, payment-to-cleaning transition and staff release after cleaning.
+- Frontend ESLint and no-write TypeScript checks pass. Backend TypeScript passes. Backend and frontend
+  production builds pass; Next.js generated all **21 routes**.
+- Staff Orders and KDS now retain cancelled lines, show active and cancelled quantities, and expose the
+  cancellation base, configured tax lines and payable amount without changing the original order audit.
+
 ## 2026-09-14 food-cost engineering addendum
 
 - Focused costing suite: **7/7 passed** using the real Express routes and in-memory MongoDB.
@@ -12,7 +23,7 @@
   isolation, linked-unit protection and rate-change history.
 - Sales-volume tests include only served, billed and closed non-cancelled orders and require the response
   to identify the result as a current-cost estimate rather than historical net profit.
-- Complete backend regression: **212/212 passed** across **14 test files**. The focused costing suite is
+- Complete backend regression at the time of the costing pass: **212/212 passed** across **14 test files**. The focused costing suite is
   included in that result.
 - Frontend ESLint and no-write TypeScript checks pass. Backend TypeScript and both production builds pass;
   Next.js generated all **21 routes**.

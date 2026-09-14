@@ -93,8 +93,13 @@ export function KotHistory({ items }: { items: OrderItem[] }) {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-body text-text">
-                    {item.qty} × {item.nameSnapshot}
+                    {Math.max(0, item.qty - (item.cancelledQty ?? 0))} × {item.nameSnapshot}
                   </p>
+                  {(item.cancelledQty ?? 0) > 0 && (
+                    <p className="text-small font-medium text-error">
+                      {item.cancelledQty} cancelled from {item.qty}
+                    </p>
+                  )}
                   <p className="text-small text-text-muted">
                     {[
                       item.spiceLevel && item.spiceLevel !== "none" ? item.spiceLevel : null,

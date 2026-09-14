@@ -13,7 +13,14 @@ import {
 import type { InventoryCategory, InventoryItem } from "@/lib/inventory/types";
 import { formatMoney } from "@/lib/format";
 import { PageHeader } from "@/components/ui/page-header";
-import { AlertTriangleIcon, BoxIcon, PlusIcon, SearchIcon, WalletIcon } from "@/components/icons";
+import {
+  AlertTriangleIcon,
+  BoxIcon,
+  ChefHatIcon,
+  PlusIcon,
+  SearchIcon,
+  WalletIcon,
+} from "@/components/icons";
 import { StatCard } from "@/components/dashboard/stat-card";
 import {
   buildInventoryCategoryNameMap,
@@ -29,16 +36,20 @@ import dynamic from "next/dynamic";
 import { formatStockQuantity } from "@/lib/inventory/units";
 import { IngredientHistoryModal } from "./ingredient-history-modal";
 
-const CostingWorkspace = dynamic(() => import("./costing-workspace").then(module => module.CostingWorkspace), { loading: () => <p role="status">Loading dish profitability…</p> });
+const CostingWorkspace = dynamic(
+  () => import("./costing-workspace").then((module) => module.CostingWorkspace),
+  { loading: () => <p role="status">Loading dish profitability…</p> }
+);
 
-const ProductionPlanner = dynamic(() => import("./production-planner").then(module => module.ProductionPlanner), {
-  loading: () => <div className="h-20 animate-pulse rounded-3xl bg-white" aria-label="Loading production planner" />,
-});
+const ProductionPlanner = dynamic(
+  () => import("./production-planner").then((module) => module.ProductionPlanner),
+  {
+    loading: () => (
+      <div className="h-20 animate-pulse rounded-3xl bg-white" aria-label="Loading production planner" />
+    ),
+  }
+);
 
-// PRD §2 Inventory column: Owner/Manager/Inventory Manager "Full"; Chef
-// "View (deduction only)"; Cashier/Server have no access at all (no nav
-// entry — see sidebar.tsx — and this screen also self-gates in case the
-// URL is hit directly).
 const VIEW_ROLES = new Set(["owner", "manager", "inventory_manager", "chef"]);
 const MANAGE_ROLES = new Set(["owner", "manager", "inventory_manager"]);
 
@@ -60,7 +71,7 @@ export function InventoryScreen() {
   const [sort, setSort] = useState("name");
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [itemModal, setItemModal] = useState<{ mode: "add" | "edit"; item: InventoryItem | null } | null>(
-    null,
+    null
   );
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
@@ -86,18 +97,46 @@ export function InventoryScreen() {
     queryFn: () => suppliersApi.list(),
     enabled: canView,
   });
-  const menuQuery = useQuery({ queryKey: ["menu-items"], queryFn: () => menuItemsApi.list(), enabled: canView });
+
+  const menuQuery = useQuery({
+    queryKey: ["menu-items"],
+    queryFn: () => menuItemsApi.list(),
+    enabled: canView,
+  });
 
   const items = itemsQuery.data?.inventoryItems;
 
-  const visibleItems = useMemo(() => (items ?? []).filter(item =>
-    (!categoryFilter || item.categoryId === categoryFilter) &&
-    (!search || item.name.toLowerCase().includes(search.toLowerCase())) &&
-    (stockFilter === "all" || (stockFilter === "low" ? item.currentStock <= item.reorderThreshold : stockFilter === "critical" ? item.currentStock <= 0 : item.currentStock > item.reorderThreshold))
-  ).sort((a, b) => sort === "value" ? b.currentStock * b.costPerUnit - a.currentStock * a.costPerUnit : sort === "stock" ? a.currentStock - b.currentStock : a.name.localeCompare(b.name)), [items, categoryFilter, search, stockFilter, sort]);
+  const visibleItems = useMemo(
+    () =>
+      (items ?? [])
+        .filter(
+          (item) =>
+            (!categoryFilter || item.categoryId === categoryFilter) &&
+            (!search || item.name.toLowerCase().includes(search.toLowerCase())) &&
+            (stockFilter === "all" ||
+              (stockFilter === "low"
+                ? item.currentStock <= item.reorderThreshold
+                : stockFilter === "critical"
+                ? item.currentStock <= 0
+                : item.currentStock > item.reorderThreshold))
+        )
+        .sort((a, b) =>
+          sort === "value"
+            ? b.currentStock * b.costPerUnit - a.currentStock * a.costPerUnit
+            : sort === "stock"
+            ? a.currentStock - b.currentStock
+            : a.name.localeCompare(b.name)
+        ),
+    [items, categoryFilter, search, stockFilter, sort]
+  );
+
   const linkedDishCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const dish of menuQuery.data?.menuItems ?? []) for (const id of new Set((dish.ingredientMapping ?? []).map(row => row.inventoryItemId))) counts[id] = (counts[id] ?? 0) + 1;
+    for (const dish of menuQuery.data?.menuItems ?? []) {
+      for (const id of new Set((dish.ingredientMapping ?? []).map((row) => row.inventoryItemId))) {
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+    }
     return counts;
   }, [menuQuery.data]);
 
@@ -207,12 +246,11 @@ export function InventoryScreen() {
     );
   }
 
-  const isLoading = categoriesQuery.isLoading || itemsQuery.isLoading || suppliersQuery.isLoading || menuQuery.isLoading;
-  const isError = categoriesQuery.isError || itemsQuery.isError || suppliersQuery.isError || menuQuery.isError;
+  const isLoading =
+    categoriesQuery.isLoading || itemsQuery.isLoading || suppliersQuery.isLoading || menuQuery.isLoading;
+  const isError =
+    categoriesQuery.isError || itemsQuery.isError || suppliersQuery.isError || menuQuery.isError;
 
-  // Reorder = swap `displayOrder` with the adjacent row (two direct API
-  // calls, not the rename mutation above — no optimistic UI needed here,
-  // the modal re-fetches once both writes land).
   function handleReorderCategory(category: InventoryCategory, direction: "up" | "down") {
     const sorted = [...categories].sort((a, b) => a.displayOrder - b.displayOrder);
     const index = sorted.findIndex((entry) => entry.id === category.id);
@@ -230,7 +268,7 @@ export function InventoryScreen() {
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-3 py-5 sm:px-6 sm:py-8">
       <PageHeader
-        title="Inventory & food cost"
+        title="Inventory & Food Cost"
         subtitle="One ingredient register. Linked recipes. Clear dish costs and daily stock control."
         action={
           canManage && (
@@ -241,7 +279,7 @@ export function InventoryScreen() {
                   setCategoryError(null);
                   setCategoryModalOpen(true);
                 }}
-                className="min-h-11 rounded-lg border border-border px-4 py-2 text-button text-text-muted transition-colors hover:text-text"
+                className="min-h-11 rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-text shadow-2xs transition-colors hover:bg-background hover:text-text"
               >
                 Categories
               </button>
@@ -253,7 +291,7 @@ export function InventoryScreen() {
                 }}
                 disabled={categories.length === 0}
                 title={categories.length === 0 ? "Add a category first" : undefined}
-                className="flex min-h-11 items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary disabled:opacity-60"
+                className="flex min-h-11 items-center gap-1.5 rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-primary disabled:opacity-60"
               >
                 <PlusIcon className="h-4 w-4" />
                 Add Item
@@ -267,12 +305,24 @@ export function InventoryScreen() {
 
       {isError && (
         <p className="text-small text-error">
-          Could not load inventory — check your connection. <button className="min-h-11 underline" onClick={() => { void itemsQuery.refetch(); void categoriesQuery.refetch(); void suppliersQuery.refetch(); void menuQuery.refetch(); }}>Retry loading</button>
+          Could not load inventory — check your connection.{" "}
+          <button
+            className="min-h-11 underline"
+            onClick={() => {
+              void itemsQuery.refetch();
+              void categoriesQuery.refetch();
+              void suppliersQuery.refetch();
+              void menuQuery.refetch();
+            }}
+          >
+            Retry loading
+          </button>
         </p>
       )}
 
       {!isLoading && !isError && (
         <>
+          {/* KPI Stat Cards */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatCard label="Tracked Items" value={String(kpis.trackedItems)} icon={BoxIcon} />
             <StatCard
@@ -284,110 +334,312 @@ export function InventoryScreen() {
             <StatCard label="Inventory Value" value={formatMoney(kpis.value)} icon={WalletIcon} />
           </div>
 
+          {/* Stock Alerts Banner */}
           {items && items.some((item) => item.currentStock <= item.reorderThreshold) && (
-            <section aria-label="Stock alerts" className="rounded-2xl border border-warning/30 bg-warning/10 p-4">
-              <h2 className="font-semibold text-text">Restock attention needed</h2>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {items.filter((item) => item.currentStock <= item.reorderThreshold).map((item) => (
-                  <span key={item.id} className={`rounded-full bg-surface px-3 py-2 text-small ${item.currentStock <= 0 ? "text-error" : "text-text"}`}>
-                    {item.currentStock <= 0 ? "Critical" : "Low stock"}: {item.name} · {formatStockQuantity(item.currentStock, item.unit)}
-                    {item.reorderRequested ? " · delivery pending" : " · reorder now"}
-                  </span>
-                ))}
+            <section
+              aria-label="Stock alerts"
+              className="flex flex-col gap-3 rounded-2xl border border-warning/30 bg-warning/10 p-4 shadow-2xs"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning/20 text-warning">
+                    <AlertTriangleIcon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-text">Restock Attention Needed</h2>
+                    <p className="text-xs text-text-muted">
+                      {items.filter((item) => item.currentStock <= item.reorderThreshold).length} ingredient(s) are at or below reorder threshold.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setStockFilter((curr) => (curr === "low" ? "all" : "low"))}
+                  className="rounded-lg border border-warning/40 bg-surface px-3 py-1 text-xs font-semibold text-text hover:bg-warning/15 transition-colors"
+                >
+                  {stockFilter === "low" ? "Show All Ingredients" : "Filter Low Stock Only"}
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                {items
+                  .filter((item) => item.currentStock <= item.reorderThreshold)
+                  .map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setSearchInput(item.name);
+                        setStockFilter("all");
+                      }}
+                      title="Click to search this ingredient"
+                      className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium transition-colors hover:border-primary ${
+                        item.currentStock <= 0 ? "text-error" : "text-text"
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          item.currentStock <= 0 ? "bg-error" : "bg-warning"
+                        }`}
+                      />
+                      <strong>{item.name}</strong>: {formatStockQuantity(item.currentStock, item.unit)}
+                      <span className="text-text-muted text-[11px]">
+                        {item.reorderRequested ? "(Reorder pending)" : "(Reorder now)"}
+                      </span>
+                    </button>
+                  ))}
               </div>
             </section>
           )}
-          <nav aria-label="Inventory workspaces" className="flex flex-wrap gap-2 rounded-2xl border border-border bg-surface p-2">
-            {[["ingredients", "Ingredients"], ["recipes", "Recipes & production"], ["costing", "Dish profitability"]].map(([value, label]) => <button key={value} type="button" aria-current={section === value ? "page" : undefined} onClick={() => setSection(value)} className={`min-h-11 rounded-xl px-4 font-semibold ${section === value ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-background"}`}>{label}</button>)}
-          </nav>
-          {section === "recipes" && items && menuQuery.data && <ProductionPlanner menu={menuQuery.data.menuItems} inventory={items} canManage={canManage || user.role === "chef"} />}
+
+          {/* Workspace Switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <nav
+              aria-label="Inventory workspaces"
+              className="inline-flex flex-wrap gap-1 rounded-2xl border border-border bg-surface p-1.5 shadow-2xs"
+            >
+              {[
+                { id: "ingredients", label: "Ingredients Register", count: items?.length, icon: BoxIcon },
+                { id: "recipes", label: "Recipes & Production", icon: ChefHatIcon },
+                { id: "costing", label: "Dish Profitability", icon: WalletIcon },
+              ].map(({ id, label, count, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-current={section === id ? "page" : undefined}
+                  onClick={() => setSection(id)}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                    section === id
+                      ? "bg-primary text-white shadow-xs"
+                      : "text-text-muted hover:bg-background hover:text-text"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                  {count !== undefined && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        section === id ? "bg-white/20 text-white" : "bg-background text-text-muted"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {section === "recipes" && items && menuQuery.data && (
+            <ProductionPlanner
+              menu={menuQuery.data.menuItems}
+              inventory={items}
+              canManage={canManage || user.role === "chef"}
+            />
+          )}
+
           {section === "costing" && <CostingWorkspace />}
-          {section === "ingredients" && <>
-          <div className="flex flex-wrap gap-2" aria-label="Ingredient categories">
-            <button type="button" onClick={() => setCategoryFilter("")} aria-pressed={!categoryFilter} className={`min-h-11 rounded-full border px-4 text-sm ${!categoryFilter ? "border-primary text-primary" : "border-border"}`}>All ingredients ({items?.length ?? 0})</button>
-            {categories.map(category => <button key={category.id} type="button" onClick={() => setCategoryFilter(category.id)} aria-pressed={categoryFilter === category.id} className={`min-h-11 rounded-full border px-4 text-sm ${categoryFilter === category.id ? "border-primary text-primary" : "border-border"}`}>{category.name} ({items?.filter(item => item.categoryId === category.id).length ?? 0})</button>)}
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm">Stock status<select value={stockFilter} onChange={event => setStockFilter(event.target.value)} className="ml-2 min-h-11 rounded-xl border border-border bg-surface px-3"><option value="all">All stock</option><option value="low">Low stock</option><option value="critical">Out of stock</option><option value="healthy">Healthy</option></select></label>
-            <label className="text-sm">Sort<select value={sort} onChange={event => setSort(event.target.value)} className="ml-2 min-h-11 rounded-xl border border-border bg-surface px-3"><option value="name">Name A–Z</option><option value="value">Highest stock value</option><option value="stock">Lowest base-unit quantity</option></select></label>
-          </div>
-          <div className="relative max-w-sm">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-            <input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              aria-label="Search inventory items"
-              placeholder="Search inventory items…"
-              className="min-h-11 w-full rounded-lg border border-border py-2 pl-9 pr-3 text-body text-text"
-            />
-          </div>
 
-          {categories.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
-              <p className="text-body text-text-muted">
-                No inventory categories yet. Add your first category to start tracking stock.
-              </p>
-              {canManage && <div className="mt-4 flex flex-wrap justify-center gap-2">{["Grains & rice", "Vegetables", "Meat & seafood", "Dairy", "Oil & fats", "Spices"].map(name => <button type="button" key={name} disabled={createCategoryMutation.isPending} onClick={() => createCategoryMutation.mutate(name)} className="min-h-11 rounded-full border border-border px-3 text-sm">+ {name}</button>)}</div>}
-              {categoryError && <p role="alert" className="mt-2 text-error">{categoryError}</p>}
-              {canManage && (
-                <button
-                  type="button"
-                  onClick={() => setCategoryModalOpen(true)}
-                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
+          {section === "ingredients" && (
+            <div className="space-y-4">
+              {/* Unified Search & Filter Toolbar */}
+              <div className="rounded-2xl border border-border bg-surface p-4 shadow-xs space-y-3">
+                {/* Search & Select Controls */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Search Bar */}
+                  <div className="relative flex-1 max-w-md">
+                    <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <input
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                      aria-label="Search inventory items"
+                      placeholder="Search ingredients by name..."
+                      className="min-h-10 w-full rounded-xl border border-border bg-background/50 py-2 pl-9 pr-8 text-xs font-medium text-text placeholder:text-text-muted shadow-2xs transition-colors focus:border-primary focus:bg-surface focus:outline-none"
+                    />
+                    {searchInput && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchInput("")}
+                        aria-label="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-text-muted hover:text-text"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Stock Status & Sort Filters */}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-text">
+                      <span className="text-text-muted whitespace-nowrap">Status:</span>
+                      <select
+                        value={stockFilter}
+                        onChange={(event) => setStockFilter(event.target.value)}
+                        className="min-h-10 rounded-xl border border-border bg-surface px-3 py-1 text-xs font-semibold text-text shadow-2xs transition-colors focus:border-primary focus:outline-none"
+                      >
+                        <option value="all">All stock</option>
+                        <option value="low">Low stock</option>
+                        <option value="critical">Out of stock</option>
+                        <option value="healthy">Healthy</option>
+                      </select>
+                    </label>
+
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-text">
+                      <span className="text-text-muted whitespace-nowrap">Sort:</span>
+                      <select
+                        value={sort}
+                        onChange={(event) => setSort(event.target.value)}
+                        className="min-h-10 rounded-xl border border-border bg-surface px-3 py-1 text-xs font-semibold text-text shadow-2xs transition-colors focus:border-primary focus:outline-none"
+                      >
+                        <option value="name">Name A–Z</option>
+                        <option value="value">Highest stock value</option>
+                        <option value="stock">Lowest stock quantity</option>
+                      </select>
+                    </label>
+
+                    {(categoryFilter || searchInput || stockFilter !== "all" || sort !== "name") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCategoryFilter("");
+                          setSearchInput("");
+                          setStockFilter("all");
+                          setSort("name");
+                        }}
+                        className="min-h-10 rounded-xl border border-border px-3 text-xs font-semibold text-text-muted hover:bg-background hover:text-text transition-colors"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category Pills Row */}
+                <div
+                  className="flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-3"
+                  aria-label="Ingredient categories"
                 >
-                  Add Category
-                </button>
+                  <span className="text-xs font-semibold text-text-muted mr-1">Category:</span>
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilter("")}
+                    aria-pressed={!categoryFilter}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                      !categoryFilter
+                        ? "bg-primary text-white shadow-2xs"
+                        : "border border-border bg-surface text-text-muted hover:bg-background hover:text-text"
+                    }`}
+                  >
+                    All ({items?.length ?? 0})
+                  </button>
+                  {categories.map((category) => {
+                    const count = items?.filter((item) => item.categoryId === category.id).length ?? 0;
+                    const isActive = categoryFilter === category.id;
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => setCategoryFilter(category.id)}
+                        aria-pressed={isActive}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                          isActive
+                            ? "bg-primary text-white shadow-2xs"
+                            : "border border-border bg-surface text-text-muted hover:bg-background hover:text-text"
+                        }`}
+                      >
+                        {category.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {categories.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
+                  <p className="text-body text-text-muted">
+                    No inventory categories yet. Add your first category to start tracking stock.
+                  </p>
+                  {canManage && (
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
+                      {["Grains & rice", "Vegetables", "Meat & seafood", "Dairy", "Oil & fats", "Spices"].map(
+                        (name) => (
+                          <button
+                            type="button"
+                            key={name}
+                            disabled={createCategoryMutation.isPending}
+                            onClick={() => createCategoryMutation.mutate(name)}
+                            className="min-h-11 rounded-full border border-border px-3 text-sm hover:border-primary transition-colors"
+                          >
+                            + {name}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
+                  {categoryError && <p role="alert" className="mt-2 text-error">{categoryError}</p>}
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setCategoryModalOpen(true)}
+                      className="mt-4 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
+                    >
+                      Add Category
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {categories.length > 0 && visibleItems.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
+                  <p className="text-body text-text-muted">
+                    {search
+                      ? `No items match "${search}".`
+                      : items?.length
+                      ? "No ingredients match these filters. Change category or stock status."
+                      : "No inventory items yet. Add your first item to start tracking stock."}
+                  </p>
+                  {canManage && !search && (
+                    <button
+                      type="button"
+                      onClick={() => setItemModal({ mode: "add", item: null })}
+                      className="mt-4 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
+                    >
+                      Add Item
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {visibleItems.length > 0 && (
+                <InventoryTable
+                  items={visibleItems}
+                  linkedDishCounts={linkedDishCounts}
+                  categoryNameById={categoryNameById}
+                  supplierNameById={supplierNameById}
+                  canManage={canManage}
+                  isTogglingReorder={(target) =>
+                    toggleReorderMutation.isPending && toggleReorderMutation.variables === target.id
+                  }
+                  onToggleReorderRequested={(target) => toggleReorderMutation.mutate(target.id)}
+                  onOpenHistory={setHistoryItem}
+                  onAdjust={(target) => {
+                    setFormError(null);
+                    setAdjustItem(target);
+                  }}
+                  onEdit={(target) => {
+                    setFormError(null);
+                    setItemModal({ mode: "edit", item: target });
+                  }}
+                  onDelete={(target) => {
+                    if (window.confirm(`Delete "${target.name}"?`)) {
+                      deleteItemMutation.mutate(target.id);
+                    }
+                  }}
+                />
               )}
             </div>
           )}
-
-          {categories.length > 0 && visibleItems.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
-              <p className="text-body text-text-muted">
-                {search
-                  ? `No items match "${search}".`
-                  : items?.length ? "No ingredients match these filters. Change category or stock status." : "No inventory items yet. Add your first item to start tracking stock."}
-              </p>
-              {canManage && !search && (
-                <button
-                  type="button"
-                  onClick={() => setItemModal({ mode: "add", item: null })}
-                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-button text-white shadow-sm transition-colors hover:bg-primary"
-                >
-                  Add Item
-                </button>
-              )}
-            </div>
-          )}
-
-          {visibleItems.length > 0 && (
-            <InventoryTable
-              items={visibleItems}
-              linkedDishCounts={linkedDishCounts}
-              categoryNameById={categoryNameById}
-              supplierNameById={supplierNameById}
-              canManage={canManage}
-              isTogglingReorder={(target) =>
-                toggleReorderMutation.isPending && toggleReorderMutation.variables === target.id
-              }
-              onToggleReorderRequested={(target) => toggleReorderMutation.mutate(target.id)}
-              onOpenHistory={setHistoryItem}
-              onAdjust={(target) => {
-                setFormError(null);
-                setAdjustItem(target);
-              }}
-              onEdit={(target) => {
-                setFormError(null);
-                setItemModal({ mode: "edit", item: target });
-              }}
-              onDelete={(target) => {
-                if (window.confirm(`Delete "${target.name}"?`)) {
-                  deleteItemMutation.mutate(target.id);
-                }
-              }}
-            />
-          )}
-          </>}
         </>
       )}
 

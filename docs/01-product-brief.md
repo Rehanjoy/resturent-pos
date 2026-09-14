@@ -1,5 +1,23 @@
 # Product Brief — Saffron (Restaurant POS & Management System)
 
+## Unified seating and transparent guest ordering — implemented 2026-09-14
+
+Tables, chairs, QR codes, bookings and active visits now share one floor workspace. Selecting the table
+centre means a whole-table booking; selecting chair buttons means a chair booking, including a group
+across multiple tables. A whole-table occupation highlights the complete table in red, while a shared
+table highlights only the occupied chairs. Every guest order is assigned to an active waiter when one is
+available, and water, bill and help requests carry the exact session and seat context.
+
+Guests can add more food after their first kitchen submission. Each submission is retry-safe and becomes
+its own KOT without duplicating inventory deductions. Cancellation is selected by item and quantity and
+uses each line's own kitchen-send time. The order keeps the original quantities plus an audit record of
+what was cancelled, the free/half/full charge percentage, tax and amount due. The guest and staff views
+both show the same bill components. For example, a ₹260 taxable base with CGST 9% and SGST 9% is shown as
+₹260 + ₹23.40 + ₹23.40 = ₹306.80 rather than only showing the final number.
+
+Completing payment moves the reserved chairs or whole table to Cleaning. Staff then use the same floor
+workspace to confirm cleaning and mark the seating Available for the next guest.
+
 ## Food-cost and menu-profit engineering — implemented 2026-09-14
 
 Inventory is organised as one category-based ingredient register with stock, purchase rate, supplier,

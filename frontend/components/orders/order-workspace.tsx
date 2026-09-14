@@ -11,6 +11,7 @@ import { tablesApi } from "@/lib/tables/api";
 import { ordersApi } from "@/lib/orders/api";
 import type { OrderItem, OrderStatus, OrderUpdatedEvent } from "@/lib/orders/types";
 import { useSocketEvent } from "@/lib/hooks/use-socket-event";
+import { formatMoney } from "@/lib/format";
 import { PageHeader } from "@/components/ui/page-header";
 import { SearchIcon } from "@/components/icons";
 import { CategoryTabs } from "./category-tabs";
@@ -246,10 +247,96 @@ export function OrderWorkspace({ tableId, mode, initialOrderId }: { tableId: str
       )}
 
       {!isLoading && !isError && order?.source === "qr" && (
-        <div className="rounded-2xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-text">
-          This guest confirmed a QR order with a cancellation-price snapshot. Its items are locked;
-          kitchen status, ETA, billing and payment remain available to staff.
+        <div className="grid gap-3 rounded-2xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-text sm:grid-cols-2">
+          <div>
+            <p className="font-semibold">Guest QR order</p>
+            <p className="mt-1 text-text-muted">
+              Guests can add another food batch and cancel selectable quantities. Kitchen progress,
+              billing and counter payment stay connected to this order.
+            </p>
+          </div>
+          <dl className="grid grid-cols-2 gap-2 rounded-xl bg-surface/80 p-3">
+            <div>
+              <dt className="text-xs text-text-muted">Assigned waiter</dt>
+              <dd className="font-medium">{order.assignedWaiter?.name ?? "Awaiting assignment"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-text-muted">Reserved seats</dt>
+              <dd className="font-medium">
+                {order.seats?.length
+                  ? order.seats.map((seat) => `Chair ${seat.chairNumber}`).join(", ")
+                  : "Whole table"}
+              </dd>
+            </div>
+          </dl>
         </div>
+      )}
+
+      {!isLoading && !isError && order && (order.cancellations?.length ?? 0) > 0 && (
+        <section className="rounded-2xl border border-error/20 bg-error/5 p-4" aria-labelledby="cancelled-items-heading">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 id="cancelled-items-heading" className="font-heading text-h4 font-semibold text-text">
+                Cancelled items
+              </h2>
+              <p className="text-small text-text-muted">
+                Original quantities stay in the order audit. Charge and tax are calculated per cancellation.
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-small text-text-muted">Cancellation amount due</p>
+              <p className="font-heading text-h4 font-semibold text-error">
+                {formatMoney((order.cancellations ?? []).reduce((sum, record) => sum + record.amountDue, 0))}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {(order.cancellations ?? []).map((record, recordIndex) => (
+              <article key={record._id ?? `${record.cancelledAt}-${recordIndex}`} className="rounded-xl border border-error/15 bg-surface p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-text">{record.reason}</p>
+                    <p className="text-xs text-text-muted">
+                      {new Date(record.cancelledAt).toLocaleString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-error/10 px-2 py-1 text-xs font-semibold text-error">
+                    Due {formatMoney(record.amountDue)}
+                  </span>
+                </div>
+                <ul className="mt-3 divide-y divide-border">
+                  {record.lines.map((line, lineIndex) => (
+                    <li key={`${line.orderItemId}-${lineIndex}`} className="flex items-start justify-between gap-3 py-2 text-small">
+                      <div>
+                        <p className="font-medium text-text">{line.qty} × {line.nameSnapshot}</p>
+                        <p className="text-text-muted">
+                          {line.chargePercent}% charge on {formatMoney(line.subtotal)}
+                          {line.taxLines.length > 0
+                            ? ` + ${line.taxLines.map((tax) => `${tax.name} ${tax.ratePercent}%`).join(" + ")}`
+                            : ""}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-medium tabular-nums text-text">{formatMoney(line.amountDue)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-2 flex justify-between border-t border-border pt-2 text-small">
+                  <span className="text-text-muted">
+                    Base {formatMoney(record.baseCharge)}
+                    {record.taxLines.map((tax) => ` · ${tax.name} ${formatMoney(tax.amount)}`).join("")}
+                  </span>
+                  <strong className="text-text">{formatMoney(record.amountDue)}</strong>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       {!isLoading && !isError && order && (

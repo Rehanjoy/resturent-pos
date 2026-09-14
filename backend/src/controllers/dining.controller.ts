@@ -12,10 +12,12 @@ export const context = asyncHandler(async (req, res) => { res.json(await dining.
 export const hold = asyncHandler(async (req, res) => { res.status(201).json(await dining.holdSeats(await restaurantId(req), req.body)); });
 export const session = asyncHandler(async (req, res) => { res.json(await dining.getSession(await restaurantId(req), sessionToken(req))); });
 export const order = asyncHandler(async (req, res) => { res.json(await dining.submitOrder(await restaurantId(req), sessionToken(req), req.body)); });
+export const cancellationQuote = asyncHandler(async (req, res) => { res.json(await dining.quoteCancellation(await restaurantId(req), sessionToken(req), req.body)); });
 export const cancel = asyncHandler(async (req, res) => { res.json(await dining.cancelOrder(await restaurantId(req), sessionToken(req), req.body)); });
 export const list = asyncHandler(async (req, res) => { res.json(await dining.listSeating(req.user!.restaurantId)); });
 export const staffHold = asyncHandler(async (req, res) => { res.status(201).json(await dining.holdSeats(req.user!.restaurantId, req.body, req.user!.userId)); });
 export const release = asyncHandler(async (req, res) => { res.json(await dining.releaseSession(req.user!.restaurantId, String(req.params.id), req.user!.userId, req.body.reason)); });
+export const available = asyncHandler(async (req, res) => { res.json(await dining.markDiningSessionAvailable(req.user!.restaurantId, String(req.params.id), req.user!.userId)); });
 export const policy = asyncHandler(async (req, res) => { res.json(await dining.updatePolicy(req.user!.restaurantId, req.body)); });
 export const preparation = asyncHandler(async (req, res) => { res.json(await dining.updatePreparation(req.user!.restaurantId, String(req.params.id), req.body.prepMinutes)); });
 export const eta = asyncHandler(async (req, res) => { res.json(await dining.updateEta(req.user!.restaurantId, String(req.params.id), String(req.params.itemId), req.body.minutes)); });

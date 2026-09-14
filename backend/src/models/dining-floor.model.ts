@@ -18,12 +18,15 @@ export interface DiningSession {
   tokenHash: string;
   source: "customer" | "staff";
   staffId?: string;
-  status: "held" | "occupied" | "expired" | "released";
+  status: "held" | "occupied" | "cleaning" | "expired" | "released";
+  bookingMode: "whole_table" | "chairs";
+  assignedWaiter?: { id: string; name: string };
   partySize: number;
   seats: SeatSelection[];
   expiresAt: string | null;
   createdAt: string;
   releasedAt?: string;
+  cleaningAt?: string;
   releaseReason?: string;
   orderId?: string;
   policy: DiningPolicy;

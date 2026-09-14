@@ -5,9 +5,11 @@ import { getSession, resolveQr } from "./dining.service";
 import { AppError } from "../utils/app-error";
 import { emitToRestaurant } from "../sockets";
 
-function toDto(record: ServiceRequestDocument) {
+function toDto(record: ServiceRequestDocument, session?: { assignedWaiter?: { id: string; name: string } | null; customer?: { name: string; phone: string }; bookingMode?: string }) {
   return { id: record._id.toString(), sessionId: record.sessionId, type: record.type, note: record.note,
     status: record.status, seats: record.seats, createdAt: record.createdAt.toISOString(),
+    assignedWaiter: session?.assignedWaiter ?? null, customer: session?.customer ? { name: session.customer.name, phone: session.customer.phone } : null,
+    bookingMode: session?.bookingMode ?? "chairs",
     acknowledgedAt: record.acknowledgedAt?.toISOString() ?? null,
     completedAt: record.completedAt?.toISOString() ?? null };
 }
@@ -57,16 +59,20 @@ export async function createGuestServiceRequest(qrToken: string, token: string, 
   const current = await ServiceRequest.findOne({ _id: record!._id, restaurantId });
   if (!current || current.status === "expired") throw new AppError("Your seating has ended. Please ask staff for help.", 409, "DINING_SESSION_ENDED");
   notify(restaurantId);
-  return toDto(current);
+  return toDto(current, session);
 }
 export async function listGuestServiceRequests(qrToken: string, token: string) {
   const { restaurantId, session } = await guestSession(qrToken, token);
   await expireStaleRequests(restaurantId);
-  return (await ServiceRequest.find({ restaurantId, sessionId: session.id }).sort({ createdAt: -1 }).limit(30).lean()).map(toDto);
+  return (await ServiceRequest.find({ restaurantId, sessionId: session.id }).sort({ createdAt: -1 }).limit(30)).map((record) => toDto(record, session));
 }
 export async function listStaffServiceRequests(restaurantId: string) {
   await expireStaleRequests(restaurantId);
-  return (await ServiceRequest.find({ restaurantId, isOpen: true }).sort({ createdAt: 1 }).lean()).map(toDto);
+  const [records, floor] = await Promise.all([
+    ServiceRequest.find({ restaurantId, isOpen: true }).sort({ createdAt: 1 }),
+    DiningFloor.findOne({ restaurantId }).lean(),
+  ]);
+  return records.map((record) => toDto(record, floor?.sessions.find((session) => session.id === record.sessionId)));
 }
 export async function updateServiceRequest(restaurantId: string, requestId: string, staffId: string, status: "acknowledged" | "completed") {
   await expireStaleRequests(restaurantId);
@@ -84,5 +90,6 @@ export async function updateServiceRequest(restaurantId: string, requestId: stri
     notify(restaurantId);
   }
   // Repeated acknowledgements/completions never overwrite the first staff/time.
-  return toDto(current);
+  const floor = await DiningFloor.findOne({ restaurantId }).lean();
+  return toDto(current, floor?.sessions.find((session) => session.id === current.sessionId));
 }

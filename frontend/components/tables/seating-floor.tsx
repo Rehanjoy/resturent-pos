@@ -55,7 +55,7 @@ export function SeatingFloor({ areaId, canManage, canBook, search }: { areaId: s
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
   const refresh = () => { cache.invalidateQueries({ queryKey: ["dining-floor"] }); cache.invalidateQueries({ queryKey: ["tables"] }); };
-  const hold = useMutation({ mutationFn: () => seatingAdminApi.hold(partySize, selected, { name: guestName.trim(), phone: guestPhone.trim() }), onSuccess: () => { setSelected([]); setGuestName(""); setGuestPhone(""); refresh(); } });
+  const hold = useMutation({ mutationFn: () => seatingAdminApi.hold(partySize, selected, { name: guestName.trim(), phone: guestPhone.trim() }, "chairs"), onSuccess: () => { setSelected([]); setGuestName(""); setGuestPhone(""); refresh(); } });
   const updateRequest = useMutation({ mutationFn: ({ id, status }: { id: string; status: "acknowledged" | "completed" }) => seatingAdminApi.updateRequest(id, status), onSuccess: () => cache.invalidateQueries({ queryKey: ["service-requests"] }) });
   const release = useMutation({ mutationFn: (reason: string) => seatingAdminApi.release(releaseGroup!.id, reason), onSuccess: () => { setReleaseGroup(null); refresh(); } });
   const openOrder = useMutation({ mutationFn: seatingAdminApi.order, onSuccess: ({ order }) => router.push(`/admin/orders/active?tableId=${order.tableId}&orderId=${order.id}`) });

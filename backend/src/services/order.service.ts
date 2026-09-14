@@ -22,6 +22,7 @@ export interface OrderItemDto {
   nameSnapshot: string;
   priceSnapshot: number;
   qty: number;
+  cancelledQty: number;
   spiceLevel?: SpiceLevel;
   addOns: string[];
   notes?: string;
@@ -43,9 +44,11 @@ export interface OrderDto {
   createdByStaffId: string;
   source?: string;
   diningSessionId?: string;
+  assignedWaiter?: OrderDocument["assignedWaiter"];
   seats?: OrderDocument["seats"];
   placedAt?: Date;
   cancellation?: OrderDocument["cancellation"];
+  cancellations?: OrderDocument["cancellations"];
   customerTotal?: number;
   servedByStaffId?: string;
   voidReason?: string;
@@ -59,6 +62,7 @@ export interface KotItemDto {
   nameSnapshot: string;
   priceSnapshot: number;
   qty: number;
+  cancelledQty: number;
   spiceLevel?: SpiceLevel;
   addOns: string[];
   notes?: string;
@@ -103,6 +107,7 @@ export function toOrderDto(order: HydratedDocument<OrderDocument>): OrderDto {
     nameSnapshot: item.nameSnapshot,
     priceSnapshot: item.priceSnapshot,
     qty: item.qty,
+    cancelledQty: item.cancelledQty ?? 0,
     spiceLevel: item.spiceLevel,
     addOns: item.addOns,
     notes: item.notes,
@@ -117,13 +122,15 @@ export function toOrderDto(order: HydratedDocument<OrderDocument>): OrderDto {
     tableId: order.tableId.toString(),
     status: order.status,
     items,
-    subtotal: items.reduce((sum, item) => sum + item.priceSnapshot * item.qty, 0),
+    subtotal: items.reduce((sum, item) => sum + item.priceSnapshot * (item.qty - item.cancelledQty), 0),
     createdByStaffId: order.createdByStaffId?.toString() ?? "",
     source: order.source,
     diningSessionId: order.diningSessionId,
+    assignedWaiter: order.assignedWaiter,
     seats: order.seats,
     placedAt: order.placedAt,
     cancellation: order.cancellation,
+    cancellations: order.cancellations ?? [],
     customerTotal: order.customerTotal,
     servedByStaffId: order.servedByStaffId?.toString(),
     voidReason: order.voidReason,
@@ -144,6 +151,7 @@ export function toKotDto(kot: HydratedDocument<KotDocument>): KotDto {
       nameSnapshot: item.nameSnapshot,
       priceSnapshot: item.priceSnapshot,
       qty: item.qty,
+      cancelledQty: item.cancelledQty ?? 0,
       spiceLevel: item.spiceLevel,
       addOns: item.addOns,
       notes: item.notes,

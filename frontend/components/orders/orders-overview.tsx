@@ -63,6 +63,20 @@ function isMeaningfulOrder(order: Order): boolean {
   return order.items.length > 0;
 }
 
+function cancellationSummary(order: Order) {
+  const cancelledQty = order.items.reduce((sum, item) => sum + (item.cancelledQty ?? 0), 0);
+  if (cancelledQty === 0) return null;
+  const orderedQty = order.items.reduce((sum, item) => sum + item.qty, 0);
+  const activeQty = Math.max(0, orderedQty - cancelledQty);
+  const amountDue = (order.cancellations ?? []).reduce((sum, record) => sum + record.amountDue, 0);
+  return {
+    cancelledQty,
+    activeQty,
+    amountDue,
+    label: activeQty === 0 ? "Cancelled · payment due" : "Partially cancelled",
+  };
+}
+
 type FilterKey = "active" | "closed" | "all";
 
 const FILTER_LABEL: Record<FilterKey, string> = {
@@ -239,32 +253,41 @@ export function OrdersOverview() {
             >
               <h3 className="font-heading text-h4 font-semibold text-text">{group.tableName}</h3>
               <div className="flex flex-col gap-2">
-                {group.orders.map((order) => (
-                  <button
-                    key={order.id}
-                    type="button"
-                    onClick={() => router.push(`/admin/orders/active?tableId=${order.tableId}&orderId=${order.id}`)}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:border-primary"
-                  >
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <span className="flex items-center gap-2 text-small font-medium">
-                        <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${TONE_DOT[orderStatusTone(order.status)]}`}
-                        />
-                        <span className={TONE_TEXT[orderStatusTone(order.status)]}>
-                          {STATUS_LABEL[order.status]}
+                {group.orders.map((order) => {
+                  const cancelled = cancellationSummary(order);
+                  return (
+                    <button
+                      key={order.id}
+                      type="button"
+                      onClick={() => router.push(`/admin/orders/active?tableId=${order.tableId}&orderId=${order.id}`)}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:border-primary"
+                    >
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <span className="flex items-center gap-2 text-small font-medium">
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full ${cancelled ? "bg-error" : TONE_DOT[orderStatusTone(order.status)]}`}
+                          />
+                          <span className={cancelled ? "text-error" : TONE_TEXT[orderStatusTone(order.status)]}>
+                            {cancelled?.label ?? STATUS_LABEL[order.status]}
+                          </span>
                         </span>
+                        <span className="flex items-center gap-1.5 text-small text-text-muted">
+                          <ReceiptIcon className="h-3.5 w-3.5" />
+                          {cancelled
+                            ? `${cancelled.activeQty} active · ${cancelled.cancelledQty} cancelled`
+                            : `${order.items.length} item${order.items.length === 1 ? "" : "s"}`} {" · "}
+                          {relativeTime(order.createdAt)}
+                        </span>
+                      </div>
+                      <span className="flex shrink-0 flex-col items-end font-medium tabular-nums text-text">
+                        {formatMoney(order.customerTotal ?? order.subtotal + (cancelled?.amountDue ?? 0))}
+                        {cancelled && cancelled.amountDue > 0 && (
+                          <small className="font-normal text-error">Cancel charge {formatMoney(cancelled.amountDue)}</small>
+                        )}
                       </span>
-                      <span className="flex items-center gap-1.5 text-small text-text-muted">
-                        <ReceiptIcon className="h-3.5 w-3.5" />
-                        {order.items.length} item{order.items.length === 1 ? "" : "s"} · {relativeTime(order.createdAt)}
-                      </span>
-                    </div>
-                    <span className="shrink-0 font-medium tabular-nums text-text">
-                      {formatMoney(order.subtotal)}
-                    </span>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}

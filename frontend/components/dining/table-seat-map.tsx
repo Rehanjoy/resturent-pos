@@ -6,6 +6,7 @@ const tones = {
   available: "border-emerald-300 bg-emerald-50 text-emerald-900",
   held: "border-amber-300 bg-amber-100 text-amber-900",
   occupied: "border-orange-300 bg-orange-100 text-orange-900",
+  cleaning: "border-sky-300 bg-sky-50 text-sky-900",
   unavailable: "border-gray-200 bg-gray-100 text-gray-500",
 };
 

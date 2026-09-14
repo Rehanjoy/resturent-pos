@@ -23,7 +23,7 @@ export async function linkDiningCustomer(restaurantId: string, input: { name: st
 }
 export async function syncCustomerVisit(restaurantId: string, session: DiningSession) {
   if (!session.customer) return;
-  const endedAt = session.status === "expired" ? session.expiresAt : session.releasedAt;
+  const endedAt = session.status === "expired" ? session.expiresAt : session.cleaningAt ?? session.releasedAt;
   await CustomerVisit.updateOne({ sessionId: session.id, restaurantId }, { $set: {
     status: session.status, expiresAt: session.expiresAt ? new Date(session.expiresAt) : null,
     ...(endedAt ? { endedAt: new Date(endedAt) } : {}), ...(session.orderId ? { orderId: session.orderId } : {}),

@@ -1,15 +1,16 @@
 import { api } from "@/lib/api";
-import type { DiningContext, DiningSeat, DiningSessionResponse, CartItem, DiningCustomer, ServiceRequest, ServiceRequestType } from "./types";
+import type { DiningContext, DiningSeat, DiningSessionResponse, CartItem, DiningCustomer, ServiceRequest, ServiceRequestType, SelectedCancellationQuote } from "./types";
 
 const path = (qrToken: string) => `/api/public/dining/${encodeURIComponent(qrToken)}`;
 const authorization = (sessionToken: string) => ({ "X-Dining-Token": sessionToken });
 
 export const diningApi = {
   context: (qrToken: string) => api.get<DiningContext>(`${path(qrToken)}/context`),
-  hold: (qrToken: string, partySize: number, seats: DiningSeat[], customer: DiningCustomer) => api.post<DiningSessionResponse & { sessionToken: string }>(`${path(qrToken)}/holds`, { partySize, seats, customer }),
+  hold: (qrToken: string, partySize: number, seats: DiningSeat[], customer: DiningCustomer, bookingMode?: "whole_table" | "chairs") => api.post<DiningSessionResponse & { sessionToken: string }>(`${path(qrToken)}/holds`, { partySize, seats, customer, bookingMode }),
   session: (qrToken: string, sessionToken: string) => api.get<DiningSessionResponse>(`${path(qrToken)}/session`, authorization(sessionToken)),
   order: (qrToken: string, sessionToken: string, items: CartItem[], idempotencyKey: string) => api.post<DiningSessionResponse>(`${path(qrToken)}/order`, { items: items.map(({ menuItemId, qty, notes }) => ({ menuItemId, qty, notes })), idempotencyKey }, authorization(sessionToken)),
-  cancel: (qrToken: string, sessionToken: string, reason: string, acceptedChargePercent: number) => api.post<DiningSessionResponse>(`${path(qrToken)}/cancel`, { reason, acceptedChargePercent }, authorization(sessionToken)),
+  cancellationQuote: (qrToken: string, sessionToken: string, items: { orderItemId: string; qty: number }[]) => api.post<SelectedCancellationQuote>(`${path(qrToken)}/cancel/quote`, { items }, authorization(sessionToken)),
+  cancelItems: (qrToken: string, sessionToken: string, reason: string, items: { orderItemId: string; qty: number; acceptedChargePercent: number }[]) => api.post<DiningSessionResponse>(`${path(qrToken)}/cancel`, { reason, items }, authorization(sessionToken)),
   serviceRequests: (qrToken: string, sessionToken: string) => api.get<ServiceRequest[]>(`${path(qrToken)}/service-requests`, authorization(sessionToken)),
   requestService: (qrToken: string, sessionToken: string, type: ServiceRequestType, note?: string) => api.post<ServiceRequest>(`${path(qrToken)}/service-requests`, { type, note }, authorization(sessionToken)),
 };

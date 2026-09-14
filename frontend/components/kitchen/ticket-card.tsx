@@ -121,7 +121,7 @@ export function TicketCard({
 
       <ul className="flex flex-col gap-2">
         {kot.items.map((item) => (
-          <li key={item.orderItemId} className="flex items-start justify-between gap-2">
+          <li key={item.orderItemId} className={`flex items-start justify-between gap-2 ${(item.cancelledQty ?? 0) >= item.qty ? "opacity-60" : ""}`}>
             <div className="flex items-start gap-2">
               <span
                 className={`mt-2 h-2 w-2 shrink-0 rounded-full ${ITEM_STATUS_DOT[item.itemStatus]}`}
@@ -129,19 +129,24 @@ export function TicketCard({
               />
               <div>
                 <p className="text-body text-text">
-                  {item.qty} × {item.nameSnapshot}
+                  {Math.max(0, item.qty - (item.cancelledQty ?? 0))} × {item.nameSnapshot}
                 </p>
+                {(item.cancelledQty ?? 0) > 0 && (
+                  <p className="text-small font-semibold text-error">
+                    {item.cancelledQty} cancelled from {item.qty}
+                  </p>
+                )}
                 <p className="text-small text-text-muted">
                   {[item.spiceLevel && item.spiceLevel !== "none" ? item.spiceLevel : null, ...item.addOns]
                     .filter(Boolean)
                     .join(", ")}
                 </p>
                 {item.notes && <p className="text-small italic text-text-muted">{item.notes}</p>}
-                {canManage && item.itemStatus !== "ready" && item.itemStatus !== "served" && <ItemEtaControl orderId={kot.orderId} itemId={item.orderItemId} name={item.nameSnapshot} estimatedReadyAt={item.estimatedReadyAt} />}
+                {canManage && (item.cancelledQty ?? 0) < item.qty && item.itemStatus !== "ready" && item.itemStatus !== "served" && <ItemEtaControl orderId={kot.orderId} itemId={item.orderItemId} name={item.nameSnapshot} estimatedReadyAt={item.estimatedReadyAt} />}
               </div>
             </div>
 
-            {canManage && item.itemStatus !== "ready" && item.itemStatus !== "served" ? (
+            {canManage && (item.cancelledQty ?? 0) < item.qty && item.itemStatus !== "ready" && item.itemStatus !== "served" ? (
               <button
                 type="button"
                 disabled={isMarkingItem}
@@ -150,6 +155,8 @@ export function TicketCard({
               >
                 Mark Ready
               </button>
+            ) : (item.cancelledQty ?? 0) >= item.qty ? (
+              <span className="shrink-0 text-small font-semibold text-error">Cancelled</span>
             ) : (
               <span className="shrink-0 text-small font-medium text-text-muted">
                 {ITEM_STATUS_LABEL[item.itemStatus]}
