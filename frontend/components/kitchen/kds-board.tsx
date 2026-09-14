@@ -106,6 +106,7 @@ export function KdsBoard() {
 
   const isLoading = ticketsQuery.isLoading || tablesQuery.isLoading;
   const isError = ticketsQuery.isError || tablesQuery.isError;
+  const loadError = ticketsQuery.error ?? tablesQuery.error;
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
@@ -121,9 +122,17 @@ export function KdsBoard() {
       {isLoading && <p className="text-small text-text-muted">Loading tickets…</p>}
 
       {isError && (
-        <p className="text-small text-error">
-          Could not load kitchen tickets — check your connection and try again.
-        </p>
+        <div role="alert" className="rounded-2xl border border-error/20 bg-error/5 p-4 text-small text-error">
+          <p className="font-semibold">Kitchen data could not be loaded.</p>
+          <p className="mt-1">
+            {loadError instanceof ApiError && loadError.status === 403
+              ? "This account is missing a required kitchen permission. Ask an Owner or Manager to review Staff access."
+              : "Check the connection and retry. Existing tickets remain safely stored on the server."}
+          </p>
+          <button type="button" onClick={() => { void tablesQuery.refetch(); void ticketsQuery.refetch(); }} className="mt-3 rounded-lg border border-error/30 px-3 py-2 font-semibold hover:bg-error/10">
+            Retry now
+          </button>
+        </div>
       )}
 
       {!isLoading && !isError && tickets.length === 0 && (

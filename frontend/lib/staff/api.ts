@@ -1,11 +1,12 @@
 import { api } from "@/lib/api";
-import type { StaffActivityLogEntry, StaffMember, StaffRole, StaffSession } from "./types";
+import type { StaffActivityLogEntry, StaffMember, StaffModule, StaffRole, StaffSession } from "./types";
 
 export interface CreateStaffInput {
   name: string;
   email: string;
   phone?: string;
   role: StaffRole;
+  visibleModules?: StaffModule[];
   password?: string;
 }
 
@@ -13,6 +14,7 @@ export interface UpdateStaffInput {
   name?: string;
   phone?: string;
   role?: StaffRole;
+  visibleModules?: StaffModule[];
 }
 
 /**

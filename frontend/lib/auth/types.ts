@@ -1,3 +1,5 @@
+import type { StaffModule } from "@/lib/staff/types";
+
 /**
  * Mirrors the sanitized user shape the backend returns from
  * login/refresh/pin-login/me (`backend/src/services/auth.service.ts`
@@ -10,6 +12,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: "owner" | "manager" | "cashier" | "server" | "chef" | "inventory_manager";
+  visibleModules: StaffModule[];
   isActive: boolean;
   mustResetPassword: boolean;
   twoFactorEnabled: boolean;

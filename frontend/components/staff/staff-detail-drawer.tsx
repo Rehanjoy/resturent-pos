@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api";
 import { staffApi } from "@/lib/staff/api";
-import type { StaffMember } from "@/lib/staff/types";
+import { STAFF_MODULE_OPTIONS, defaultModulesForRole, type StaffMember } from "@/lib/staff/types";
 
 function errorMessageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
@@ -93,6 +93,18 @@ export function StaffDetailDrawer({
             &#x2715;
           </button>
         </div>
+
+        <section className="rounded-2xl border border-border bg-background/60 p-4">
+          <h3 className="font-heading text-h4 font-semibold text-text">Visible workspaces</h3>
+          <p className="mt-1 text-small text-text-muted">Navigation assigned to this account.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(staff.visibleModules?.length ? staff.visibleModules : defaultModulesForRole(staff.role)).map((module) => (
+              <span key={module} className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-small font-medium text-primary">
+                {STAFF_MODULE_OPTIONS.find((option) => option.value === module)?.label ?? module}
+              </span>
+            ))}
+          </div>
+        </section>
 
         <section className="flex flex-col gap-3">
           <h3 className="font-heading text-h4 font-semibold text-text">Active Sessions</h3>

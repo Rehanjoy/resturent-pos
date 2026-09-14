@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { AuthUser } from "@/lib/auth/types";
+import { defaultModulesForRole } from "@/lib/staff/types";
 import { useSocketConnectionState } from "@/lib/hooks/use-socket-connection-state";
 import { useUiStore } from "@/lib/store/ui-store";
 import { BellIcon, ClockIcon, MenuIcon, PlusIcon, SearchIcon } from "@/components/icons";
@@ -17,22 +18,22 @@ import { BellIcon, ClockIcon, MenuIcon, PlusIcon, SearchIcon } from "@/component
 const NEW_ORDER_ROLES = new Set(["owner", "manager", "cashier", "server"]);
 
 function useLiveClock(): string {
-  // Safe to compute `new Date()` directly (no SSR/hydration risk): this
-  // component only ever renders once `AdminLayout`'s auth gate flips to
-  // "authenticated", which is a client-only state transition that never
-  // happens during the server-rendered pass (see `app/admin/layout.tsx`).
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    const initialId = window.setTimeout(() => setNow(new Date()), 0);
     const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    return () => {
+      window.clearTimeout(initialId);
+      clearInterval(id);
+    };
   }, []);
 
-  return now.toLocaleTimeString("en-IN", {
+  return now?.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-  });
+  }) ?? "--:--:--";
 }
 
 /**
@@ -86,7 +87,9 @@ function ConnectionStatus() {
  */
 export function Topbar({ user }: { user: AuthUser }) {
   const clock = useLiveClock();
-  const canStartOrder = NEW_ORDER_ROLES.has(user.role);
+  const visibleModules = new Set(user.visibleModules?.length ? user.visibleModules : defaultModulesForRole(user.role));
+  const canStartOrder = NEW_ORDER_ROLES.has(user.role) && visibleModules.has("tables") && visibleModules.has("orders");
+  const canViewKitchen = visibleModules.has("kitchen");
   const toggleMobileNav = useUiStore((state) => state.toggleMobileNav);
 
   return (
@@ -135,15 +138,17 @@ export function Topbar({ user }: { user: AuthUser }) {
           <span>{clock}</span>
         </div>
 
-        <Link
-          href="/admin/kitchen"
-          title="Live kitchen queue"
-          aria-label="Open live kitchen queue"
-          className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background/60 text-text-muted transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"
-        >
-          <BellIcon className="h-4 w-4" />
-          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-accent ring-2 ring-surface" />
-        </Link>
+        {canViewKitchen && (
+          <Link
+            href="/admin/kitchen"
+            title="Live kitchen queue"
+            aria-label="Open live kitchen queue"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background/60 text-text-muted transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"
+          >
+            <BellIcon className="h-4 w-4" />
+            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-accent ring-2 ring-surface" />
+          </Link>
+        )}
 
         {canStartOrder && (
           <Link

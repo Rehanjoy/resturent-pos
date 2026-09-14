@@ -4,7 +4,6 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { authApi } from "./api";
 import {
   getAccessToken,
-  getStoredUser,
   onSessionExpired,
   setAccessToken,
   setStoredUser,
@@ -32,27 +31,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  * preventing false unauthenticated bounces on page reloads or tab switches.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>(() => {
-    if (typeof window !== "undefined") {
-      const token = getAccessToken();
-      const storedUser = getStoredUser<AuthUser>();
-      if (token && storedUser) {
-        return "authenticated";
-      }
-    }
-    return "loading";
-  });
-
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== "undefined") {
-      const token = getAccessToken();
-      const storedUser = getStoredUser<AuthUser>();
-      if (token && storedUser) {
-        return storedUser;
-      }
-    }
-    return null;
-  });
+  // Server and browser must produce the same first render. Storage is read
+  // inside the effect below, which prevents production hydration error #418.
+  const [status, setStatus] = useState<AuthStatus>("loading");
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   const setSession = useCallback((accessToken: string, nextUser: AuthUser) => {
     setAccessToken(accessToken);

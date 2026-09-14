@@ -93,6 +93,32 @@ describe("RBAC — cross-module access control", () => {
       expect(res.status).toBe(201);
     });
 
+    it("stores a role-safe visible workspace selection for frontline staff", async () => {
+      const res = await as("manager")
+        .post("/api/staff")
+        .send({
+          name: "Kitchen Lead",
+          email: "kitchen-lead@test.saffron.dev",
+          role: "chef",
+          visibleModules: ["orders", "kitchen"],
+        });
+      expect(res.status).toBe(201);
+      expect(res.body.staff.visibleModules).toEqual(["orders", "kitchen"]);
+    });
+
+    it("rejects a workspace that is outside the selected role", async () => {
+      const res = await as("manager")
+        .post("/api/staff")
+        .send({
+          name: "Kitchen Lead",
+          email: "kitchen-dashboard@test.saffron.dev",
+          role: "chef",
+          visibleModules: ["orders", "kitchen", "dashboard"],
+        });
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe("STAFF_MODULE_NOT_PERMITTED");
+    });
+
     it("allows an Owner to create a Manager account", async () => {
       const res = await as("owner")
         .post("/api/staff")
@@ -127,6 +153,11 @@ describe("RBAC — cross-module access control", () => {
   });
 
   describe("Kitchen module — Cashier/Server can view, only Owner/Manager/Chef can Mark Ready", () => {
+    it("allows Chef to read table names required by Kitchen and Orders", async () => {
+      const res = await as("chef").get("/api/tables");
+      expect(res.status).toBe(200);
+    });
+
     it.each(["cashier", "server"])("blocks %s from marking a ticket ready", async (role) => {
       const res = await as(role).patch(`/api/kitchen/tickets/${DUMMY_ID}/mark-all-ready`);
       expect(res.status).toBe(403);

@@ -71,6 +71,12 @@ Orders, so the cashier and guest work from the same figures.
 ### Staff
 Owner/Manager add, edit, and deactivate staff accounts. **A Manager can fully manage frontline roles (Cashier/Server/Chef/Inventory Manager) but can never create, edit, or deactivate an Owner or another Manager account** — this stops a Manager from ever escalating privileges. Every staff member has an activity log (their orders, voids, discounts) and a list of active login sessions that can be individually revoked.
 
+The Add/Edit Staff form includes **Visible workspaces**. The selector only offers modules that the chosen
+role is already allowed to use; it can hide navigation entries but cannot grant a Chef, Cashier or other
+frontline role an Owner/Manager action. Legacy accounts automatically receive the standard defaults for
+their role. Chef defaults are Orders, Kitchen, Menu and Inventory. Kitchen and Orders can read table names
+for ticket labels, while table management remains restricted by its separate action guards.
+
 ### Settings
 Restaurant profile, GST/tax configuration, discount approval threshold, and which payment modes are accepted. Owner-only for the restaurant's core identity (name, GST number, logo); Manager can adjust the operational settings (tax slabs, discount threshold, payment modes).
 

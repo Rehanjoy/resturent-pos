@@ -18,7 +18,9 @@ router.use(authenticate);
 // Same view/manage split as areas (PRD §2). Status changes get their own,
 // wider-access guard below — Server can flip a table's status (seat/clean)
 // without being able to create/edit/delete tables structurally.
-const canView = authorize("owner", "manager", "cashier", "server");
+// Chef/KDS reads table names to label kitchen tickets. This grants read-only
+// table metadata; structural edits and status changes remain separately gated.
+const canView = authorize("owner", "manager", "cashier", "server", "chef");
 const canManage = authorize("owner", "manager");
 const canChangeStatus = authorize("owner", "manager", "server");
 

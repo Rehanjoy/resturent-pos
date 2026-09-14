@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { USER_ROLES } from "../models/user.model";
+import { STAFF_MODULES, USER_ROLES } from "../models/user.model";
+
+const visibleModulesSchema = z.array(z.enum(STAFF_MODULES)).min(1, "Select at least one workspace.").max(STAFF_MODULES.length).refine(
+  (modules) => new Set(modules).size === modules.length,
+  "A workspace can only be selected once.",
+);
 
 const phoneSchema = z
   .string()
@@ -12,6 +17,7 @@ export const createStaffSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email."),
   phone: phoneSchema.optional(),
   role: z.enum(USER_ROLES),
+  visibleModules: visibleModulesSchema.optional(),
   // Optional — left blank, the server auto-generates a temporary password
   // and returns it once in the response (see staff.service.ts). If
   // supplied, must meet the same minimum the self-service reset flow uses.
@@ -23,8 +29,9 @@ export const updateStaffSchema = z
     name: z.string().trim().min(1).max(120).optional(),
     phone: phoneSchema.optional(),
     role: z.enum(USER_ROLES).optional(),
+    visibleModules: visibleModulesSchema.optional(),
   })
-  .refine((body) => body.name !== undefined || body.phone !== undefined || body.role !== undefined, {
+  .refine((body) => body.name !== undefined || body.phone !== undefined || body.role !== undefined || body.visibleModules !== undefined, {
     message: "Provide at least one field to update.",
   });
 

@@ -1,7 +1,14 @@
 import { randomBytes } from "crypto";
 import { Types, type HydratedDocument } from "mongoose";
 import { AppError } from "../utils/app-error";
-import { User, type UserDocument, type UserRole } from "../models/user.model";
+import {
+  User,
+  defaultModulesForRole,
+  resolveVisibleModules,
+  type StaffModule,
+  type UserDocument,
+  type UserRole,
+} from "../models/user.model";
 import { AuditLog } from "../models/audit-log.model";
 import { Session } from "../models/session.model";
 import { hashPassword } from "../utils/password";
@@ -28,6 +35,7 @@ export interface StaffDto {
   email: string;
   phone?: string;
   role: UserRole;
+  visibleModules: StaffModule[];
   isActive: boolean;
   mustResetPassword: boolean;
   twoFactorEnabled: boolean;
@@ -64,6 +72,7 @@ function toStaffDto(user: HydratedDocument<UserDocument>): StaffDto {
     email: user.email,
     phone: user.phone,
     role: user.role,
+    visibleModules: resolveVisibleModules(user.role, user.visibleModules),
     isActive: user.isActive,
     mustResetPassword: user.mustResetPassword,
     twoFactorEnabled: user.twoFactorEnabled,
@@ -92,6 +101,17 @@ function assertCanAssignRole(actorRole: UserRole, targetRole: UserRole): void {
  */
 function assertCanManageExistingStaff(actorRole: UserRole, existingRole: UserRole): void {
   assertCanAssignRole(actorRole, existingRole);
+}
+
+function assertModulesAllowed(role: UserRole, modules: StaffModule[]): void {
+  const allowed = new Set(defaultModulesForRole(role));
+  if (modules.some((module) => !allowed.has(module))) {
+    throw new AppError(
+      "One or more selected workspaces are not available for this role.",
+      403,
+      "STAFF_MODULE_NOT_PERMITTED",
+    );
+  }
 }
 
 /** 12-character alphanumeric temporary password, e.g. "aK9mQz3RtP2v". */
@@ -153,6 +173,7 @@ export interface CreateStaffInput {
   email: string;
   phone?: string;
   role: UserRole;
+  visibleModules?: StaffModule[];
   password?: string;
 }
 
@@ -178,6 +199,8 @@ export async function createStaff(
   input: CreateStaffInput,
 ): Promise<CreateStaffResult> {
   assertCanAssignRole(actorRole, input.role);
+  const visibleModules = input.visibleModules ?? defaultModulesForRole(input.role);
+  assertModulesAllowed(input.role, visibleModules);
   await assertEmailAvailable(restaurantId, input.email);
 
   const generatedPassword = input.password ? undefined : generateTemporaryPassword();
@@ -189,6 +212,7 @@ export async function createStaff(
     email: input.email,
     phone: input.phone,
     role: input.role,
+    visibleModules,
     passwordHash: await hashPassword(passwordToHash),
     mustResetPassword: true,
     isActive: true,
@@ -200,7 +224,7 @@ export async function createStaff(
     action: "staff.created",
     entityType: "User",
     entityId: user._id.toString(),
-    afterValue: { name: user.name, email: user.email, role: user.role },
+    afterValue: { name: user.name, email: user.email, role: user.role, visibleModules },
   });
 
   return { staff: toStaffDto(user), temporaryPassword: generatedPassword };
@@ -210,6 +234,7 @@ export interface UpdateStaffInput {
   name?: string;
   phone?: string;
   role?: UserRole;
+  visibleModules?: StaffModule[];
 }
 
 export async function updateStaff(
@@ -224,11 +249,18 @@ export async function updateStaff(
     assertCanAssignRole(actorRole, input.role);
   }
 
-  const beforeValue = { name: user.name, phone: user.phone, role: user.role };
+  const beforeValue = { name: user.name, phone: user.phone, role: user.role, visibleModules: resolveVisibleModules(user.role, user.visibleModules) };
+  const nextRole = input.role ?? user.role;
+  const nextVisibleModules = input.visibleModules ??
+    (input.role && input.role !== user.role
+      ? defaultModulesForRole(nextRole)
+      : resolveVisibleModules(user.role, user.visibleModules));
+  assertModulesAllowed(nextRole, nextVisibleModules);
 
   if (input.name !== undefined) user.name = input.name;
   if (input.phone !== undefined) user.phone = input.phone;
   if (input.role !== undefined) user.role = input.role;
+  if (input.visibleModules !== undefined || input.role !== undefined) user.visibleModules = nextVisibleModules;
 
   await user.save();
 
@@ -239,7 +271,7 @@ export async function updateStaff(
     entityType: "User",
     entityId: user._id.toString(),
     beforeValue,
-    afterValue: { name: user.name, phone: user.phone, role: user.role },
+    afterValue: { name: user.name, phone: user.phone, role: user.role, visibleModules: nextVisibleModules },
   });
 
   return toStaffDto(user);

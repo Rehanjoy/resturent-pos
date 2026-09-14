@@ -2,13 +2,22 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
-import { MANAGER_ASSIGNABLE_ROLES, STAFF_ROLES, type StaffMember, type StaffRole } from "@/lib/staff/types";
+import {
+  MANAGER_ASSIGNABLE_ROLES,
+  STAFF_MODULE_OPTIONS,
+  STAFF_ROLES,
+  defaultModulesForRole,
+  type StaffMember,
+  type StaffModule,
+  type StaffRole,
+} from "@/lib/staff/types";
 
 export interface StaffFormValues {
   name: string;
   email: string;
   phone: string;
   role: StaffRole;
+  visibleModules: StaffModule[];
   password: string;
 }
 
@@ -35,6 +44,9 @@ export function StaffFormModal({
   const [email, setEmail] = useState(staff?.email ?? "");
   const [phone, setPhone] = useState(staff?.phone ?? "");
   const [role, setRole] = useState<StaffRole>(staff?.role ?? assignableRoles[0]?.value ?? "cashier");
+  const [visibleModules, setVisibleModules] = useState<StaffModule[]>(
+    staff?.visibleModules?.length ? staff.visibleModules : defaultModulesForRole(staff?.role ?? assignableRoles[0]?.value ?? "cashier"),
+  );
   const [password, setPassword] = useState("");
 
   return (
@@ -42,7 +54,7 @@ export function StaffFormModal({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          onSubmit({ name: name.trim(), email: email.trim(), phone: phone.trim(), role, password });
+          onSubmit({ name: name.trim(), email: email.trim(), phone: phone.trim(), role, visibleModules, password });
         }}
         className="flex flex-col gap-4"
       >
@@ -88,7 +100,11 @@ export function StaffFormModal({
           <span className="text-small font-medium text-text">Role</span>
           <select
             value={role}
-            onChange={(event) => setRole(event.target.value as StaffRole)}
+            onChange={(event) => {
+              const nextRole = event.target.value as StaffRole;
+              setRole(nextRole);
+              setVisibleModules(defaultModulesForRole(nextRole));
+            }}
             className="rounded-lg border border-border px-3 py-2 text-body text-text"
           >
             {assignableRoles.map((option) => (
@@ -103,6 +119,42 @@ export function StaffFormModal({
             </span>
           )}
         </label>
+
+        <fieldset className="rounded-2xl border border-border bg-background/60 p-4">
+          <legend className="px-1 text-small font-semibold text-text">Visible workspaces</legend>
+          <p className="mb-3 text-small text-text-muted">
+            Choose what appears in this staff member&apos;s navigation. Their role still controls which actions they can perform.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {STAFF_MODULE_OPTIONS.filter((module) => defaultModulesForRole(role).includes(module.value)).map((module) => {
+              const checked = visibleModules.includes(module.value);
+              return (
+                <label
+                  key={module.value}
+                  className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                    checked ? "border-primary bg-primary/5" : "border-border bg-surface hover:border-primary/40"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => setVisibleModules((current) =>
+                      checked ? current.filter((value) => value !== module.value) : [...current, module.value]
+                    )}
+                    className="mt-1 h-4 w-4 accent-[var(--color-primary)]"
+                  />
+                  <span>
+                    <span className="block text-small font-semibold text-text">{module.label}</span>
+                    <span className="block text-xs text-text-muted">{module.description}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {visibleModules.length === 0 && (
+            <p role="alert" className="mt-3 text-small font-medium text-error">Select at least one workspace.</p>
+          )}
+        </fieldset>
 
         {!isEdit && (
           <label className="flex flex-col gap-1">
@@ -133,7 +185,7 @@ export function StaffFormModal({
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || !name.trim() || !email.trim()}
+            disabled={isSubmitting || !name.trim() || !email.trim() || visibleModules.length === 0}
             className="rounded-lg bg-accent px-4 py-2 text-button text-white disabled:opacity-60"
           >
             {isSubmitting ? "Saving…" : "Save"}

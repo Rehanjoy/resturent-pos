@@ -11,6 +11,44 @@ export const USER_ROLES = [
 
 export type UserRole = (typeof USER_ROLES)[number];
 
+export const STAFF_MODULES = [
+  "dashboard",
+  "customers",
+  "tables",
+  "reservations",
+  "orders",
+  "kitchen",
+  "menu",
+  "inventory",
+  "bills",
+  "reports",
+  "staff",
+  "website",
+  "marketing",
+  "settings",
+] as const;
+
+export type StaffModule = (typeof STAFF_MODULES)[number];
+
+const ROLE_DEFAULT_MODULES: Record<UserRole, readonly StaffModule[]> = {
+  owner: STAFF_MODULES,
+  manager: STAFF_MODULES,
+  cashier: ["dashboard", "customers", "tables", "reservations", "orders", "kitchen", "menu", "bills", "reports"],
+  server: ["customers", "tables", "reservations", "orders", "kitchen", "menu"],
+  chef: ["orders", "kitchen", "menu", "inventory"],
+  inventory_manager: ["menu", "inventory"],
+};
+
+export function defaultModulesForRole(role: UserRole): StaffModule[] {
+  return [...ROLE_DEFAULT_MODULES[role]];
+}
+
+export function resolveVisibleModules(role: UserRole, configured?: StaffModule[]): StaffModule[] {
+  const allowed = new Set(ROLE_DEFAULT_MODULES[role]);
+  const selected = configured?.filter((module, index) => allowed.has(module) && configured.indexOf(module) === index);
+  return selected?.length ? selected : defaultModulesForRole(role);
+}
+
 export interface UserDocument {
   _id: Types.ObjectId;
   restaurantId: Types.ObjectId;
@@ -19,6 +57,7 @@ export interface UserDocument {
   phone?: string;
   passwordHash: string;
   role: UserRole;
+  visibleModules?: StaffModule[];
   pinHash?: string;
   isActive: boolean;
   mustResetPassword: boolean;
@@ -51,6 +90,7 @@ const userSchema = new Schema<UserDocument>(
     phone: { type: String, trim: true },
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: USER_ROLES, required: true },
+    visibleModules: [{ type: String, enum: STAFF_MODULES }],
     pinHash: { type: String, select: false },
     isActive: { type: Boolean, default: true },
     mustResetPassword: { type: Boolean, default: false },

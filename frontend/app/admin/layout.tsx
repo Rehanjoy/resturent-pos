@@ -70,7 +70,6 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar
-        role={user.role}
         user={user}
         onLogout={() => {
           void clearSession().then(() => router.push("/login"));

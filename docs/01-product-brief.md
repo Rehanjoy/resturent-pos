@@ -1,5 +1,18 @@
 # Product Brief — Saffron (Restaurant POS & Management System)
 
+## Staff workspace controls and KDS reliability — implemented 2026-09-14
+
+Chef accounts default to Orders, Kitchen, Menu and Inventory. Kitchen and Orders receive the read-only
+table metadata needed to label tickets, while table configuration and operational mutations remain
+separately protected. Owner/Manager can choose which role-eligible workspaces appear for each staff
+account from the Add/Edit Staff form. The selection is stored per user and returned by every login,
+refresh and current-user response; it never expands the role's server-side permissions.
+
+Authentication now renders the same initial state on server and browser to prevent React hydration
+failures. Permission failures are not retried automatically, avoiding repeated 403 traffic during a busy
+service. KDS presents a clear retry action and distinguishes an access configuration issue from a network
+failure.
+
 ## Unified seating and transparent guest ordering — implemented 2026-09-14
 
 Tables, chairs, QR codes, bookings and active visits now share one floor workspace. Selecting the table

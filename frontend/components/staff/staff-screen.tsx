@@ -108,12 +108,13 @@ export function StaffScreen() {
         email: values.email,
         phone: values.phone || undefined,
         role: values.role,
+        visibleModules: values.visibleModules,
         password: values.password || undefined,
       });
     } else if (formModal?.staff) {
       updateMutation.mutate({
         id: formModal.staff.id,
-        input: { name: values.name, phone: values.phone || undefined, role: values.role },
+        input: { name: values.name, phone: values.phone || undefined, role: values.role, visibleModules: values.visibleModules },
       });
     }
   }

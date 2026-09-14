@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthUser } from "@/lib/auth/types";
+import { defaultModulesForRole, type StaffModule } from "@/lib/staff/types";
 import { useUiStore } from "@/lib/store/ui-store";
 import {
   BoxIcon,
@@ -31,58 +32,66 @@ import {
 const NAV_ITEMS: {
   href: string;
   label: string;
+  module: StaffModule;
   roles: AuthUser["role"][] | null;
   icon: (props: IconProps) => React.ReactElement;
 }[] = [
-  { href: "/admin", label: "Dashboard", roles: ["owner", "manager", "cashier"], icon: DashboardIcon },
-  { href: "/admin/customers", label: "Customers", roles: ["owner", "manager", "cashier", "server"], icon: StaffIcon },
+  { href: "/admin", label: "Dashboard", module: "dashboard", roles: ["owner", "manager", "cashier"], icon: DashboardIcon },
+  { href: "/admin/customers", label: "Customers", module: "customers", roles: ["owner", "manager", "cashier", "server"], icon: StaffIcon },
   {
     href: "/admin/tables",
     label: "Tables",
+    module: "tables",
     roles: ["owner", "manager", "cashier", "server"],
     icon: TableIcon,
   },
   {
     href: "/admin/reservations",
     label: "Reservations",
+    module: "reservations",
     roles: ["owner", "manager", "cashier", "server"],
     icon: CalendarIcon,
   },
   {
     href: "/admin/orders/active",
     label: "Orders",
+    module: "orders",
     roles: ["owner", "manager", "cashier", "server", "chef"],
     icon: OrdersIcon,
   },
   {
     href: "/admin/kitchen",
     label: "Kitchen",
+    module: "kitchen",
     roles: ["owner", "manager", "cashier", "server", "chef"],
     icon: KitchenIcon,
   },
-  { href: "/admin/menu", label: "Menu", roles: null, icon: MenuBookIcon },
+  { href: "/admin/menu", label: "Menu", module: "menu", roles: null, icon: MenuBookIcon },
   {
     href: "/admin/inventory",
     label: "Inventory",
+    module: "inventory",
     roles: ["owner", "manager", "inventory_manager", "chef"],
     icon: BoxIcon,
   },
   {
     href: "/admin/invoices",
     label: "Bills",
+    module: "bills",
     roles: ["owner", "manager", "cashier"],
     icon: ReceiptIcon,
   },
   {
     href: "/admin/reports",
     label: "Reports",
+    module: "reports",
     roles: ["owner", "manager", "cashier"],
     icon: ReportsIcon,
   },
-  { href: "/admin/staff", label: "Staff", roles: ["owner", "manager"], icon: StaffIcon },
-  { href: "/admin/website", label: "Website", roles: ["owner", "manager"], icon: GlobeIcon },
-  { href: "/admin/marketing", label: "Marketing", roles: ["owner", "manager"], icon: MegaphoneIcon },
-  { href: "/admin/settings", label: "Settings", roles: ["owner", "manager"], icon: SettingsIcon },
+  { href: "/admin/staff", label: "Staff", module: "staff", roles: ["owner", "manager"], icon: StaffIcon },
+  { href: "/admin/website", label: "Website", module: "website", roles: ["owner", "manager"], icon: GlobeIcon },
+  { href: "/admin/marketing", label: "Marketing", module: "marketing", roles: ["owner", "manager"], icon: MegaphoneIcon },
+  { href: "/admin/settings", label: "Settings", module: "settings", roles: ["owner", "manager"], icon: SettingsIcon },
 ];
 
 function initialsOf(name: string): string {
@@ -98,18 +107,21 @@ function initialsOf(name: string): string {
  * native Windows scrollbars from squishing the rail icons.
  */
 export function Sidebar({
-  role,
   user,
   onLogout,
 }: {
-  role: AuthUser["role"];
   user: AuthUser;
   onLogout: () => void;
 }) {
   const pathname = usePathname();
   const isMobileNavOpen = useUiStore((state) => state.isMobileNavOpen);
   const closeMobileNav = useUiStore((state) => state.closeMobileNav);
-  const visibleItems = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
+  const visibleModules = new Set(
+    user.visibleModules?.length ? user.visibleModules : defaultModulesForRole(user.role),
+  );
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => visibleModules.has(item.module) && (!item.roles || item.roles.includes(user.role)),
+  );
 
   return (
     <>

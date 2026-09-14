@@ -14,6 +14,52 @@ export const STAFF_ROLES: { value: StaffRole; label: string }[] = [
   { value: "inventory_manager", label: "Inventory Manager" },
 ];
 
+export type StaffModule =
+  | "dashboard"
+  | "customers"
+  | "tables"
+  | "reservations"
+  | "orders"
+  | "kitchen"
+  | "menu"
+  | "inventory"
+  | "bills"
+  | "reports"
+  | "staff"
+  | "website"
+  | "marketing"
+  | "settings";
+
+export const STAFF_MODULE_OPTIONS: { value: StaffModule; label: string; description: string }[] = [
+  { value: "dashboard", label: "Dashboard", description: "Live business summary" },
+  { value: "customers", label: "Customers", description: "Guest visits and service notes" },
+  { value: "tables", label: "Tables", description: "Floor, chairs and bookings" },
+  { value: "reservations", label: "Reservations", description: "Upcoming guest reservations" },
+  { value: "orders", label: "Orders", description: "Order list and progress" },
+  { value: "kitchen", label: "Kitchen", description: "KDS tickets and preparation" },
+  { value: "menu", label: "Menu", description: "Dishes and availability" },
+  { value: "inventory", label: "Inventory", description: "Stock and recipes" },
+  { value: "bills", label: "Bills", description: "Invoices and settlement" },
+  { value: "reports", label: "Reports", description: "Sales and performance" },
+  { value: "staff", label: "Staff", description: "Team access management" },
+  { value: "website", label: "Website", description: "Public website content" },
+  { value: "marketing", label: "Marketing", description: "Campaigns and inbox" },
+  { value: "settings", label: "Settings", description: "Restaurant configuration" },
+];
+
+export const ROLE_DEFAULT_MODULES: Record<StaffRole, StaffModule[]> = {
+  owner: STAFF_MODULE_OPTIONS.map((module) => module.value),
+  manager: STAFF_MODULE_OPTIONS.map((module) => module.value),
+  cashier: ["dashboard", "customers", "tables", "reservations", "orders", "kitchen", "menu", "bills", "reports"],
+  server: ["customers", "tables", "reservations", "orders", "kitchen", "menu"],
+  chef: ["orders", "kitchen", "menu", "inventory"],
+  inventory_manager: ["menu", "inventory"],
+};
+
+export function defaultModulesForRole(role: StaffRole): StaffModule[] {
+  return [...ROLE_DEFAULT_MODULES[role]];
+}
+
 /** Mirrors `backend/src/services/staff.service.ts` `StaffDto`. */
 export interface StaffMember {
   id: string;
@@ -22,6 +68,7 @@ export interface StaffMember {
   email: string;
   phone?: string;
   role: StaffRole;
+  visibleModules: StaffModule[];
   isActive: boolean;
   mustResetPassword: boolean;
   twoFactorEnabled: boolean;

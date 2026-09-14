@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import QRCode from "qrcode";
 import { AppError } from "../utils/app-error";
 import { Restaurant } from "../models/restaurant.model";
-import { User, type UserDocument } from "../models/user.model";
+import { User, resolveVisibleModules, type UserDocument } from "../models/user.model";
 import { comparePassword, comparePin, hashPassword } from "../utils/password";
 import {
   buildTwoFactorUri,
@@ -42,6 +42,7 @@ export interface SanitizedUser {
   name: string;
   email: string;
   role: UserDocument["role"];
+  visibleModules: ReturnType<typeof resolveVisibleModules>;
   isActive: boolean;
   mustResetPassword: boolean;
   twoFactorEnabled: boolean;
@@ -64,6 +65,7 @@ function sanitizeUser(user: UserDocument): SanitizedUser {
     name: user.name,
     email: user.email,
     role: user.role,
+    visibleModules: resolveVisibleModules(user.role, user.visibleModules),
     isActive: user.isActive,
     mustResetPassword: user.mustResetPassword,
     twoFactorEnabled: user.twoFactorEnabled,

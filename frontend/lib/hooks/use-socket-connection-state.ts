@@ -14,25 +14,19 @@ export type SocketConnectionState = "connected" | "connecting";
  * connected" — staff need to know when what they're looking at might be
  * stale, not just see a decorative dot that's always green.
  *
- * Starts as "connecting" (never a false-positive "connected" before the
- * handshake actually completes) and flips to "connected" immediately if
- * the shared socket instance happens to already be connected when this
- * hook mounts (e.g. a second screen mounting after the first already
- * connected it).
+ * Starts deterministically as "connecting" on both server and browser,
+ * then synchronizes with the shared socket after mount. This avoids a
+ * production hydration mismatch when the browser socket is already live.
  */
 export function useSocketConnectionState(): SocketConnectionState {
-  // Lazy initializer (runs once, during this component's first render
-  // only) rather than a `setState` call inside the effect body below —
-  // reflects the shared socket's *current* connection state immediately
-  // instead of always starting from a hardcoded "connecting" and briefly
-  // flashing the amber state even when another screen already connected
-  // it.
-  const [state, setState] = useState<SocketConnectionState>(
-    () => (connectSocket().connected ? "connected" : "connecting"),
-  );
+  const [state, setState] = useState<SocketConnectionState>("connecting");
 
   useEffect(() => {
     const socket = connectSocket();
+    const initialId = window.setTimeout(
+      () => setState(socket.connected ? "connected" : "connecting"),
+      0,
+    );
 
     const handleConnected = () => setState("connected");
     const handleDisconnected = () => setState("connecting");
@@ -45,6 +39,7 @@ export function useSocketConnectionState(): SocketConnectionState {
     socket.io.on("reconnect", handleConnected);
 
     return () => {
+      window.clearTimeout(initialId);
       socket.off("connect", handleConnected);
       socket.off("disconnect", handleDisconnected);
       socket.io.off("reconnect_attempt", handleDisconnected);

@@ -1,7 +1,7 @@
 "use client";
 
 import { EditIcon, PowerIcon } from "@/components/icons";
-import { MANAGER_ASSIGNABLE_ROLES, STAFF_ROLES, type StaffMember, type StaffRole } from "@/lib/staff/types";
+import { MANAGER_ASSIGNABLE_ROLES, STAFF_ROLES, defaultModulesForRole, type StaffMember, type StaffRole } from "@/lib/staff/types";
 
 function roleLabel(role: StaffRole): string {
   return STAFF_ROLES.find((option) => option.value === role)?.label ?? role;
@@ -94,6 +94,10 @@ export function StaffTable({
             }`}
           >
             {member.isActive ? "Active" : "Deactivated"}
+          </span>
+
+          <span className="hidden w-24 shrink-0 text-small text-text-muted xl:block">
+            {(member.visibleModules?.length ?? defaultModulesForRole(member.role).length)} workspace{(member.visibleModules?.length ?? defaultModulesForRole(member.role).length) === 1 ? "" : "s"}
           </span>
 
           <p className="hidden w-44 shrink-0 text-small text-text-muted lg:block">

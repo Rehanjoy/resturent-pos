@@ -1,5 +1,20 @@
 # QA & Test Report — Saffron (Phase 6)
 
+## 2026-09-14 Chef access and staff workspace controls addendum
+
+- Complete backend regression: **219/219 passed** across **14 test files**.
+- Focused RBAC integration: **41/41 passed**, including Chef read access to table names required by
+  Orders/KDS, role-safe workspace selection, and rejection of workspaces outside a role's allowed scope.
+- Chef table access is read-only; table creation, edits, deletion and status actions keep their existing
+  narrower role guards.
+- Frontend navigation uses the workspaces selected in Staff Management, while the backend role matrix
+  remains the authority for every action.
+- The auth provider and live clock now have deterministic first renders, removing production React
+  hydration error #418. React Query no longer retries 401/403 failures, preventing repeated forbidden
+  requests from flooding the browser and backend.
+- Frontend ESLint, frontend/backend TypeScript and both production builds pass. Next.js generated all
+  **21 routes**.
+
 ## 2026-09-14 unified dining lifecycle addendum
 
 - Complete backend regression: **216/216 passed** across **14 test files**.
