@@ -1,5 +1,13 @@
 # QA & Test Report — Saffron (Phase 6)
 
+## 2026-09-14 dashboard analytics addendum
+
+- Added exactly three responsive dashboard tabs: **Earnings**, **Staff**, and **Inventory**.
+- Earnings uses settled billing data for revenue, tax, discounts, payment mix, seven-day trend and top sellers.
+- Staff uses the existing seven-day staff-performance report; Inventory derives stock value, health, coverage and reorder risk from live inventory records.
+- Owner/Manager workspace selections gate the sensitive tabs. Cashier accounts see clear restricted states and do not call forbidden Staff or Inventory endpoints; tab queries disable automatic retries.
+- Dashboard ESLint, the full frontend TypeScript check, and the Next.js production build passed after implementation. The complete backend regression remains **219/219 passed** across **14 test files**.
+
 ## 2026-09-14 Chef access and staff workspace controls addendum
 
 - Complete backend regression: **219/219 passed** across **14 test files**.

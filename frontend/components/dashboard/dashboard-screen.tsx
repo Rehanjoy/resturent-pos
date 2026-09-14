@@ -1,64 +1,69 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { BoxIcon, DashboardIcon, StaffIcon } from "@/components/icons";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/lib/auth/auth-context";
 import { dashboardApi } from "@/lib/dashboard/api";
-import { formatMoney } from "@/lib/format";
-import { PageHeader } from "@/components/ui/page-header";
-import { PercentIcon, ReceiptIcon, TrendUpIcon, WalletIcon } from "@/components/icons";
-import { StatCard, type StatCardTrend } from "./stat-card";
-import { PaymentModeDonut } from "./payment-mode-donut";
-import { LiveOpsTiles } from "./live-ops-tiles";
-import { TopDishesList } from "./top-dishes-list";
-import { BarChartCard } from "@/components/charts/bar-chart-card";
-import type { DailyRevenue } from "@/lib/dashboard/types";
+import { inventoryItemsApi } from "@/lib/inventory/api";
+import { reportsApi } from "@/lib/reports/api";
+import { defaultModulesForRole } from "@/lib/staff/types";
+import { DashboardErrorState, DashboardLoadingState } from "./analytics-charts";
+import { EarningsPanel } from "./earnings-panel";
+import { InventoryPanel } from "./inventory-panel";
+import { StaffPanel } from "./staff-panel";
 
-// PRD §2 Dashboard column: Owner/Manager "Full", Cashier "View" — every
-// other role has no access at all (matches the nav rail's role filter and
-// the backend's `authorize()` guard on GET /api/dashboard/summary).
 const DASHBOARD_ROLES = new Set(["owner", "manager", "cashier"]);
+type DashboardTab = "earnings" | "staff" | "inventory";
 
-// Inventory RBAC (PRD §2 Inventory column) — Cashier can see this
-// dashboard but has no Inventory access at all, so the low-stock tile
-// below is rendered as a non-link for that role. See `live-ops-tiles.tsx`.
-const INVENTORY_VIEW_ROLES = new Set(["owner", "manager", "inventory_manager", "chef"]);
-
-const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-/**
- * Today-vs-yesterday gross revenue trend, computed from the real 7-day
- * `weeklyTrend` series the backend already returns (last element is always
- * today — see `sales-analytics.service.ts` `aggregateDailyRevenue`, which
- * fills every day in range including zero-revenue ones, so the array is
- * always contiguous). Returns `null` rather than a misleading "+Infinity%"
- * when yesterday had zero revenue to compare against.
- */
-function computeGrossRevenueTrend(weeklyTrend: DailyRevenue[]): StatCardTrend | null {
-  if (weeklyTrend.length < 2) return null;
-  const today = weeklyTrend[weeklyTrend.length - 1]!.grossRevenue;
-  const yesterday = weeklyTrend[weeklyTrend.length - 2]!.grossRevenue;
-  if (yesterday <= 0) return null;
-
-  const changePercent = ((today - yesterday) / yesterday) * 100;
-  const direction: StatCardTrend["direction"] = changePercent >= 0 ? "up" : "down";
-  return { direction, label: `${Math.abs(Math.round(changePercent))}% vs yesterday` };
-}
+const TABS = [
+  { id: "earnings" as const, label: "Earnings", description: "Sales, payments and demand", icon: DashboardIcon },
+  { id: "staff" as const, label: "Staff", description: "Output and service speed", icon: StaffIcon },
+  { id: "inventory" as const, label: "Inventory", description: "Stock health and value", icon: BoxIcon },
+];
 
 export function DashboardScreen() {
   const { user } = useAuth();
-  const canView = !!user && DASHBOARD_ROLES.has(user.role);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("earnings");
+  const canViewDashboard = !!user && DASHBOARD_ROLES.has(user.role);
+  const visibleModules = user
+    ? new Set(user.visibleModules?.length ? user.visibleModules : defaultModulesForRole(user.role))
+    : new Set<string>();
+  const canViewStaffDetail = !!user
+    && (user.role === "owner" || user.role === "manager")
+    && visibleModules.has("staff");
+  const canViewInventoryDetail = !!user
+    && (user.role === "owner" || user.role === "manager")
+    && visibleModules.has("inventory");
 
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: () => dashboardApi.getSummary().then((result) => result.summary),
-    enabled: canView,
-    // Live ops in particular should feel current without a manual refresh.
+    enabled: canViewDashboard && activeTab === "earnings",
     refetchInterval: 30_000,
+    retry: false,
+  });
+
+  const staffQuery = useQuery({
+    queryKey: ["dashboard-staff-performance", "7d"],
+    queryFn: () => reportsApi.getStaffPerformanceReport({ range: "7d" }).then((result) => result.report),
+    enabled: canViewDashboard && canViewStaffDetail && activeTab === "staff",
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const inventoryQuery = useQuery({
+    queryKey: ["dashboard-inventory-items"],
+    queryFn: () => inventoryItemsApi.list().then((result) => result.inventoryItems),
+    enabled: canViewDashboard && canViewInventoryDetail && activeTab === "inventory",
+    staleTime: 30_000,
+    retry: false,
   });
 
   if (!user) return null;
 
-  if (!canView) {
+  if (!canViewDashboard) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <p className="text-body text-error">You do not have access to the dashboard.</p>
@@ -66,32 +71,6 @@ export function DashboardScreen() {
     );
   }
 
-  if (summaryQuery.isLoading) {
-    return (
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <PageHeader title="Dashboard" subtitle="Loading today's numbers…" />
-        <p className="mt-8 text-small text-text-muted">Loading dashboard…</p>
-      </main>
-    );
-  }
-
-  if (summaryQuery.isError || !summaryQuery.data) {
-    return (
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <PageHeader title="Dashboard" />
-        <p className="mt-8 text-small text-error">
-          Could not load the dashboard — check your connection and try again.
-        </p>
-      </main>
-    );
-  }
-
-  const { salesSummary, paymentModeBreakdown, liveOps, topDishes, topCategories, weeklyTrend } =
-    summaryQuery.data;
-
-  // Safe to compute directly (no SSR/hydration risk) — this component only
-  // ever renders once `AdminLayout`'s auth gate has already flipped to
-  // "authenticated" client-side (see that file's doc comment).
   const todayLabel = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
@@ -99,71 +78,69 @@ export function DashboardScreen() {
     year: "numeric",
   });
 
-  const avgOrderValue =
-    salesSummary.invoiceCount > 0 ? Math.round(salesSummary.netRevenue / salesSummary.invoiceCount) : 0;
-
-  const revenueTrend = computeGrossRevenueTrend(weeklyTrend);
-
   return (
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
-      <PageHeader title="Dashboard" subtitle={todayLabel} />
+      <PageHeader title="Dashboard" subtitle={`${todayLabel} · Live restaurant intelligence`} />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Gross Revenue Today"
-          value={formatMoney(salesSummary.grossRevenue)}
-          icon={WalletIcon}
-          trend={revenueTrend ?? undefined}
-        />
-        <StatCard
-          label="Orders Settled Today"
-          value={String(salesSummary.invoiceCount)}
-          icon={ReceiptIcon}
-          tone="default"
-        />
-        <StatCard
-          label="Avg Order Value"
-          value={formatMoney(avgOrderValue)}
-          icon={TrendUpIcon}
-          tone="default"
-        />
-        <StatCard
-          label="Discounts Given"
-          value={formatMoney(salesSummary.totalDiscounts)}
-          icon={PercentIcon}
-          tone={salesSummary.totalDiscounts > 0 ? "warning" : "default"}
-        />
+      <div role="tablist" aria-label="Dashboard analysis" className="grid gap-2 rounded-2xl border border-border bg-surface p-2 shadow-sm sm:grid-cols-3">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const selected = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              id={`dashboard-tab-${tab.id}`}
+              aria-controls={`dashboard-panel-${tab.id}`}
+              aria-selected={selected}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex min-h-14 items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${selected ? "bg-primary text-white shadow-sm" : "text-text hover:bg-background"}`}
+            >
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${selected ? "bg-white/15" : "bg-primary/10 text-primary"}`}>
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-body font-semibold">{tab.label}</span>
+                <span className={`hidden truncate text-[11px] lg:block ${selected ? "text-white/80" : "text-text-muted"}`}>{tab.description}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-1 text-small text-text-muted">
-        <span>
-          Net Revenue: <span className="font-medium text-text">{formatMoney(salesSummary.netRevenue)}</span>
-        </span>
-        <span>
-          Tax Collected: <span className="font-medium text-text">{formatMoney(salesSummary.totalTax)}</span>
-        </span>
-      </div>
+      {activeTab === "earnings" ? (
+        summaryQuery.isLoading ? <DashboardLoadingState label="Loading earnings analysis" />
+          : summaryQuery.isError || !summaryQuery.data ? <DashboardErrorState message="Could not load earnings — check your connection and try again." onRetry={() => void summaryQuery.refetch()} />
+            : <EarningsPanel summary={summaryQuery.data} canViewInventory={canViewInventoryDetail} />
+      ) : null}
 
-      <LiveOpsTiles
-        liveOps={liveOps}
-        lowStockCount={summaryQuery.data.lowStockCount}
-        canViewInventory={INVENTORY_VIEW_ROLES.has(user.role)}
-      />
+      {activeTab === "staff" ? (
+        !canViewStaffDetail ? <RestrictedPanel id="staff" title="Staff analytics are restricted" message="An Owner or Manager with the Staff workspace enabled can view individual performance." />
+          : staffQuery.isLoading ? <DashboardLoadingState label="Loading staff analysis" />
+            : staffQuery.isError || !staffQuery.data ? <DashboardErrorState message="Could not load staff performance — check your connection and try again." onRetry={() => void staffQuery.refetch()} />
+              : <StaffPanel report={staffQuery.data} />
+      ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <PaymentModeDonut breakdown={paymentModeBreakdown} subtitle="Today" />
-        <BarChartCard
-          title="Last 7 Days — Gross Revenue"
-          data={weeklyTrend.map((day) => ({
-            label: WEEKDAY[new Date(`${day.date}T00:00:00`).getDay()]!,
-            value: day.grossRevenue,
-          }))}
-          valueFormatter={formatMoney}
-          emptyMessage="No sales recorded in the last 7 days."
-        />
-      </div>
-
-      <TopDishesList dishes={topDishes} categories={topCategories} />
+      {activeTab === "inventory" ? (
+        !canViewInventoryDetail ? <RestrictedPanel id="inventory" title="Inventory analytics are restricted" message="An Owner or Manager with the Inventory workspace enabled can view stock value and ingredient health." />
+          : inventoryQuery.isLoading ? <DashboardLoadingState label="Loading inventory analysis" />
+            : inventoryQuery.isError || !inventoryQuery.data ? <DashboardErrorState message="Could not load inventory analysis — check your connection and try again." onRetry={() => void inventoryQuery.refetch()} />
+              : <InventoryPanel items={inventoryQuery.data} />
+      ) : null}
     </main>
+  );
+}
+
+function RestrictedPanel({ id, title, message }: {
+  id: Exclude<DashboardTab, "earnings">;
+  title: string;
+  message: string;
+}) {
+  return (
+    <section role="tabpanel" id={`dashboard-panel-${id}`} aria-labelledby={`dashboard-tab-${id}`} className="rounded-2xl border border-border bg-surface px-6 py-14 text-center shadow-sm">
+      <h2 className="font-heading text-h3 font-semibold text-text">{title}</h2>
+      <p className="mx-auto mt-2 max-w-lg text-small text-text-muted">{message}</p>
+    </section>
   );
 }

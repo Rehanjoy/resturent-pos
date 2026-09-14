@@ -136,7 +136,7 @@ Enforcement: JWT claims (`role`, `restaurantId`, `staffId`) checked server-side 
 - Menu management: categories + dishes, availability toggle, veg/non-veg/spice metadata
 - Billing & Settlement: itemized bill, GST (CGST/SGST configurable), discounts with approval lock, payment mode recording (cash/card/UPI/split), sequential invoice numbering, PDF generation
 - Staff management: add/edit/deactivate, roles, activity audit log
-- Dashboard: today's sales, payment mode breakdown, live table/kitchen widget, top dishes
+- Dashboard: three responsive analytics workspaces — Earnings (today's sales, payment mix, seven-day revenue, demand and live operations), Staff (seven-day output and service speed), and Inventory (live stock value, coverage, health and reorder risk). Staff and Inventory detail is limited to Owner/Manager accounts that have the matching workspace enabled.
 - Basic reports: sales by date range, export CSV
 - Audit logging for all financial actions (discount, void, refund, price edit)
 
