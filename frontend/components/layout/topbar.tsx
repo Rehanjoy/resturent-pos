@@ -48,34 +48,41 @@ function ConnectionStatus() {
   const state = useSocketConnectionState();
   const connected = state === "connected";
 
-  // Tailwind's build-time scanner needs literal class strings (no
-  // `` `bg-${tone}` `` template interpolation), so the two states are
-  // spelled out in full rather than composed from a shared token name.
   const dotColor = connected ? "bg-success" : "bg-warning";
   const textColor = connected ? "text-success" : "text-warning";
 
   return (
-    <div
-      className="hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-small font-medium sm:flex"
-      title={connected ? "Receiving live updates" : "Reconnecting to live updates…"}
-    >
-      <span className="relative flex h-2 w-2">
-        <span className={`absolute inline-flex h-full w-full animate-pulse rounded-full ${dotColor} opacity-75`} />
-        <span className={`relative inline-flex h-2 w-2 rounded-full ${dotColor}`} />
-      </span>
-      <span className={textColor}>{connected ? "Live" : "Reconnecting…"}</span>
-    </div>
+    <>
+      {/* Desktop live pill */}
+      <div
+        className="hidden items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-3 py-1.5 text-small font-medium sm:flex"
+        title={connected ? "Receiving live updates" : "Reconnecting to live updates…"}
+      >
+        <span className="relative flex h-2 w-2">
+          <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${dotColor} opacity-75`} />
+          <span className={`relative inline-flex h-2 w-2 rounded-full ${dotColor}`} />
+        </span>
+        <span className={textColor}>{connected ? "Live" : "Reconnecting…"}</span>
+      </div>
+
+      {/* Mobile live indicator dot */}
+      <div
+        className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/80 px-2 py-1 text-xs font-medium sm:hidden"
+        title={connected ? "Live updates active" : "Reconnecting to live updates…"}
+      >
+        <span className="relative flex h-2 w-2">
+          <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${dotColor} opacity-75`} />
+          <span className={`relative inline-flex h-2 w-2 rounded-full ${dotColor}`} />
+        </span>
+        <span className={`text-[11px] font-semibold ${textColor}`}>{connected ? "Live" : "…"}</span>
+      </div>
+    </>
   );
 }
 
 /**
- * Shared top bar for the admin/POS shell: search (decorative — no search
- * endpoint exists yet, this is purely the layout slot the reference
- * screenshots call for), a live clock, a notifications bell (decorative —
- * no notification feed exists yet either; a follow-up part, not faked
- * here), and the primary "+ New Order" CTA. Staff identity + log out live
- * in the sidebar's bottom panel instead of here (see `sidebar.tsx`) — the
- * functionality moved, it wasn't removed.
+ * Shared top bar for the admin/POS shell: search, live clock, kitchen queue
+ * notifications, and the primary "+ New Order" CTA.
  */
 export function Topbar({ user }: { user: AuthUser }) {
   const clock = useLiveClock();
@@ -83,36 +90,48 @@ export function Topbar({ user }: { user: AuthUser }) {
   const toggleMobileNav = useUiStore((state) => state.toggleMobileNav);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 sm:gap-4 sm:px-6">
-      {/* Hamburger — only below `lg`, where the sidebar becomes an
-          off-canvas drawer instead of a docked rail (see
-          `components/layout/sidebar.tsx`). Sized to the 44px WCAG tap
-          target minimum. */}
-      <button
-        type="button"
-        onClick={toggleMobileNav}
-        aria-label="Open menu"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-background hover:text-text lg:hidden"
-      >
-        <MenuIcon className="h-5 w-5" />
-      </button>
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/80 bg-surface/90 backdrop-blur-md px-3 sm:gap-4 sm:px-6">
+      {/* Left side: Mobile Brand & Hamburger / Desktop Search */}
+      <div className="flex items-center gap-2.5 sm:gap-3 flex-1 max-w-lg">
+        {/* Hamburger + Brand on mobile (< lg) */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <button
+            type="button"
+            onClick={toggleMobileNav}
+            aria-label="Open menu"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-text-muted transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary active:scale-95"
+          >
+            <MenuIcon className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-1.5 sm:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark.svg" alt="Saffron" width={22} height={22} className="h-5.5 w-5.5" />
+            <span className="font-heading text-small font-bold tracking-tight text-text">Saffron</span>
+          </div>
+        </div>
 
-      <form action="/admin/tables" className="relative hidden flex-1 max-w-sm sm:block">
-        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-        <input
-          type="search"
-          name="q"
-          placeholder="Find a table…"
-          aria-label="Find a table, press Enter to search"
-          className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-small text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-        />
-      </form>
+        {/* Global Search Bar */}
+        <form action="/admin/tables" className="relative hidden flex-1 sm:block">
+          <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <input
+            type="search"
+            name="q"
+            placeholder="Find a table, dish, or bill…"
+            aria-label="Find a table, dish, or bill, press Enter to search"
+            className="w-full rounded-xl border border-border/80 bg-background/70 py-2 pl-9 pr-12 text-small text-text placeholder:text-text-muted/80 transition-all focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/15"
+          />
+          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden select-none rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-text-muted md:inline-flex">
+            /
+          </kbd>
+        </form>
+      </div>
 
-      <div className="ml-auto flex items-center gap-3">
+      {/* Right side: Status, Clock, Kitchen Bell, New Order CTA */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <ConnectionStatus />
 
-        <div className="hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-small font-medium tabular-nums text-text-muted sm:flex">
-          <ClockIcon className="h-4 w-4" />
+        <div className="hidden items-center gap-1.5 rounded-xl border border-border/80 bg-background/70 px-3 py-1.5 text-small font-medium tabular-nums text-text-muted md:flex">
+          <ClockIcon className="h-4 w-4 text-primary/70" />
           <span>{clock}</span>
         </div>
 
@@ -120,18 +139,20 @@ export function Topbar({ user }: { user: AuthUser }) {
           href="/admin/kitchen"
           title="Live kitchen queue"
           aria-label="Open live kitchen queue"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-primary hover:text-primary"
+          className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background/60 text-text-muted transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"
         >
           <BellIcon className="h-4 w-4" />
+          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-accent ring-2 ring-surface" />
         </Link>
 
         {canStartOrder && (
           <Link
             href="/admin/tables"
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-button font-semibold text-white shadow-sm transition-colors hover:bg-primary"
+            className="flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-button font-semibold text-white shadow-sm hover:bg-primary hover:shadow-md transition-all active:scale-95"
           >
-            <PlusIcon className="h-4 w-4" />
-            New Order
+            <PlusIcon className="h-4 w-4 stroke-[2.5]" />
+            <span className="hidden sm:inline">New Order</span>
+            <span className="sm:hidden text-xs font-bold">Order</span>
           </Link>
         )}
       </div>

@@ -209,3 +209,28 @@ input, select, textarea { min-height: 44px; }
     @apply bg-background text-foreground; }
   html {
     @apply font-sans; } }
+
+/* Modern sleek scrollbars across the application */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e2d9d5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c8bbb6;
+}
+
+/* Hide scrollbars completely where desired (e.g. desktop nav rails, pill carousels) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

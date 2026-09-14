@@ -76,7 +76,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
           void clearSession().then(() => router.push("/login"));
         }}
       />
-      <div className="flex min-h-screen flex-1 flex-col overflow-x-hidden">
+      <div className="flex min-h-screen flex-1 flex-col overflow-x-clip min-w-0">
         <Topbar user={user} />
         <div className="flex-1">{children}</div>
       </div>
