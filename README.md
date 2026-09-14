@@ -1,4 +1,4 @@
-# Saffron — Restaurant POS & Management Platform
+# QRwik — Restaurant POS & Management Platform
 
 Client: digitecweb. Full product context lives in `docs/` (PRD, product brief, brand kit, wireframes).
 
