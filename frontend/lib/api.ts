@@ -117,9 +117,10 @@ export const api = {
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
-  patch: <TResponse>(path: string, body?: unknown) =>
+  patch: <TResponse>(path: string, body?: unknown, headers?: Record<string, string>) =>
     request<TResponse>(path, {
       method: "PATCH",
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
   delete: <TResponse>(path: string, body?: unknown) =>

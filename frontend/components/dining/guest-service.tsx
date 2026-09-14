@@ -48,7 +48,7 @@ export function GuestService({ qrToken, token, active }: { qrToken: string; toke
   }
 
   return (
-    <Card className="mx-auto mt-5 max-w-2xl rounded-3xl p-5" aria-label="Table service">
+    <Card id="guest-service" className="mx-auto mt-5 max-w-2xl scroll-mt-24 rounded-3xl p-5" aria-label="Table service">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold">Need something?</h2>

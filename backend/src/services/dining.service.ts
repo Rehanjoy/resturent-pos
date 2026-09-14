@@ -20,6 +20,7 @@ import { aggregateTaxLines, calculateOrderBill, taxForAmount } from "./dining-bi
 import { User } from "../models/user.model";
 import { Invoice } from "../models/invoice.model";
 import { Payment } from "../models/payment.model";
+import { notifyOrderBatch } from "./notification.service";
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 // Session tokens authenticate an unauthenticated guest, so the lookup must not leak
@@ -295,6 +296,8 @@ async function projectSubmission(restaurantId: string, claimed: DiningSession) {
   }
   emitToRestaurant(restaurantId, "order:updated", { order: toOrderDto(order!) });
   emitToRestaurant(restaurantId, "dining:changed", {});
+  const table = await Table.findOne({ _id: order!.tableId, restaurantId }).select("name").lean();
+  notifyOrderBatch({ restaurantId, orderId: order!.id, batchKey: submission.key, diningSessionId: claimed.id, assignedWaiterId: claimed.assignedWaiter?.id, tableLabel: table?.name ?? "Table", seats: claimed.seats, itemCount: submissionItems.reduce((sum, item) => sum + item.qty, 0) });
 }
 
 async function addItemsToOrder(
@@ -373,6 +376,8 @@ async function projectAddedBatch(restaurantId: string, order: InstanceType<typeo
     if (kot) emitToRestaurant(restaurantId, "kitchen:new-ticket", { kot: toKotDto(kot) });
   }
   emitToRestaurant(restaurantId, "order:updated", { order: toOrderDto(order) });
+  const table = await Table.findOne({ _id: order.tableId, restaurantId }).select("name").lean();
+  notifyOrderBatch({ restaurantId, orderId: order.id, batchKey: key, diningSessionId: order.diningSessionId, assignedWaiterId: order.assignedWaiter?.id, tableLabel: table?.name ?? "Table", seats: order.seats, itemCount: items.reduce((sum, item) => sum + item.qty, 0) });
 }
 
 type CancellationSelection = { orderItemId: string; qty: number; acceptedChargePercent?: number };

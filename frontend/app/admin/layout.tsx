@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useUiStore } from "@/lib/store/ui-store";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { Toaster } from "@/components/ui/sonner";
 
 /**
  * Shared chrome for every /admin route (POS + Dashboard): a dark, full-height
@@ -79,6 +80,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
         <Topbar user={user} />
         <div className="flex-1">{children}</div>
       </div>
+      <Toaster position="top-right" />
     </div>
   );
 }

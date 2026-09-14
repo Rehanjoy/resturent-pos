@@ -10,6 +10,8 @@ import * as tableService from "./table.service";
 import { emitToRestaurant } from "../sockets";
 import { recordVisitPayment } from "./customer.service";
 import { markDiningSessionCleaning } from "./dining.service";
+import { Table } from "../models/table.model";
+import { notifyPaymentCompleted } from "./notification.service";
 
 export interface PaymentDto {
   id: string;
@@ -114,6 +116,8 @@ export async function createPayment(
 
   const orderDto = toOrderDto(order);
   emitToRestaurant(restaurantId, "order:updated", { order: orderDto });
+  const table = await Table.findOne({ _id: order.tableId, restaurantId }).select("name").lean();
+  notifyPaymentCompleted({ restaurantId, invoiceId: invoice.id, orderId: order.id, diningSessionId: order.diningSessionId, tableLabel: table?.name ?? "Table", seats: order.seats });
 
   return {
     invoice: toInvoiceDto(invoice),

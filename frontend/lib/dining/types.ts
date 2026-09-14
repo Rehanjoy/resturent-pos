@@ -34,3 +34,19 @@ export interface DiningSessionResponse { session: DiningSession; order: DiningOr
 export interface CartItem { key: string; menuItemId: string; name: string; price: number; qty: number; notes?: string }
 export type ServiceRequestType = "water" | "bill" | "help";
 export interface ServiceRequest { id: string; sessionId: string; type: ServiceRequestType; note: string; status: "pending" | "acknowledged" | "completed" | "expired"; seats: (DiningSeat & { tableName: string })[]; createdAt: string; acknowledgedAt: string | null; completedAt: string | null }
+export interface DiningNotification {
+  id: string;
+  category: string;
+  eventType: string;
+  title: string;
+  message: string;
+  priority: string;
+  createdAt: string;
+  read: boolean;
+  actionUrl?: string | null;
+}
+export interface DiningNotificationPage {
+  notifications: DiningNotification[];
+  nextCursor: string | null;
+  unreadCount: number;
+}

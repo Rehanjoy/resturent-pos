@@ -15,6 +15,7 @@ import { recordAuditLog } from "./audit-log.service";
 import * as tableService from "./table.service";
 import { deductInventoryForSentItems } from "./inventory-deduction.service";
 import { DiningFloor } from "../models/dining-floor.model";
+import { notifyOrderBatch, notifyOrderServed } from "./notification.service";
 
 export interface OrderItemDto {
   id: string;
@@ -414,9 +415,10 @@ export async function sendToKitchen(
   }));
 
   const sentAt = new Date();
-  const [preparationMenu, diningFloor] = await Promise.all([
+  const [preparationMenu, diningFloor, table] = await Promise.all([
     MenuItem.find({ restaurantId, _id: { $in: pendingItems.map(i => i.menuItemId) } }).lean(),
     DiningFloor.findOne({ restaurantId }).lean(),
+    Table.findOne({ _id: order.tableId, restaurantId }).select("name").lean(),
   ]);
   const hasExistingKot = await Kot.exists({ restaurantId, orderId: order._id });
 
@@ -467,6 +469,16 @@ export async function sendToKitchen(
 
   emitToRestaurant(restaurantId, "kitchen:new-ticket", { kot: kotDto });
   emitToRestaurant(restaurantId, "order:updated", { order: orderDto });
+  notifyOrderBatch({
+    restaurantId,
+    orderId: order.id,
+    batchKey: kot.id,
+    diningSessionId: order.diningSessionId,
+    assignedWaiterId: order.assignedWaiter?.id,
+    tableLabel: table?.name ?? "Table",
+    seats: order.seats,
+    itemCount: kotItems.reduce((sum, item) => sum + item.qty, 0),
+  });
 
   return { order: orderDto, kot: kotDto };
 }
@@ -529,6 +541,8 @@ export async function serveOrder(
 
   const dto = toOrderDto(order);
   emitToRestaurant(restaurantId, "order:updated", { order: dto });
+  const table = await Table.findOne({ _id: order.tableId, restaurantId }).select("name").lean();
+  notifyOrderServed({ restaurantId, orderId: order.id, serveKey: [...servedIds].sort().join(":"), diningSessionId: order.diningSessionId, tableLabel: table?.name ?? "Table", seats: order.seats, itemCount: targets.reduce((sum, item) => sum + item.qty - (item.cancelledQty ?? 0), 0), allServed: order.status === "served" });
   return dto;
 }
 

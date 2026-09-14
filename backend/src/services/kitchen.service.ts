@@ -2,8 +2,18 @@ import { Types, type HydratedDocument } from "mongoose";
 import { AppError } from "../utils/app-error";
 import { Kot, type KotDocument } from "../models/kot.model";
 import { Order } from "../models/order.model";
+import { Table } from "../models/table.model";
 import { emitToRestaurant } from "../sockets";
 import { findOrderOrThrow, toKotDto, toOrderDto, type KotDto } from "./order.service";
+import { notifyTicketReady } from "./notification.service";
+
+async function createReadyNotification(restaurantId: string, kotId: string, order: InstanceType<typeof Order>) {
+  const table = await Table.findOne({ _id: order.tableId, restaurantId }).select("name").lean();
+  notifyTicketReady({
+    restaurantId, kotId, orderId: order.id, diningSessionId: order.diningSessionId,
+    assignedWaiterId: order.assignedWaiter?.id, tableLabel: table?.name ?? "Table", seats: order.seats,
+  });
+}
 
 async function findKotOrThrow(
   restaurantId: string,
@@ -96,6 +106,7 @@ export async function markItemReady(
   const dto = toKotDto(kot);
   if (allReady) {
     emitToRestaurant(restaurantId, "kitchen:ticket-ready", { kot: dto });
+    void createReadyNotification(restaurantId, kot.id, order).catch((error) => console.error("[notification] ready alert failed", error));
     await advanceOrderToReadyIfComplete(restaurantId, kot.orderId);
   }
 
@@ -124,6 +135,7 @@ export async function markAllReady(restaurantId: string, kotId: string): Promise
   const kotDto = toKotDto(kot);
   emitToRestaurant(restaurantId, "order:updated", { order: toOrderDto(order) });
   emitToRestaurant(restaurantId, "kitchen:ticket-ready", { kot: kotDto });
+  void createReadyNotification(restaurantId, kot.id, order).catch((error) => console.error("[notification] ready alert failed", error));
 
   await advanceOrderToReadyIfComplete(restaurantId, kot.orderId);
 

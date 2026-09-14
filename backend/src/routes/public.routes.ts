@@ -6,6 +6,7 @@ import { restaurantSlugParamsSchema } from "../validators/website.validators";
 import whatsappWebhookRoutes from "./whatsapp-webhook.routes";
 import { publicDiningRoutes } from "./dining.routes";
 import { publicServiceRequestRoutes } from "./service-request.routes";
+import { publicNotificationRoutes } from "./notification.routes";
 
 const router = Router();
 
@@ -26,6 +27,7 @@ const router = Router();
 // its real security boundary.
 router.use("/dining", publicDiningRoutes);
 router.use("/dining", publicServiceRequestRoutes);
+router.use("/dining", publicNotificationRoutes);
 router.use(publicRateLimiter);
 
 router.get(

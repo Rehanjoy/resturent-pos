@@ -19,9 +19,9 @@ function errorMessageOf(error: unknown, fallback: string): string {
 
 /**
  * Kitchen Display System board (PRD §3.4). Real-time by design: an initial
- * fetch on mount, then every update arrives over Socket.io
- * (`kitchen:new-ticket`, `kitchen:ticket-ready`, `order:updated`) — no
- * polling loop, matching the PRD's "<1s KDS latency" requirement.
+ * fetch on mount, then updates arrive over Socket.io
+ * (`kitchen:new-ticket`, `kitchen:ticket-ready`, `order:updated`). A slow
+ * 30-second recovery poll protects the queue after a missed reconnect.
  */
 export function KdsBoard() {
   const { user } = useAuth();
@@ -35,6 +35,7 @@ export function KdsBoard() {
     queryKey: ["kitchenTickets"],
     queryFn: () => kitchenApi.listTickets().then((result) => result.tickets),
     enabled: canView,
+    refetchInterval: 30_000,
   });
 
   const tableNameById = new Map(

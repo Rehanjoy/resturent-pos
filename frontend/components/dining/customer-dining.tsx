@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import { ApiError } from "@/lib/api";
 import { diningApi, remainingTime } from "@/lib/dining/api";
-import type { CartItem, DiningContext, DiningMenuItem, DiningSessionResponse, DiningCustomer } from "@/lib/dining/types";
+import type { CartItem, DiningContext, DiningMenuItem, DiningNotification, DiningSessionResponse, DiningCustomer } from "@/lib/dining/types";
 import { SeatSelection } from "./seat-selection";
 import { MenuCustomization } from "./menu-customization";
 import { OrderTracker } from "./order-tracker";
@@ -13,7 +14,7 @@ import { GuestCart } from "./guest-cart";
 import { GuestIdentity } from "./guest-identity";
 import { GuestService } from "./guest-service";
 import { VisitSummary } from "./visit-summary";
-import { OrderUpdates } from "./order-updates";
+import { GuestNotificationCenter } from "./guest-notification-center";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,12 +34,14 @@ function DiningHeader({
   setView,
   showViewToggle,
   hasActiveSession,
+  notifications,
 }: {
   context: DiningContext | null;
   view: "menu" | "order";
   setView: (view: "menu" | "order") => void;
   showViewToggle: boolean;
   hasActiveSession: boolean;
+  notifications?: ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-surface/95 backdrop-blur-xl">
@@ -57,16 +60,19 @@ function DiningHeader({
           </div>
         </div>
 
-        {showViewToggle ? (
-          <Tabs value={view} onValueChange={(value) => setView(value as "menu" | "order")}>
-            <TabsList aria-label="Switch between the menu and your order status">
-              <TabsTrigger value="menu">Menu</TabsTrigger>
-              <TabsTrigger value="order">Order</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        ) : (
-          <Badge variant="outline">{hasActiveSession ? "Menu" : "Choose seats"}</Badge>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {notifications}
+          {showViewToggle ? (
+            <Tabs value={view} onValueChange={(value) => setView(value as "menu" | "order")}>
+              <TabsList aria-label="Switch between the menu and your order status">
+                <TabsTrigger value="menu">Menu</TabsTrigger>
+                <TabsTrigger value="order">Order</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          ) : (
+            <Badge variant="outline" className="hidden sm:inline-flex">{hasActiveSession ? "Menu" : "Choose seats"}</Badge>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -291,6 +297,21 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
     }
   }
 
+  function openNotificationTarget(notification: DiningNotification) {
+    const isOrderActivity = ["orders", "kitchen", "billing"].includes(notification.category) ||
+      ["order", "kitchen", "payment"].some((prefix) => notification.eventType.startsWith(prefix));
+    if (isOrderActivity && session?.order) {
+      setView("order");
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+      return;
+    }
+    if (notification.category === "service" || notification.eventType.startsWith("service")) {
+      window.requestAnimationFrame(() => {
+        document.getElementById("guest-service")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }
+
   return (
     <main className="min-h-dvh bg-background text-text">
       <Toaster position="top-center" />
@@ -301,6 +322,15 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
         setView={setView}
         showViewToggle={Boolean(session?.order) && !expired}
         hasActiveSession={Boolean(session) && !expired}
+        notifications={token ? (
+          <GuestNotificationCenter
+            key={token}
+            qrToken={qrToken}
+            sessionToken={token}
+            active={!expired}
+            onAction={openNotificationTarget}
+          />
+        ) : undefined}
       />
 
       <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
@@ -322,7 +352,6 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
           </Card>
         ) : session?.order && view === "order" ? (
           <>
-            <OrderUpdates order={session.order} />
             <OrderTracker
               data={session}
               now={now}

@@ -6,7 +6,8 @@ import type { AuthUser } from "@/lib/auth/types";
 import { defaultModulesForRole } from "@/lib/staff/types";
 import { useSocketConnectionState } from "@/lib/hooks/use-socket-connection-state";
 import { useUiStore } from "@/lib/store/ui-store";
-import { BellIcon, ClockIcon, MenuIcon, PlusIcon, SearchIcon } from "@/components/icons";
+import { ClockIcon, MenuIcon, PlusIcon, SearchIcon } from "@/components/icons";
+import { NotificationCenter } from "@/components/notifications/notification-center";
 
 // Same entry point the Table Grid's free-table cards use to start an order
 // (`/admin/orders/new?tableId=...` requires a table first) — a global
@@ -89,7 +90,6 @@ export function Topbar({ user }: { user: AuthUser }) {
   const clock = useLiveClock();
   const visibleModules = new Set(user.visibleModules?.length ? user.visibleModules : defaultModulesForRole(user.role));
   const canStartOrder = NEW_ORDER_ROLES.has(user.role) && visibleModules.has("tables") && visibleModules.has("orders");
-  const canViewKitchen = visibleModules.has("kitchen");
   const toggleMobileNav = useUiStore((state) => state.toggleMobileNav);
 
   return (
@@ -138,17 +138,7 @@ export function Topbar({ user }: { user: AuthUser }) {
           <span>{clock}</span>
         </div>
 
-        {canViewKitchen && (
-          <Link
-            href="/admin/kitchen"
-            title="Live kitchen queue"
-            aria-label="Open live kitchen queue"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/80 bg-background/60 text-text-muted transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary active:scale-95"
-          >
-            <BellIcon className="h-4 w-4" />
-            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-accent ring-2 ring-surface" />
-          </Link>
-        )}
+        <NotificationCenter />
 
         {canStartOrder && (
           <Link

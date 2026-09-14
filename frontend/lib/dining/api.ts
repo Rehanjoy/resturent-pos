@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { DiningContext, DiningSeat, DiningSessionResponse, CartItem, DiningCustomer, ServiceRequest, ServiceRequestType, SelectedCancellationQuote } from "./types";
+import type { DiningContext, DiningSeat, DiningSessionResponse, CartItem, DiningCustomer, DiningNotificationPage, ServiceRequest, ServiceRequestType, SelectedCancellationQuote } from "./types";
 
 const path = (qrToken: string) => `/api/public/dining/${encodeURIComponent(qrToken)}`;
 const authorization = (sessionToken: string) => ({ "X-Dining-Token": sessionToken });
@@ -13,6 +13,13 @@ export const diningApi = {
   cancelItems: (qrToken: string, sessionToken: string, reason: string, items: { orderItemId: string; qty: number; acceptedChargePercent: number }[]) => api.post<DiningSessionResponse>(`${path(qrToken)}/cancel`, { reason, items }, authorization(sessionToken)),
   serviceRequests: (qrToken: string, sessionToken: string) => api.get<ServiceRequest[]>(`${path(qrToken)}/service-requests`, authorization(sessionToken)),
   requestService: (qrToken: string, sessionToken: string, type: ServiceRequestType, note?: string) => api.post<ServiceRequest>(`${path(qrToken)}/service-requests`, { type, note }, authorization(sessionToken)),
+  notifications: (qrToken: string, sessionToken: string, options: { cursor?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams({ limit: String(options.limit ?? 30) });
+    if (options.cursor) query.set("cursor", options.cursor);
+    return api.get<DiningNotificationPage>(`${path(qrToken)}/notifications?${query.toString()}`, authorization(sessionToken));
+  },
+  markNotificationRead: (qrToken: string, sessionToken: string, notificationId: string) =>
+    api.patch<{ notification: { id: string; read: boolean } }>(`${path(qrToken)}/notifications/${encodeURIComponent(notificationId)}/read`, {}, authorization(sessionToken)),
 };
 
 export function remainingTime(until: string | null | undefined, now: number): string {

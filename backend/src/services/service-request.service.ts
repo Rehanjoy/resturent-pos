@@ -4,6 +4,7 @@ import { Table } from "../models/table.model";
 import { getSession, resolveQr } from "./dining.service";
 import { AppError } from "../utils/app-error";
 import { emitToRestaurant } from "../sockets";
+import { notifyServiceRequest } from "./notification.service";
 
 function toDto(record: ServiceRequestDocument, session?: { assignedWaiter?: { id: string; name: string } | null; customer?: { name: string; phone: string }; bookingMode?: string }) {
   return { id: record._id.toString(), sessionId: record.sessionId, type: record.type, note: record.note,
@@ -59,6 +60,7 @@ export async function createGuestServiceRequest(qrToken: string, token: string, 
   const current = await ServiceRequest.findOne({ _id: record!._id, restaurantId });
   if (!current || current.status === "expired") throw new AppError("Your seating has ended. Please ask staff for help.", 409, "DINING_SESSION_ENDED");
   notify(restaurantId);
+  notifyServiceRequest({ restaurantId, requestId: current.id, sessionId: current.sessionId, type: current.type, status: "pending", assignedWaiterId: session.assignedWaiter?.id, tableLabel: current.seats[0]?.tableName ?? "Table", seats: current.seats });
   return toDto(current, session);
 }
 export async function listGuestServiceRequests(qrToken: string, token: string) {
@@ -91,5 +93,7 @@ export async function updateServiceRequest(restaurantId: string, requestId: stri
   }
   // Repeated acknowledgements/completions never overwrite the first staff/time.
   const floor = await DiningFloor.findOne({ restaurantId }).lean();
-  return toDto(current, floor?.sessions.find((session) => session.id === current.sessionId));
+  const session = floor?.sessions.find((candidate) => candidate.id === current.sessionId);
+  if (allowed) notifyServiceRequest({ restaurantId, requestId: current.id, sessionId: current.sessionId, type: current.type, status, assignedWaiterId: session?.assignedWaiter?.id, tableLabel: current.seats[0]?.tableName ?? "Table", seats: current.seats });
+  return toDto(current, session);
 }

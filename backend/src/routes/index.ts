@@ -30,6 +30,7 @@ import customerRoutes from "./customer.routes";
 import serviceRequestRoutes from "./service-request.routes";
 import productionRoutes from "./production.routes";
 import costingRoutes from "./costing.routes";
+import notificationRoutes from "./notification.routes";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.use("/tables", tableRoutes);
 router.use("/dining", diningRoutes);
 router.use("/customers", customerRoutes);
 router.use("/service-requests", serviceRequestRoutes);
+router.use("/notifications", notificationRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/menu-items", menuItemRoutes);
 router.use("/orders", orderRoutes);

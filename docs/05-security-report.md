@@ -1,5 +1,13 @@
 # Security Audit Report — Saffron (Phase 7)
 
+## 2026-09-14 persistent notification security addendum
+
+Notifications are stored with a restaurant-scoped unique deduplication key. Staff list/read queries derive restaurant, role and user identity from the verified JWT, load the active staff record, and filter notifications again by that account's resolved visible workspaces. Guest list/read queries resolve the restaurant from the QR token and the exact dining session from its 256-bit dining token; one visit cannot read another visit's history.
+
+Socket notifications contain only a notification ID and timestamp and are sent to verified role/user rooms. Existing order, kitchen, dining, table, service and WhatsApp events are now delivered only to roles allowed to use the corresponding workflow, closing the previous broad restaurant-room payload exposure. REST persistence remains the source of truth after disconnects or process restarts. Input cursors, categories, page sizes and IDs are validated and bounded. Notification failures are logged without rolling back a successfully recorded order or payment.
+
+Focused isolation/deduplication tests and the complete **222/222** backend suite pass. Frontend lint, both TypeScript checks and both production builds pass. No secret, environment variable or package dependency was added.
+
 ## 2026-09-14 costing security addendum
 
 Every costing route requires JWT authentication and derives `restaurantId` from the token. Owner and
