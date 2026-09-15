@@ -27,6 +27,12 @@ export interface MenuItemInput {
 }
 
 export const menuItemsApi = {
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.postForm<{ imageUrl: string; image: { id: string; contentType: string; length: number; filename: string } }>("/api/media/menu-image", formData);
+  },
+
   list: (categoryId?: string) =>
     api.get<{ menuItems: MenuItem[] }>(
       `/api/menu-items${categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : ""}`,

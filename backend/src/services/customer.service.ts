@@ -34,12 +34,33 @@ export async function syncCustomerVisit(restaurantId: string, session: DiningSes
     startedAt: new Date(session.createdAt), amountPaid: 0,
   } }, { upsert: true });
 }
-export async function recordVisitPayment(restaurantId: string, orderId: string, invoiceId: string) {
-  const payments = await Payment.find({ restaurantId, invoiceId }).lean();
-  await CustomerVisit.updateOne({ restaurantId, orderId }, { $set: {
+export async function recordVisitPayment(restaurantId: string, orderId: string, invoiceId: string, sessionId?: string) {
+  const payments = await Payment.find({ restaurantId, invoiceId }).sort({ createdAt: 1 }).lean();
+  const visitFilter = sessionId
+    ? { restaurantId, $or: [{ orderId }, { sessionId }] }
+    : { restaurantId, orderId };
+  await CustomerVisit.updateOne(visitFilter, { $set: {
     amountPaid: payments.reduce((total, payment) => total + payment.amount, 0),
     paidAt: payments.length ? payments[payments.length - 1]!.createdAt : undefined,
+    orderId,
   } });
+}
+
+/** Repairs visits created after checkout and any historic payment-sync miss.
+ * Payment rows are the immutable source of truth, so replaying this is safe
+ * and cannot double-count customer spend. */
+async function reconcileVisitPayments(restaurantId: string) {
+  const totals = await Payment.aggregate<{ _id: Types.ObjectId; amountPaid: number; paidAt: Date }>([
+    { $match: { restaurantId: new Types.ObjectId(restaurantId) } },
+    { $lookup: { from: "invoices", localField: "invoiceId", foreignField: "_id", as: "invoice" } },
+    { $unwind: "$invoice" },
+    { $group: { _id: "$invoice.orderId", amountPaid: { $sum: "$amount" }, paidAt: { $max: "$createdAt" } } },
+  ]);
+  if (!totals.length) return;
+  await CustomerVisit.bulkWrite(totals.map((total) => ({ updateOne: {
+    filter: { restaurantId: new Types.ObjectId(restaurantId), orderId: total._id },
+    update: { $set: { amountPaid: total.amountPaid, paidAt: total.paidAt } },
+  } })), { ordered: false });
 }
 async function expireVisits(restaurantId: string) {
   await CustomerVisit.updateMany({ restaurantId, status: "held", expiresAt: { $lte: new Date(), $ne: null } }, [
@@ -47,7 +68,7 @@ async function expireVisits(restaurantId: string) {
   ], { updatePipeline: true });
 }
 export async function listCustomers(restaurantId: string, search = "", page = 1) {
-  await expireVisits(restaurantId);
+  await Promise.all([expireVisits(restaurantId), reconcileVisitPayments(restaurantId)]);
   const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const filter = { restaurantId, ...(search ? { $or: [{ name: { $regex: escaped, $options: "i" } }, { phone: { $regex: escaped } }] } : {}) };
   const [contacts, total] = await Promise.all([Contact.find(filter).sort({ updatedAt: -1 }).skip((page - 1) * 30).limit(30).lean(), Contact.countDocuments(filter)]);
@@ -58,7 +79,7 @@ export async function listCustomers(restaurantId: string, search = "", page = 1)
   }), total, page, totalPages: Math.max(1, Math.ceil(total / 30)) };
 }
 export async function customerDetail(restaurantId: string, id: string) {
-  await expireVisits(restaurantId);
+  await Promise.all([expireVisits(restaurantId), reconcileVisitPayments(restaurantId)]);
   const contact = await Contact.findOne({ _id: id, restaurantId }).lean();
   if (!contact) throw new AppError("Customer not found.", 404, "NOT_FOUND");
   const visits = await CustomerVisit.find({ restaurantId, contactId: id }).sort({ startedAt: -1 }).limit(100).lean();

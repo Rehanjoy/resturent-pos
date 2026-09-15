@@ -107,12 +107,17 @@ export async function createPayment(
   }
   order.status = "closed";
   await order.save();
-  // Analytics must never turn an already-recorded payment into a failed
-  // checkout response. It remains recoverable from the payment ledger.
-  await recordVisitPayment(restaurantId, order.id, invoice.id).catch(() => undefined);
-
+  // Create/update the visit before syncing its paid total. Some legacy or
+  // interrupted dining flows can reach checkout before the visit document
+  // exists; doing this in the opposite order leaves a successful payment at ₹0.
   if (order.diningSessionId) await markDiningSessionCleaning(restaurantId, order.diningSessionId);
   else await tableService.updateTableStatus(restaurantId, order.tableId.toString(), "needs_cleaning");
+  // The immutable payment ledger remains the source of truth. A later
+  // customer-list reconciliation safely repairs this if analytics syncing
+  // encounters a transient error after money was already recorded.
+  await recordVisitPayment(restaurantId, order.id, invoice.id, order.diningSessionId).catch((error) => {
+    console.error("[payment] Customer visit sync failed", { restaurantId, orderId: order.id, invoiceId: invoice.id, error });
+  });
 
   const orderDto = toOrderDto(order);
   emitToRestaurant(restaurantId, "order:updated", { order: orderDto });

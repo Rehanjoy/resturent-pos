@@ -31,6 +31,7 @@ import serviceRequestRoutes from "./service-request.routes";
 import productionRoutes from "./production.routes";
 import costingRoutes from "./costing.routes";
 import notificationRoutes from "./notification.routes";
+import mediaRoutes from "./media.routes";
 
 const router = Router();
 
@@ -44,6 +45,7 @@ router.use("/service-requests", serviceRequestRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/menu-items", menuItemRoutes);
+router.use("/media", mediaRoutes);
 router.use("/orders", orderRoutes);
 router.use("/kitchen", kitchenRoutes);
 router.use("/invoices", invoiceRoutes);

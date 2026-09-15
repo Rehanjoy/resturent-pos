@@ -8,6 +8,7 @@ import * as tables from "../src/services/table.service";
 import * as kitchen from "../src/services/kitchen.service";
 import * as invoices from "../src/services/invoice.service";
 import * as payments from "../src/services/payment.service";
+import * as customers from "../src/services/customer.service";
 import { DiningFloor, DEFAULT_DINING_POLICY } from "../src/models/dining-floor.model";
 import { Order } from "../src/models/order.model";
 import { Kot } from "../src/models/kot.model";
@@ -15,6 +16,7 @@ import { createApp } from "../src/app";
 import { env } from "../src/config/env";
 import { InventoryItem } from "../src/models/inventory-item.model";
 import { InventoryTransaction } from "../src/models/inventory-transaction.model";
+import { CustomerVisit } from "../src/models/customer-visit.model";
 
 describe("Chair dining, kitchen and counter settlement", () => {
   beforeAll(connectTestDb);
@@ -86,7 +88,12 @@ describe("Chair dining, kitchen and counter settlement", () => {
     await kitchen.markAllReady(restaurantId, submitted.order!.id);
     await orders.serveOrder(restaurantId, user.id, submitted.order!.id);
     const bill = await invoices.generateInvoice(restaurantId, user.id, submitted.order!.id, {});
+    // Reproduces an interrupted flow where payment reaches the ledger before
+    // the customer visit has been persisted. Checkout must rebuild and sync it.
+    await CustomerVisit.deleteMany({ restaurantId, sessionId: guest.session.id });
     await payments.createPayment(restaurantId, { invoiceId: bill.id, payments: [{ mode: "cash", amount: bill.total }] });
+    const customer = (await customers.listCustomers(restaurantId, "9876543210", 1)).customers[0];
+    expect(customer).toMatchObject({ name: "Aarav", visitCount: 1, amountPaid: bill.total });
     expect((await dining.listSeating(restaurantId)).tables[0]!.chairs[0]!.status).toBe("cleaning");
     await dining.markDiningSessionAvailable(restaurantId, guest.session.id, user.id);
     const floor = await dining.listSeating(restaurantId);

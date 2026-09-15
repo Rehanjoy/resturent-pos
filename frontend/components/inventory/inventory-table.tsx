@@ -5,9 +5,7 @@ import { formatQuantity, formatStockQuantity } from "@/lib/inventory/units";
 import { formatMoney } from "@/lib/format";
 import type { InventoryCategory, InventoryItem, Supplier } from "@/lib/inventory/types";
 
-export function buildInventoryCategoryNameMap(
-  categories: InventoryCategory[]
-): Map<string, string> {
+export function buildInventoryCategoryNameMap(categories: InventoryCategory[]): Map<string, string> {
   return new Map(categories.map((category) => [category.id, category.name]));
 }
 
@@ -15,26 +13,44 @@ export function buildSupplierNameMap(suppliers: Supplier[]): Map<string, string>
   return new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
 }
 
-function stockLevelPercent(item: InventoryItem): number {
-  if (item.currentStock <= 0) return 0;
-  const target = item.reorderThreshold > 0 ? item.reorderThreshold * 2 : item.currentStock;
-  return Math.max(0, Math.min(100, Math.round((item.currentStock / target) * 100)));
+type StockTone = "error" | "warning" | "success";
+
+function stockMetrics(item: InventoryItem): { percent: number; tone: StockTone; label: string; detail: string } {
+  const days = item.daysRemaining;
+  const dailyUsage = item.expectedDailyUsage || (days && days > 0 ? item.currentStock / days : 0);
+  const targetStock = dailyUsage > 0
+    ? dailyUsage * 7
+    : item.reorderThreshold > 0
+      ? item.reorderThreshold * 2
+      : item.currentStock;
+  const percent = item.currentStock <= 0 || targetStock <= 0
+    ? 0
+    : Math.max(3, Math.min(100, Math.round((item.currentStock / targetStock) * 100)));
+
+  if (item.currentStock <= 0) return { percent: 0, tone: "error", label: "Out of stock", detail: "Stock entry required" };
+  if (item.currentStock <= item.reorderThreshold || (days != null && days <= 1)) {
+    return { percent, tone: "error", label: "Critical", detail: "Restock now" };
+  }
+  if (days != null && days < 7) {
+    return { percent, tone: "warning", label: days <= 3 ? "Restock soon" : "Plan restock", detail: `${Number(days.toFixed(1))} days cover` };
+  }
+  return { percent, tone: "success", label: "Healthy", detail: days == null ? "Above minimum" : `${Number(days.toFixed(1))} days cover` };
 }
 
-function stockLevelTone(item: InventoryItem): "error" | "warning" | "success" {
-  if (item.currentStock <= 0) return "error";
-  if (item.currentStock <= item.reorderThreshold) return "warning";
-  return "success";
-}
-
-const BAR_TONE_CLASS: Record<"error" | "warning" | "success", string> = {
+const BAR_CLASS: Record<StockTone, string> = {
   error: "bg-error",
   warning: "bg-warning",
   success: "bg-success",
 };
 
-function formatStock(item: InventoryItem): string {
-  return formatStockQuantity(item.currentStock, item.unit);
+const STATUS_CLASS: Record<StockTone, string> = {
+  error: "bg-error/10 text-error",
+  warning: "bg-warning/12 text-warning",
+  success: "bg-success/10 text-success",
+};
+
+function MobileLabel({ children }: { children: React.ReactNode }) {
+  return <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted lg:hidden">{children}</span>;
 }
 
 export function InventoryTable({
@@ -63,252 +79,85 @@ export function InventoryTable({
   onDelete: (item: InventoryItem) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
+    <div className="overflow-hidden rounded-2xl border border-border/80 bg-white/75 shadow-sm backdrop-blur-xl">
       <div className="overflow-x-auto">
         <table className="block w-full text-left text-body lg:table">
-          <thead className="hidden lg:table-header-group bg-background/60 border-b border-border">
-            <tr className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-              <th className="px-4 py-3.5">Ingredient Item</th>
-              <th className="px-4 py-3.5">Stock Level</th>
-              <th className="px-4 py-3.5">Today (IST)</th>
-              <th className="px-4 py-3.5">Runway / Daily Plan</th>
-              <th className="px-4 py-3.5">Supplier</th>
-              <th className="px-4 py-3.5">Stock Value</th>
-              <th className="px-4 py-3.5">Status</th>
-              <th className="px-4 py-3.5 text-right">Actions</th>
+          <thead className="hidden border-b border-border/70 bg-background/55 lg:table-header-group">
+            <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
+              <th className="px-4 py-3">Ingredient</th>
+              <th className="px-4 py-3">Stock &amp; coverage</th>
+              <th className="px-4 py-3">Today</th>
+              <th className="px-4 py-3">Runway</th>
+              <th className="px-4 py-3">Cost &amp; supplier</th>
+              <th className="px-4 py-3 text-right">Status &amp; actions</th>
             </tr>
           </thead>
           <tbody className="grid gap-3 p-3 sm:grid-cols-2 lg:table-row-group lg:p-0">
             {items.map((item) => {
-              const tone = stockLevelTone(item);
-              const percent = stockLevelPercent(item);
-              const isLow = item.currentStock <= item.reorderThreshold;
-              const value = Math.round(item.currentStock * item.costPerUnit);
+              const metrics = stockMetrics(item);
               const linkedCount = linkedDishCounts[item.id] ?? 0;
+              const shouldReorder = metrics.tone !== "success";
+              const received = item.today?.received ?? 0;
+              const used = item.today?.used ?? 0;
+              const wasted = item.today?.wasted ?? 0;
 
               return (
-                <tr
-                  key={item.id}
-                  className="group block rounded-xl border border-border bg-surface p-4 transition-colors hover:bg-background/40 lg:table-row lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b lg:border-border/60 lg:p-0 lg:last:border-0"
-                >
-                  {/* Item Column */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-text text-sm">{item.name}</span>
-                        {linkedCount > 0 && (
-                          <span
-                            title={`Used in ${linkedCount} menu dish${linkedCount > 1 ? "es" : ""}`}
-                            className="inline-flex items-center rounded-md bg-secondary/10 px-1.5 py-0.5 text-[10px] font-semibold text-secondary whitespace-nowrap"
-                          >
-                            {linkedCount} dish{linkedCount > 1 ? "es" : ""}
-                          </span>
-                        )}
+                <tr key={item.id} className="group block rounded-xl border border-border/75 bg-white/80 p-4 transition hover:border-primary/20 hover:bg-white lg:table-row lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-b lg:border-border/55 lg:p-0 lg:last:border-b-0">
+                  <td className="block align-middle lg:table-cell lg:px-4 lg:py-3.5">
+                    <div className="min-w-44">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <strong className="text-sm text-text">{item.name}</strong>
+                        {linkedCount > 0 ? <span title={`Used in ${linkedCount} menu dish${linkedCount > 1 ? "es" : ""}`} className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">{linkedCount} {linkedCount === 1 ? "dish" : "dishes"}</span> : null}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-text-muted">
-                        <span className="rounded-md bg-background px-2 py-0.5 font-medium">
-                          {categoryNameById.get(item.categoryId) ?? "Uncategorized"}
-                        </span>
-                        <span>•</span>
-                        <span>Base unit: <strong>{item.unit}</strong></span>
-                      </div>
+                      <p className="mt-1 text-xs text-text-muted">{categoryNameById.get(item.categoryId) ?? "Uncategorized"}</p>
                     </div>
                   </td>
 
-                  {/* Stock Level Column */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle">
-                    <div className="flex w-full flex-col gap-1.5 lg:w-44">
-                      <div className="flex items-baseline justify-between text-xs">
-                        <strong className="font-bold text-text text-sm">
-                          {formatStock(item)}
-                        </strong>
-                        <span className="text-[11px] text-text-muted">
-                          Min: {item.reorderThreshold} {item.unit}
-                        </span>
+                  <td className="mt-4 block align-middle lg:mt-0 lg:table-cell lg:px-4 lg:py-3.5">
+                    <MobileLabel>Stock &amp; coverage</MobileLabel>
+                    <div className="w-full lg:w-48">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <strong className="text-sm tabular-nums text-text">{formatStockQuantity(item.currentStock, item.unit)}</strong>
+                        <span className="whitespace-nowrap text-[10px] text-text-muted">Min {formatQuantity(item.reorderThreshold)} {item.unit}</span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-border/60">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${BAR_TONE_CLASS[tone]}`}
-                          style={{ width: `${percent}%` }}
-                        />
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border/55" role="progressbar" aria-label={`${item.name} stock coverage`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={metrics.percent}>
+                        <div className={`h-full rounded-full transition-[width] duration-500 ${BAR_CLASS[metrics.tone]}`} style={{ width: `${metrics.percent}%` }} />
                       </div>
-                      {item.currentStock <= 0 ? (
-                        <span className="text-[11px] font-semibold text-error">Out of stock!</span>
-                      ) : isLow ? (
-                        <span className="text-[11px] font-medium text-warning">Below reorder point</span>
-                      ) : (
-                        <span className="text-[11px] text-text-muted">Healthy stock buffer</span>
-                      )}
+                      <div className="mt-1.5 flex items-center justify-between text-[10px] text-text-muted"><span>{metrics.percent}% of 7-day target</span><span>{metrics.detail}</span></div>
                     </div>
                   </td>
 
-                  {/* Today (IST) Column */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle">
-                    <div className="flex flex-col gap-1 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded bg-success/10 px-1.5 py-0.5 text-[11px] font-semibold text-success">
-                          In: +{formatQuantity(item.today?.received ?? 0)} {item.unit}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded bg-background px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
-                          Out: -{formatQuantity(item.today?.used ?? 0)} {item.unit}
-                        </span>
+                  <td className="mt-4 block align-middle lg:mt-0 lg:table-cell lg:px-4 lg:py-3.5">
+                    <MobileLabel>Movement today</MobileLabel>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
+                      <span className="font-semibold text-success">+{formatQuantity(received)} {item.unit}</span>
+                      <span className="text-text-muted">−{formatQuantity(used)} {item.unit}</span>
+                      {wasted > 0 ? <span className="font-medium text-error">Waste {formatQuantity(wasted)}</span> : null}
+                    </div>
+                    {item.today?.corrected ? <p className="mt-1 text-[10px] text-info">Correction {formatQuantity(item.today.corrected)} {item.unit}</p> : null}
+                  </td>
+
+                  <td className="mt-4 block align-middle lg:mt-0 lg:table-cell lg:px-4 lg:py-3.5">
+                    <MobileLabel>Runway</MobileLabel>
+                    {item.daysRemaining == null ? <span className="text-xs text-text-muted">Usage data needed</span> : <div><strong className={`text-sm tabular-nums ${metrics.tone === "error" ? "text-error" : metrics.tone === "warning" ? "text-warning" : "text-success"}`}>{Number(item.daysRemaining.toFixed(1))} days</strong><p className="mt-1 text-[10px] text-text-muted">{formatQuantity(item.expectedDailyUsage || 0)} {item.unit}/day planned</p></div>}
+                  </td>
+
+                  <td className="mt-4 block align-middle lg:mt-0 lg:table-cell lg:px-4 lg:py-3.5">
+                    <MobileLabel>Cost &amp; supplier</MobileLabel>
+                    <strong className="text-sm tabular-nums text-text">{formatMoney(item.currentStock * item.costPerUnit)}</strong>
+                    <p className="mt-1 text-[10px] text-text-muted">{formatMoney(item.costPerUnit)}/{item.unit} · {item.supplierId ? supplierNameById.get(item.supplierId) ?? "Unknown supplier" : "No supplier"}</p>
+                  </td>
+
+                  <td className="mt-4 block align-middle lg:mt-0 lg:table-cell lg:px-4 lg:py-3.5">
+                    <MobileLabel>Status &amp; actions</MobileLabel>
+                    <div className="flex flex-wrap items-center justify-between gap-2 lg:justify-end">
+                      <span className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${STATUS_CLASS[metrics.tone]}`}><span className={`h-1.5 w-1.5 rounded-full ${BAR_CLASS[metrics.tone]}`} />{metrics.label}</span>
+                      <div className="flex items-center gap-1">
+                        {canManage ? <button type="button" onClick={() => onAdjust(item)} title={`Add or adjust stock for ${item.name}`} className="min-h-9 rounded-lg border border-border/80 bg-white px-2.5 text-[11px] font-semibold text-text shadow-xs transition hover:border-primary/30 hover:text-primary">Stock entry</button> : null}
+                        {shouldReorder && canManage ? <button type="button" disabled={isTogglingReorder(item)} onClick={() => onToggleReorderRequested(item)} title={item.reorderRequested ? "Mark purchase as pending" : "Create a reorder request"} className="min-h-9 rounded-lg px-2.5 text-[11px] font-semibold text-warning transition hover:bg-warning/10 disabled:opacity-50">{item.reorderRequested ? "Requested" : "Reorder"}</button> : null}
+                        <button type="button" onClick={() => onOpenHistory(item)} aria-label={`View rate history for ${item.name}`} title="Rate history" className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-background hover:text-primary"><HistoryIcon className="h-4 w-4" /></button>
+                        {canManage ? <><button type="button" onClick={() => onEdit(item)} aria-label={`Edit ${item.name}`} title="Edit ingredient" className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-background hover:text-secondary"><EditIcon className="h-4 w-4" /></button><button type="button" onClick={() => onDelete(item)} aria-label={`Delete ${item.name}`} title="Delete ingredient" className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition hover:bg-error/10 hover:text-error"><TrashIcon className="h-4 w-4" /></button></> : null}
                       </div>
-                      {(item.today?.wasted ?? 0) > 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-error/10 px-1.5 py-0.5 text-[11px] font-medium text-error w-fit">
-                          Waste: {formatQuantity(item.today?.wasted ?? 0)} {item.unit}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-text-muted">No waste logged today</span>
-                      )}
-                      {!!item.today?.corrected && (
-                        <span className="text-[10px] text-info">
-                          Correction: {formatQuantity(item.today.corrected)} {item.unit}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Daily Plan / Runway */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle">
-                    <div className="flex flex-col gap-1">
-                      {item.daysRemaining == null ? (
-                        <span className="inline-flex w-fit items-center rounded-full bg-background px-2.5 py-0.5 text-[11px] font-medium text-text-muted">
-                          No usage data
-                        </span>
-                      ) : item.daysRemaining <= 1 ? (
-                        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-error/15 px-2.5 py-0.5 text-xs font-bold text-error">
-                          <span className="h-1.5 w-1.5 rounded-full bg-error animate-pulse" />
-                          {Number(item.daysRemaining.toFixed(1))} days left
-                        </span>
-                      ) : item.daysRemaining <= 3 ? (
-                        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-bold text-warning">
-                          <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                          {Number(item.daysRemaining.toFixed(1))} days left
-                        </span>
-                      ) : (
-                        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">
-                          <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                          {Number(item.daysRemaining.toFixed(1))} days left
-                        </span>
-                      )}
-                      <span className="text-[11px] text-text-muted">
-                        {item.expectedDailyUsage || 0} {item.unit} / day planned
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Supplier */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle text-xs font-medium text-text-muted">
-                    {item.supplierId ? (
-                      <span className="text-text font-medium">
-                        {supplierNameById.get(item.supplierId) ?? "—"}
-                      </span>
-                    ) : (
-                      <span className="text-text-muted/60 italic">No supplier</span>
-                    )}
-                  </td>
-
-                  {/* Stock Value */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle">
-                    <div className="flex flex-col">
-                      <strong className="text-sm font-bold text-text tabular-nums">
-                        {formatMoney(value)}
-                      </strong>
-                      <span className="text-[11px] text-text-muted tabular-nums">
-                        {formatMoney(item.costPerUnit)} / {item.unit}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Status Badge */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle">
-                    {isLow ? (
-                      <button
-                        type="button"
-                        disabled={!canManage || isTogglingReorder(item)}
-                        onClick={() => onToggleReorderRequested(item)}
-                        title={
-                          canManage
-                            ? item.reorderRequested
-                              ? "Mark as pending order"
-                              : "Mark as reorder requested"
-                            : undefined
-                        }
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all disabled:cursor-default ${
-                          item.reorderRequested
-                            ? "bg-secondary/15 text-secondary hover:bg-secondary/25"
-                            : item.currentStock <= 0
-                            ? "bg-error/15 text-error hover:bg-error/25"
-                            : "bg-warning/15 text-warning hover:bg-warning/25"
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            item.reorderRequested
-                              ? "bg-secondary"
-                              : item.currentStock <= 0
-                              ? "bg-error"
-                              : "bg-warning"
-                          }`}
-                        />
-                        {item.currentStock <= 0
-                          ? "Out of Stock"
-                          : "Low Stock"}
-                        {" • "}
-                        {item.reorderRequested ? "Reordered" : "Reorder"}
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
-                        <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                        In Stock
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Actions Column */}
-                  <td className="block lg:table-cell px-4 py-3.5 align-middle">
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
-                      {canManage && (
-                        <button
-                          type="button"
-                          onClick={() => onAdjust(item)}
-                          title={`Adjust stock for ${item.name}`}
-                          className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-text shadow-2xs transition-colors hover:bg-background hover:text-primary"
-                        >
-                          Stock entry
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => onOpenHistory(item)}
-                        title={`Rate history for ${item.name}`}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-background hover:text-primary"
-                      >
-                        <HistoryIcon className="h-4 w-4" />
-                      </button>
-
-                      {canManage && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => onEdit(item)}
-                            title={`Edit ${item.name}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-background hover:text-secondary"
-                          >
-                            <EditIcon className="h-4 w-4" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => onDelete(item)}
-                            title={`Delete ${item.name}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-error/10 hover:text-error"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
                     </div>
                   </td>
                 </tr>
