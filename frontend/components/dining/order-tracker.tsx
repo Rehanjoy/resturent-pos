@@ -117,8 +117,8 @@ const ITEM_STATUS_LABEL: Record<string, string> = {
   sent: "Queued in kitchen",
 };
 
-export function OrderTracker({ data, now, policy, busy, error, taxConfig, onAddItems, onQuote, onCancel }: {
-  data: DiningSessionResponse; now: number; policy: DiningPolicy; busy: boolean; error: string | null; taxConfig?: DiningTaxConfig[]; onAddItems: () => void;
+export function OrderTracker({ data, now, policy, busy, error, taxConfig, onQuote, onCancel }: {
+  data: DiningSessionResponse; now: number; policy: DiningPolicy; busy: boolean; error: string | null; taxConfig?: DiningTaxConfig[];
   onQuote: (items: { orderItemId: string; qty: number }[]) => Promise<SelectedCancellationQuote>;
   onCancel: (reason: string, items: { orderItemId: string; qty: number; acceptedChargePercent: number }[]) => Promise<boolean>;
 }) {
@@ -144,48 +144,42 @@ export function OrderTracker({ data, now, policy, busy, error, taxConfig, onAddI
     }
   }
 
+  const statusBadgeVariant = wholeOrderCancelled ? "error" : order.status === "closed" ? "success" : order.status === "ready" ? "warning" : "outline";
+
   return (
     <section className="mx-auto max-w-2xl space-y-4 pb-8">
-      <div className="overflow-hidden rounded-[2rem] bg-text text-white shadow-[0_20px_60px_rgba(28,25,23,0.12)]">
-        <div className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/55">Order #{order.id.slice(-6).toUpperCase()}</p>
-              <h1 className="mt-2 font-heading text-2xl font-semibold">
-                {wholeOrderCancelled ? "Cancellation recorded" : order.status === "closed" ? "Thanks for visiting" : "Your kitchen timeline"}
-              </h1>
-            </div>
-            <Badge variant="outline" className="border-white/20 bg-white/10 text-white capitalize">{order.status.replaceAll("_", " ")}</Badge>
+      <Card className="rounded-3xl p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Order #{order.id.slice(-6).toUpperCase()}</p>
+            <h1 className="mt-1 font-heading text-2xl font-semibold">
+              {wholeOrderCancelled ? "Cancellation recorded" : order.status === "closed" ? "Thanks for visiting" : "Your kitchen timeline"}
+            </h1>
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-white/65">
-            {wholeOrderCancelled ? "Your cancelled order and payable charge remain visible below." : "Track every dish, add more whenever you like, or cancel only the items you select."}
-          </p>
+          <Badge variant={statusBadgeVariant} className="shrink-0 capitalize">{order.status.replaceAll("_", " ")}</Badge>
         </div>
-        {!wholeOrderCancelled && (
-          <div className="grid grid-cols-2 border-t border-white/10">
+        <p className="mt-3 text-sm leading-relaxed text-text-muted">
+          {wholeOrderCancelled ? "Your cancelled order and payable charge remain visible below." : "Track every dish live. Use Add Item below for more, or cancel only what you select."}
+        </p>
+      </Card>
+
+      <Card className="overflow-hidden rounded-3xl p-0">
+        {!wholeOrderCancelled && cancellable.length > 0 && (
+          <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div>
+              <h2 className="text-sm font-semibold">Order items</h2>
+              <p className="mt-0.5 text-xs text-text-muted">{order.items.length} dish{order.items.length === 1 ? "" : "es"}</p>
+            </div>
             <Button
               type="button"
-              variant="ghost"
-              disabled={data.canAddItems === false}
-              onClick={onAddItems}
-              className="h-14 rounded-none border-r border-white/10 px-4 text-white hover:bg-white/5 hover:text-white disabled:opacity-40"
-            >
-              ＋ Add more items
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={!cancellable.length}
+              variant="outline"
+              size="sm"
               onClick={() => { setShowCancel(true); setQuote(null); setAcceptedAmount(null); }}
-              className="h-14 rounded-none px-4 text-white hover:bg-white/5 hover:text-white disabled:opacity-40"
             >
-              Cancel selected items
+              Cancel items
             </Button>
           </div>
         )}
-      </div>
-
-      <Card className="overflow-hidden rounded-3xl p-0">
         {order.items.map((item) => {
           const cancelledQty = item.cancelledQty ?? 0;
           const activeQty = Math.max(0, item.qty - cancelledQty);

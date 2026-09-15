@@ -141,7 +141,9 @@ export function GuestMenu({ context, cart, busy, onCustomize, onReview }: { cont
         </aside>
       </div>
 
-      <div className="glass-elevated fixed inset-x-2 bottom-2 z-20 rounded-3xl border border-white/85 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] lg:hidden">
+      {/* Sits above the fixed guest-service footer nav (Call Waiter/Water/Add Item/Bill) — the
+          offset reserves that bar's ~5.5rem height plus its own safe-area padding. */}
+      <div className="glass-elevated fixed inset-x-2 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 rounded-3xl border border-white/85 p-3 lg:hidden">
         <Button
           type="button"
           variant="accent"

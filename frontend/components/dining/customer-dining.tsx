@@ -19,27 +19,29 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
+import { PlusIcon } from "@/components/icons";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "Check your connection and try again.";
 }
 
-/** Header row: restaurant identity on the left, current-step indicator on the right. */
+/** Header row: restaurant identity on the left, current-step indicator on the right.
+ * Once an order exists, the tracker is the home screen; "Add Item" is the only
+ * explicit action to jump to the menu (no more Menu/Order tab toggle). */
 function DiningHeader({
   context,
-  view,
-  setView,
-  showViewToggle,
+  showAddItem,
+  canAddItems,
+  onAddItems,
   hasActiveSession,
   notifications,
 }: {
   context: DiningContext | null;
-  view: "menu" | "order";
-  setView: (view: "menu" | "order") => void;
-  showViewToggle: boolean;
+  showAddItem: boolean;
+  canAddItems: boolean;
+  onAddItems: () => void;
   hasActiveSession: boolean;
   notifications?: ReactNode;
 }) {
@@ -62,13 +64,11 @@ function DiningHeader({
 
         <div className="flex shrink-0 items-center gap-2">
           {notifications}
-          {showViewToggle ? (
-            <Tabs value={view} onValueChange={(value) => setView(value as "menu" | "order")}>
-              <TabsList aria-label="Switch between the menu and your order status">
-                <TabsTrigger value="menu">Menu</TabsTrigger>
-                <TabsTrigger value="order">Order</TabsTrigger>
-              </TabsList>
-            </Tabs>
+          {showAddItem ? (
+            <Button type="button" variant="accent" size="sm" disabled={!canAddItems} onClick={onAddItems} className="gap-1.5">
+              <PlusIcon className="h-4 w-4" />
+              Add Item
+            </Button>
           ) : (
             <Badge variant="outline" className="hidden sm:inline-flex">{hasActiveSession ? "Menu" : "Choose seats"}</Badge>
           )}
@@ -136,6 +136,7 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
           setToken(savedToken);
           setSession(savedSession);
           setCustomer(savedSession.session.customer ?? null);
+          if (savedSession.order) setView("order");
           syncClock(savedSession.serverNow);
         } catch (cause) {
           if (cause instanceof ApiError && [401, 403, 404, 410].includes(cause.status)) {
@@ -312,15 +313,18 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
     }
   }
 
+  const footerVisible = Boolean(session) && Boolean(token) && !expired;
+  const addItemsDisabled = Boolean(session?.order) && session?.canAddItems === false;
+
   return (
     <main className="ambient-shell min-h-dvh bg-transparent text-text">
       <Toaster position="top-center" />
 
       <DiningHeader
         context={context}
-        view={view}
-        setView={setView}
-        showViewToggle={Boolean(session?.order) && !expired}
+        showAddItem={Boolean(session?.order) && !expired && view === "order"}
+        canAddItems={!addItemsDisabled}
+        onAddItems={() => setView("menu")}
         hasActiveSession={Boolean(session) && !expired}
         notifications={token ? (
           <GuestNotificationCenter
@@ -333,7 +337,7 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
         ) : undefined}
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+      <div className={`mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 ${footerVisible ? "pb-28" : ""}`}>
         {error && (
           <Alert variant="destructive" className="mx-auto mb-5 max-w-4xl">
             <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
@@ -359,12 +363,10 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
               busy={busy}
               error={error}
               taxConfig={context.taxConfig}
-              onAddItems={() => setView("menu")}
               onQuote={quoteCancellation}
               onCancel={cancel}
             />
             <VisitSummary data={session} now={now} />
-            {token && <GuestService qrToken={qrToken} token={token} active={!expired} />}
           </>
         ) : expired ? (
           <Card className="mx-auto max-w-lg rounded-3xl p-8 text-center">
@@ -426,7 +428,6 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
             )}
 
             <GuestMenu context={context} cart={cart} busy={busy} onCustomize={setCustomize} onReview={() => setCartOpen(true)} />
-            {token && <GuestService qrToken={qrToken} token={token} active={!expired} />}
           </>
         )}
 
@@ -438,6 +439,16 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
           </div>
         )}
       </div>
+
+      {footerVisible && token && (
+        <GuestService
+          qrToken={qrToken}
+          token={token}
+          active={!expired}
+          onAddItems={() => setView("menu")}
+          addItemsDisabled={addItemsDisabled}
+        />
+      )}
 
       {customize && !expired && (
         <MenuCustomization

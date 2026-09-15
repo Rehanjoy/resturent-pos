@@ -1,21 +1,52 @@
 "use client";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { diningApi } from "@/lib/dining/api";
 import type { ServiceRequest, ServiceRequestType } from "@/lib/dining/types";
-import { HelpIcon, ReceiptIcon, WaterIcon, type IconProps } from "@/components/icons";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { HelpIcon, PlusIcon, ReceiptIcon, WaterIcon, type IconProps } from "@/components/icons";
 
-const options: { type: ServiceRequestType; icon: (props: IconProps) => React.ReactElement; label: string }[] = [
-  { type: "water", icon: WaterIcon, label: "Water" },
-  { type: "bill", icon: ReceiptIcon, label: "Ask for bill" },
-  { type: "help", icon: HelpIcon, label: "Call waiter" },
+const leadingServiceOptions: { type: ServiceRequestType; icon: (props: IconProps) => React.ReactElement; label: string; sentLabel: string }[] = [
+  { type: "help", icon: HelpIcon, label: "Call Waiter", sentLabel: "Requested" },
+  { type: "water", icon: WaterIcon, label: "Water", sentLabel: "Requested" },
 ];
+const billOption: { type: ServiceRequestType; icon: (props: IconProps) => React.ReactElement; label: string; sentLabel: string } =
+  { type: "bill", icon: ReceiptIcon, label: "Bill", sentLabel: "Requested" };
 
-export function GuestService({ qrToken, token, active }: { qrToken: string; token: string; active: boolean }) {
+function ServiceButton({ option, existing, active, busy, onRequest }: {
+  option: typeof leadingServiceOptions[number];
+  existing?: ServiceRequest;
+  active: boolean;
+  busy: ServiceRequestType | null;
+  onRequest: (type: ServiceRequestType, label: string) => void;
+}) {
+  const acknowledged = existing?.status === "acknowledged";
+  const Icon = option.icon;
+  return (
+    <button
+      type="button"
+      disabled={!active || busy !== null || Boolean(existing)}
+      onClick={() => onRequest(option.type, option.label)}
+      className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 rounded-[1.35rem] px-1 py-2 text-[11px] font-semibold transition-colors ${
+        existing ? (acknowledged ? "bg-success/10 text-success" : "bg-warning/15 text-text") : "text-text-muted hover:bg-background hover:text-primary"
+      } disabled:pointer-events-none disabled:opacity-100`}
+    >
+      <Icon className="h-5 w-5" />
+      <span className="leading-none">
+        {existing ? (acknowledged ? "On the way" : option.sentLabel) : busy === option.type ? "Sending…" : option.label}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Fixed mobile-app-style bottom nav for the active dining visit: Call
+ * Waiter, Water, Add Item, Bill. Replaces the earlier inline "Need
+ * something?" card — same `diningApi.requestService` plumbing, restyled as
+ * a persistent footer so it never scrolls out of reach.
+ */
+export function GuestService({ qrToken, token, active, onAddItems, addItemsDisabled }: { qrToken: string; token: string; active: boolean; onAddItems: () => void; addItemsDisabled: boolean }) {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [busy, setBusy] = useState<ServiceRequestType | null>(null);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!active) return;
@@ -33,52 +64,42 @@ export function GuestService({ qrToken, token, active }: { qrToken: string; toke
 
   const open = requests.filter((item) => item.status === "pending" || item.status === "acknowledged");
 
-  async function request(type: ServiceRequestType) {
+  async function request(type: ServiceRequestType, label: string) {
     setBusy(type);
-    setMessage("");
     try {
       const item = await diningApi.requestService(qrToken, token, type);
       setRequests((current) => [item, ...current.filter((row) => row.id !== item.id)]);
-      setMessage(item.status === "acknowledged" ? "A waiter is already on the way." : "Request sent to the floor team.");
+      toast(item.status === "acknowledged" ? "A waiter is already on the way." : `${label} sent to the floor team.`, { id: `guest-service-${type}` });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not send the request.");
+      toast(error instanceof Error ? error.message : "Could not send the request.", { id: `guest-service-${type}` });
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <Card id="guest-service" className="mx-auto mt-5 max-w-2xl scroll-mt-24 rounded-3xl p-5" aria-label="Table service">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-semibold">Need something?</h2>
-          <p className="mt-1 text-xs text-text-muted">Tap once. Your table and reserved chairs light up for staff.</p>
-        </div>
-        {open.length > 0 && (
-          <Badge variant="warning">{open.some((item) => item.status === "acknowledged") ? "Waiter on the way" : "Sent"}</Badge>
-        )}
-      </div>
+    <nav
+      id="guest-service"
+      aria-label="Table service and ordering actions"
+      className="fixed inset-x-0 bottom-0 z-30 px-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 sm:px-4"
+    >
+      <div className="glass-elevated mx-auto flex max-w-xl items-stretch gap-1.5 rounded-[1.75rem] border border-white/85 p-1.5 shadow-[0_18px_45px_rgba(28,25,23,0.16)]">
+        {leadingServiceOptions.map((option) => (
+          <ServiceButton key={option.type} option={option} existing={open.find((item) => item.type === option.type)} active={active} busy={busy} onRequest={(type, label) => void request(type, label)} />
+        ))}
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {options.map((option) => {
-          const existing = open.find((item) => item.type === option.type);
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.type}
-              type="button"
-              disabled={!active || busy !== null || Boolean(existing)}
-              onClick={() => void request(option.type)}
-              className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-background px-2 py-3 text-xs font-semibold transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-55"
-            >
-              <Icon className="h-5 w-5" />
-              {existing ? (existing.status === "acknowledged" ? "On the way" : "Requested") : busy === option.type ? "Sending…" : option.label}
-            </button>
-          );
-        })}
-      </div>
+        <button
+          type="button"
+          disabled={addItemsDisabled}
+          onClick={onAddItems}
+          className="flex min-h-16 flex-[1.15] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-accent px-1 py-2 text-[11px] font-semibold text-white shadow-[0_8px_20px_rgba(255,75,36,0.28)] transition-transform hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40"
+        >
+          <PlusIcon className="h-5 w-5" />
+          <span className="leading-none">Add Item</span>
+        </button>
 
-      {message && <p role="status" className="mt-3 text-sm text-text-muted">{message}</p>}
-    </Card>
+        <ServiceButton option={billOption} existing={open.find((item) => item.type === billOption.type)} active={active} busy={busy} onRequest={(type, label) => void request(type, label)} />
+      </div>
+    </nav>
   );
 }
