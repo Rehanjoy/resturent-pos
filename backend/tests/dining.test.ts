@@ -209,6 +209,15 @@ describe("Chair dining, kitchen and counter settlement", () => {
     ]);
     expect(results.filter(r => r.status === "fulfilled")).toHaveLength(1);
   });
+  it("does not bump the floor revision on read-only session/seating polls", async () => {
+    const { restaurantId, table } = await setup();
+    const hold = await dining.holdSeats(restaurantId, { partySize: 1, seats: [{ tableId: table.id, chairNumber: 1 }], customer: { name: "Aarav", phone: "9876543210" } });
+    const before = (await DiningFloor.findOne({ restaurantId }).lean())!.revision;
+    await dining.getSession(restaurantId, hold.sessionToken);
+    await dining.listSeating(restaurantId);
+    const after = (await DiningFloor.findOne({ restaurantId }).lean())!.revision;
+    expect(after).toBe(before);
+  });
   it("validates public requests, isolates sessions by tenant and guards staff policy", async () => {
     const { restaurantId, table, user } = await setup();
     const app = createApp();

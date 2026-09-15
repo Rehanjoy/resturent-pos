@@ -52,6 +52,18 @@ async function readFloor(restaurantId: string) {
   }
   return (await DiningFloor.findOne({ restaurantId }).lean())!;
 }
+/** Read-only equivalent of `changeFloor(restaurantId, f => f)`, for polled
+ * reads (guest session refresh, seating list) that outnumber writes many
+ * times over. Applies the same in-memory `expire()` so callers see accurate
+ * held-session state, but skips the revision-incrementing `updateOne` —
+ * that write only matters when something is actually changing, and every
+ * real mutation already re-reads and persists through `changeFloor`. */
+async function peekFloor(restaurantId: string) {
+  const floor = await readFloor(restaurantId);
+  floor.tableBlocks ??= {};
+  expire(floor);
+  return floor;
+}
 /** No process-local lock: a revision predicate serializes competing terminals,
  * including multi-table groups, on standalone MongoDB and replica sets alike. */
 export async function changeFloor<T>(restaurantId: string, change: (floor: DiningFloorDocument) => T | Promise<T>): Promise<T> {
@@ -80,7 +92,7 @@ export async function resolveQr(qrToken: string) {
   return { restaurantId: table.restaurantId.toString(), tableId: table._id.toString(), tableName: table.name, chairNumber: chair ? Number(chair) : null };
 }
 export async function listSeating(restaurantId: string) {
-  const floor = await changeFloor(restaurantId, f => f);
+  const floor = await peekFloor(restaurantId);
   const [tables, areas] = await Promise.all([Table.find({ restaurantId }).sort({ name: 1 }).lean(), Area.find({ restaurantId }).lean()]);
   const sessions = floor.sessions.filter(s => active(s));
   return {
@@ -145,7 +157,7 @@ export async function holdSeats(restaurantId: string, input: { partySize: number
   return { sessionToken: token, session: sessionDto(session), serverNow: new Date().toISOString() };
 }
 async function authenticateSession(restaurantId: string, token: string) {
-  const floor = await changeFloor(restaurantId, f => f);
+  const floor = await peekFloor(restaurantId);
   const tokenHash = hash(token);
   const session = floor.sessions.find(s => safeHashEquals(s.tokenHash, tokenHash));
   if (!session) throw new AppError("Dining session not found. Scan your chair QR again.", 401, "DINING_SESSION_INVALID");
