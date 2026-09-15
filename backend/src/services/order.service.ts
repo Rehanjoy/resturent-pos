@@ -542,7 +542,7 @@ export async function serveOrder(
   const dto = toOrderDto(order);
   emitToRestaurant(restaurantId, "order:updated", { order: dto });
   const table = await Table.findOne({ _id: order.tableId, restaurantId }).select("name").lean();
-  notifyOrderServed({ restaurantId, orderId: order.id, serveKey: [...servedIds].sort().join(":"), diningSessionId: order.diningSessionId, tableLabel: table?.name ?? "Table", seats: order.seats, itemCount: targets.reduce((sum, item) => sum + item.qty - (item.cancelledQty ?? 0), 0), allServed: order.status === "served" });
+  notifyOrderServed({ restaurantId, orderId: order.id, serveKey: [...servedIds].sort().join(":"), diningSessionId: order.diningSessionId, tableLabel: table?.name ?? "Table", seats: order.seats, items: targets.map((item) => ({ name: item.nameSnapshot, qty: item.qty - (item.cancelledQty ?? 0) })), itemCount: targets.reduce((sum, item) => sum + item.qty - (item.cancelledQty ?? 0), 0), allServed: order.status === "served" });
   return dto;
 }
 

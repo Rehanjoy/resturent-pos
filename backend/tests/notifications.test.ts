@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { Types } from "mongoose";
 import { Notification } from "../src/models/notification.model";
 import { User } from "../src/models/user.model";
 import {
@@ -7,6 +8,7 @@ import {
   listStaffNotifications,
   markGuestNotificationRead,
   markStaffNotificationRead,
+  notifyOrderServed,
   staffUnreadCounts,
 } from "../src/services/notification.service";
 import { clearTestDb, connectTestDb, disconnectTestDb } from "./utils/test-db";
@@ -73,5 +75,36 @@ describe("persistent operational notifications", () => {
     expect(guestPage.unreadCount).toBe(1);
     await markGuestNotificationRead(restaurant.id, "session-a", notificationId);
     expect((await listGuestNotifications(restaurant.id, "session-a", { limit: 30 })).unreadCount).toBe(0);
+  });
+
+  it("names served items in the guest-facing message, capped after four", async () => {
+    const restaurant = await createTestRestaurant();
+    notifyOrderServed({
+      restaurantId: restaurant.id,
+      orderId: new Types.ObjectId().toString(),
+      serveKey: "item-1:item-2",
+      diningSessionId: "session-served",
+      tableLabel: "T1",
+      items: [{ name: "Chicken Biryani", qty: 2 }, { name: "Chicken Chilli", qty: 1 }],
+      itemCount: 3,
+      allServed: false,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const partial = await Notification.findOne({ restaurantId: restaurant._id, targetDiningSessionId: "session-served" });
+    expect(partial?.message).toBe("2× Chicken Biryani, 1× Chicken Chilli served. Remaining items stay on the live tracker.");
+
+    notifyOrderServed({
+      restaurantId: restaurant.id,
+      orderId: new Types.ObjectId().toString(),
+      serveKey: "item-3:item-4:item-5:item-6:item-7",
+      diningSessionId: "session-served-full",
+      tableLabel: "T1",
+      items: [{ name: "Dish A", qty: 1 }, { name: "Dish B", qty: 1 }, { name: "Dish C", qty: 1 }, { name: "Dish D", qty: 1 }, { name: "Dish E", qty: 1 }],
+      itemCount: 5,
+      allServed: true,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const full = await Notification.findOne({ restaurantId: restaurant._id, targetDiningSessionId: "session-served-full" });
+    expect(full?.message).toBe("1× Dish A, 1× Dish B, 1× Dish C, 1× Dish D +1 more served. Your order is complete — open the menu to add more items.");
   });
 });

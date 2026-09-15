@@ -72,6 +72,31 @@ export function GuestNotificationCenter({
   const [error, setError] = useState<string | null>(null);
   const initialized = useRef(false);
   const seenIds = useRef(new Set<string>());
+  const dismissedStorageKey = `saffron-dining:dismissed:${qrToken}`;
+  // Per-device, not backend state: dismissing a notification on this phone must
+  // never hide it from another guest's device sharing the same table session.
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(dismissedStorageKey);
+      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  function dismiss(...ids: string[]) {
+    setDismissedIds((current) => {
+      const next = new Set(current);
+      for (const id of ids) next.add(id);
+      try {
+        // Cap stored history so this key doesn't grow unbounded over a long visit.
+        localStorage.setItem(dismissedStorageKey, JSON.stringify([...next].slice(-500)));
+      } catch { /* Dismissal still applies for this page session even if storage is unavailable. */ }
+      return next;
+    });
+  }
+
+  const visibleNotifications = notifications.filter((notification) => !dismissedIds.has(notification.id));
 
   const loadLatest = useCallback(async () => {
     try {
@@ -124,6 +149,10 @@ export function GuestNotificationCenter({
   }, [active, loadLatest]);
 
   async function markRead(notification: DiningNotification, runAction = false) {
+    // Dismissal is instant and local, independent of the backend read call below —
+    // it must disappear from this device's list even if that call fails or is slow.
+    dismiss(notification.id);
+
     if (notification.read) {
       if (runAction) {
         setOpen(false);
@@ -152,6 +181,9 @@ export function GuestNotificationCenter({
   }
 
   async function markAllRead() {
+    if (!visibleNotifications.length) return;
+    dismiss(...visibleNotifications.map((notification) => notification.id));
+
     const unread = notifications.filter((notification) => !notification.read);
     if (!unread.length) return;
     const results = await Promise.allSettled(
@@ -220,7 +252,7 @@ export function GuestNotificationCenter({
                 <p className="text-sm font-semibold">Live visit updates</p>
                 <p className="text-xs text-text-muted">Kitchen, payment and waiter activity in one place</p>
               </div>
-              {unreadCount > 0 && (
+              {visibleNotifications.length > 0 && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => void markAllRead()}>
                   Mark all read
                 </Button>
@@ -238,7 +270,7 @@ export function GuestNotificationCenter({
               <div role="status" className="space-y-3">
                 {[1, 2, 3].map((key) => <div key={key} className="h-24 animate-pulse rounded-2xl bg-muted" />)}
               </div>
-            ) : notifications.length === 0 ? (
+            ) : visibleNotifications.length === 0 ? (
               <div className="glass-panel rounded-2xl border-dashed p-8 text-center">
                 <CheckCircleIcon className="mx-auto h-8 w-8 text-success" />
                 <p className="mt-3 font-semibold">You’re all caught up</p>
@@ -246,7 +278,7 @@ export function GuestNotificationCenter({
               </div>
             ) : (
               <ol className="space-y-3" aria-label="Visit activity, newest first">
-                {notifications.map((notification) => {
+                {visibleNotifications.map((notification) => {
                   const NotificationIcon = categoryIcon(notification.category);
                   return (
                     <li key={notification.id}>

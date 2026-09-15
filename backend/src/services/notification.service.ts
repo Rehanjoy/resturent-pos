@@ -116,7 +116,14 @@ export function notifyTicketReady(input: { restaurantId: string; orderId: string
   });
 }
 
-export function notifyOrderServed(input: { restaurantId: string; orderId: string; serveKey: string; diningSessionId?: string; tableLabel: string; seats?: { chairNumber: number }[]; itemCount: number; allServed: boolean }) {
+function servedItemsSummary(items: { name: string; qty: number }[]) {
+  const shown = items.slice(0, 4);
+  const remaining = items.length - shown.length;
+  const list = shown.map((item) => `${item.qty}× ${item.name}`).join(", ");
+  return remaining > 0 ? `${list} +${remaining} more` : list;
+}
+
+export function notifyOrderServed(input: { restaurantId: string; orderId: string; serveKey: string; diningSessionId?: string; tableLabel: string; seats?: { chairNumber: number }[]; items: { name: string; qty: number }[]; itemCount: number; allServed: boolean }) {
   const context = { tableLabel: input.tableLabel, chairLabel: seatLabel(input.seats) };
   const servedBatch = createHash("sha256").update(input.serveKey).digest("hex").slice(0, 16);
   queueNotification({
@@ -125,12 +132,18 @@ export function notifyOrderServed(input: { restaurantId: string; orderId: string
     requiredModule: "orders", targetRoles: ["owner", "manager", "cashier", "server"], entity: { type: "order", id: input.orderId },
     actionUrl: "/admin/orders/active", context, dedupeKey: `order:${input.orderId}:served:${servedBatch}:staff`,
   });
-  if (input.diningSessionId) queueNotification({
-    restaurantId: input.restaurantId, category: "orders", eventType: "order_served", title: input.allServed ? "Order served" : `${input.itemCount} item${input.itemCount === 1 ? "" : "s"} served`,
-    message: input.allServed ? "Your order has been served. You can still open the menu to add more items." : "Part of your order was served. Remaining items stay on the live tracker.", priority: "info",
-    targetDiningSessionId: input.diningSessionId, entity: { type: "order", id: input.orderId }, context,
-    dedupeKey: `order:${input.orderId}:served:${servedBatch}:guest`,
-  });
+  if (input.diningSessionId) {
+    const summary = servedItemsSummary(input.items);
+    const guestMessage = input.allServed
+      ? `${summary} served. Your order is complete — open the menu to add more items.`
+      : `${summary} served. Remaining items stay on the live tracker.`;
+    queueNotification({
+      restaurantId: input.restaurantId, category: "orders", eventType: "order_served", title: input.allServed ? "Order served" : `${input.itemCount} item${input.itemCount === 1 ? "" : "s"} served`,
+      message: guestMessage.slice(0, 320), priority: "info",
+      targetDiningSessionId: input.diningSessionId, entity: { type: "order", id: input.orderId }, context,
+      dedupeKey: `order:${input.orderId}:served:${servedBatch}:guest`,
+    });
+  }
 }
 
 export function notifyServiceRequest(input: { restaurantId: string; requestId: string; sessionId: string; type: "water" | "bill" | "help"; status: "pending" | "acknowledged" | "completed"; assignedWaiterId?: string; tableLabel: string; seats?: { chairNumber: number }[] }) {
