@@ -15,7 +15,7 @@ function Card({
         // ring-foreground/10` — every card-like surface elsewhere in this
         // app already uses a literal `border border-border`, so this
         // matches that existing convention instead of adding a second one.
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-2xl border border-border bg-card py-(--card-spacing) text-sm text-card-foreground shadow-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl",
+        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-2xl border border-white/80 bg-card/88 py-(--card-spacing) text-sm text-card-foreground shadow-[0_10px_30px_rgba(86,43,25,0.07)] backdrop-blur-xl transition-[border-color,box-shadow] duration-200 [--card-spacing:--spacing(4)] hover:border-primary/15 hover:shadow-[0_16px_38px_rgba(86,43,25,0.10)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl",
         className
       )}
       {...props}

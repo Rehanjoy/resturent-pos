@@ -135,14 +135,14 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-full w-72 sm:w-80 shrink-0 flex-col border-r border-sidebar-border bg-surface text-sidebar-foreground shadow-2xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-24 lg:translate-x-0 lg:shadow-none ${
+        className={`glass-elevated fixed inset-y-0 left-0 z-50 flex h-full w-72 shrink-0 flex-col border-r border-white/80 text-sidebar-foreground transition-transform duration-300 ease-out sm:w-80 lg:sticky lg:top-0 lg:z-auto lg:m-3 lg:mr-0 lg:h-[calc(100vh-1.5rem)] lg:w-24 lg:translate-x-0 lg:rounded-[1.75rem] ${
           isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand Header */}
         <div className="flex items-center justify-between border-b border-sidebar-border/60 px-5 py-4 lg:border-b-0 lg:justify-center lg:px-2 lg:pt-5 lg:pb-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 transition-transform hover:scale-105">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white bg-gradient-to-br from-white to-primary/10 shadow-sm transition-transform hover:scale-105">
               {/* Plain <img> to avoid SVG optimizer restrictions */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-mark.svg" alt="Saffron" width={28} height={28} className="h-7 w-7" />
@@ -176,10 +176,10 @@ export function Sidebar({
                 title={item.label}
                 aria-current={isActive ? "page" : undefined}
                 onClick={closeMobileNav}
-                className={`group flex items-center gap-3.5 rounded-xl px-3.5 py-3 text-body font-medium transition-all duration-150 lg:flex-col lg:gap-1 lg:px-1 lg:py-2.5 lg:text-[11px] ${
+                className={`group flex min-h-12 items-center gap-3.5 rounded-xl px-3.5 py-3 text-body font-medium transition-all duration-200 lg:flex-col lg:gap-1 lg:px-1 lg:py-2.5 lg:text-[11px] ${
                   isActive
-                    ? "bg-primary text-white font-semibold shadow-sm shadow-primary/30"
-                    : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground active:scale-98"
+                    ? "bg-gradient-to-br from-primary to-accent font-semibold text-white shadow-[0_10px_24px_rgba(229,62,21,0.25)]"
+                    : "text-sidebar-muted hover:bg-white/70 hover:text-sidebar-foreground active:scale-[.98]"
                 }`}
               >
                 <Icon className={`h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-105 ${isActive ? "text-white" : "text-sidebar-muted group-hover:text-primary"}`} />
@@ -191,7 +191,7 @@ export function Sidebar({
 
         {/* Footer Profile & Logout */}
         <div className="border-t border-sidebar-border/80 p-3">
-          <div className="flex items-center gap-3 rounded-2xl bg-sidebar-hover/70 p-2.5 lg:flex-col lg:gap-2 lg:bg-transparent lg:p-0">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/55 p-2.5 shadow-sm backdrop-blur-xl lg:flex-col lg:gap-2 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
             <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-small font-bold text-primary ring-2 ring-primary/20">
               {initialsOf(user.name)}
               <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-success ring-2 ring-surface" title="Online" />

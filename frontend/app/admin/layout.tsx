@@ -69,14 +69,14 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="ambient-shell flex min-h-screen bg-transparent">
       <Sidebar
         user={user}
         onLogout={() => {
           void clearSession().then(() => router.push("/login"));
         }}
       />
-      <div className="flex min-h-screen flex-1 flex-col overflow-x-clip min-w-0">
+      <div className="min-w-0 flex min-h-screen flex-1 flex-col overflow-x-clip">
         <Topbar user={user} />
         <div className="flex-1">{children}</div>
       </div>

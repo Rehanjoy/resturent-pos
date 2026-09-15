@@ -141,3 +141,12 @@ PRD §9 names Jest specifically. `ts-jest` currently requires TypeScript `>=4.3 
 ## 5. What would block a production gate
 
 Nothing currently open blocks this gate — all automated tests pass and both apps build clean. The one open item carried forward is the manual UI walkthrough in §3, which should happen before Phase 8 (Deployment), not before Phase 7 (Security).
+
+## Premium responsive UI verification (2026-09-15)
+
+- Frontend TypeScript (`tsc --noEmit`): passed.
+- Targeted ESLint for all redesigned pages and shared components: passed with no source warnings.
+- Next.js production build: passed; 21 routes generated.
+- Desktop browser visual QA: landing and login hierarchy, focusable navigation, glass surfaces and content flow verified.
+- Responsive visual QA: 500x900 phone-class and 820x1180 tablet captures verified without horizontal overflow; navigation, hero CTAs, menu preview and operations panel adapt correctly.
+- Accessibility: semantic landmarks/headings, labelled navigation, 44px touch targets, reduced motion, reduced transparency fallback, keyboard focus and readable solid fallbacks retained.

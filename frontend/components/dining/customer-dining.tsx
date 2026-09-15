@@ -44,8 +44,8 @@ function DiningHeader({
   notifications?: ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-surface/95 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-30 px-2 pt-2 sm:px-4 sm:pt-3">
+      <div className="glass-panel mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-2xl px-3 py-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <Image src="/logo-mark.svg" alt="" width={38} height={38} />
           <div className="min-w-0">
@@ -313,7 +313,7 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
   }
 
   return (
-    <main className="min-h-dvh bg-background text-text">
+    <main className="ambient-shell min-h-dvh bg-transparent text-text">
       <Toaster position="top-center" />
 
       <DiningHeader

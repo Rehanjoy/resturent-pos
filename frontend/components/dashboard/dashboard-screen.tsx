@@ -82,7 +82,7 @@ export function DashboardScreen() {
     <main className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
       <PageHeader title="Dashboard" subtitle={`${todayLabel} · Live restaurant intelligence`} />
 
-      <div role="tablist" aria-label="Dashboard analysis" className="grid gap-2 rounded-2xl border border-border bg-surface p-2 shadow-sm sm:grid-cols-3">
+      <div role="tablist" aria-label="Dashboard analysis" className="glass-panel grid gap-2 rounded-2xl p-2 sm:grid-cols-3">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const selected = activeTab === tab.id;
@@ -95,7 +95,7 @@ export function DashboardScreen() {
               aria-controls={`dashboard-panel-${tab.id}`}
               aria-selected={selected}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex min-h-14 items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${selected ? "bg-primary text-white shadow-sm" : "text-text hover:bg-background"}`}
+              className={`flex min-h-14 items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${selected ? "bg-gradient-to-br from-primary to-accent text-white shadow-[0_10px_24px_rgba(229,62,21,.22)]" : "text-text hover:bg-white/65"}`}
             >
               <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${selected ? "bg-white/15" : "bg-primary/10 text-primary"}`}>
                 <Icon className="h-5 w-5" />

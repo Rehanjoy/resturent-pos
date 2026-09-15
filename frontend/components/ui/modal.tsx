@@ -39,7 +39,7 @@ export function Modal({
   }, []);
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[#211916]/55 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
       role="presentation"
     >
@@ -53,7 +53,7 @@ export function Modal({
         // once.
         ref={dialogRef}
         tabIndex={-1}
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-y-auto rounded-t-3xl border border-border bg-surface p-5 pb-8 shadow-xl outline-none sm:rounded-3xl sm:p-6"
+        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-y-auto glass-elevated rounded-t-3xl border border-white/85 p-5 pb-[max(2rem,env(safe-area-inset-bottom))] outline-none sm:rounded-3xl sm:p-6"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -65,7 +65,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-background text-text-muted hover:text-text"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/60 text-text-muted shadow-sm hover:bg-white hover:text-text"
           >
             &#x2715;
           </button>

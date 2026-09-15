@@ -201,7 +201,7 @@ export function GuestNotificationCenter({
         size="sm"
         onClick={() => setOpen(true)}
         aria-label={unreadCount > 0 ? `Activity, ${unreadCount} unread updates` : "Activity"}
-        className="relative gap-2 bg-white"
+        className="relative gap-2 border-white/85 bg-white/68 shadow-sm backdrop-blur-xl"
       >
         <BellIcon className="h-4 w-4" />
         <span className="hidden sm:inline">Activity</span>
@@ -228,7 +228,7 @@ export function GuestNotificationCenter({
             </div>
 
             {error && (
-              <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-error">
+              <div role="alert" className="glass-panel rounded-2xl border-error/20 p-3 text-sm text-error">
                 {error}
                 <button type="button" onClick={() => void loadLatest()} className="ml-2 font-semibold underline">Retry</button>
               </div>
@@ -239,7 +239,7 @@ export function GuestNotificationCenter({
                 {[1, 2, 3].map((key) => <div key={key} className="h-24 animate-pulse rounded-2xl bg-muted" />)}
               </div>
             ) : notifications.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+              <div className="glass-panel rounded-2xl border-dashed p-8 text-center">
                 <CheckCircleIcon className="mx-auto h-8 w-8 text-success" />
                 <p className="mt-3 font-semibold">You’re all caught up</p>
                 <p className="mt-1 text-sm text-text-muted">Order and service updates will appear here.</p>
@@ -253,7 +253,7 @@ export function GuestNotificationCenter({
                       <button
                         type="button"
                         onClick={() => void markRead(notification, true)}
-                        className={`relative flex min-h-24 w-full items-start gap-3 rounded-2xl border p-3 text-left transition hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${notificationTone(notification)}`}
+                        className={`relative flex min-h-24 w-full items-start gap-3 rounded-2xl border p-3 text-left shadow-sm backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${notificationTone(notification)}`}
                       >
                         <span className="mt-0.5 rounded-xl bg-white p-2 shadow-sm"><NotificationIcon className="h-5 w-5" /></span>
                         <span className="min-w-0 flex-1">

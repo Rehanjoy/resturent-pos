@@ -115,7 +115,7 @@ export function GuestMenu({ context, cart, busy, onCustomize, onReview }: { cont
         </section>
 
         <aside className="hidden lg:block">
-          <Card className="sticky top-6 rounded-3xl p-5">
+          <Card className="glass-elevated sticky top-24 rounded-3xl p-5">
             <h2 className="font-heading text-lg font-semibold">Your order</h2>
             <div className="mt-4 space-y-3">
               {cart.length ? (
@@ -141,7 +141,7 @@ export function GuestMenu({ context, cart, busy, onCustomize, onReview }: { cont
         </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 rounded-t-3xl border-t border-border bg-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden">
+      <div className="glass-elevated fixed inset-x-2 bottom-2 z-20 rounded-3xl border border-white/85 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] lg:hidden">
         <Button
           type="button"
           variant="accent"

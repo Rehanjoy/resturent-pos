@@ -93,7 +93,7 @@ export function Topbar({ user }: { user: AuthUser }) {
   const toggleMobileNav = useUiStore((state) => state.toggleMobileNav);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/80 bg-surface/90 backdrop-blur-md px-3 sm:gap-4 sm:px-6">
+    <header className="glass-panel sticky top-0 z-30 mx-2 mt-2 flex h-16 shrink-0 items-center justify-between gap-2 rounded-2xl px-3 sm:mx-4 sm:mt-3 sm:gap-4 sm:px-5 lg:mx-5">
       {/* Left side: Mobile Brand & Hamburger / Desktop Search */}
       <div className="flex items-center gap-2.5 sm:gap-3 flex-1 max-w-lg">
         {/* Hamburger + Brand on mobile (< lg) */}
@@ -121,7 +121,7 @@ export function Topbar({ user }: { user: AuthUser }) {
             name="q"
             placeholder="Find a table, dish, or bill…"
             aria-label="Find a table, dish, or bill, press Enter to search"
-            className="w-full rounded-xl border border-border/80 bg-background/70 py-2 pl-9 pr-12 text-small text-text placeholder:text-text-muted/80 transition-all focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/15"
+            className="w-full rounded-xl border border-white/85 bg-white/62 py-2 pl-9 pr-12 text-small text-text shadow-sm backdrop-blur-xl placeholder:text-text-muted/80 transition-all focus:border-primary/50 focus:bg-white/92 focus:outline-none focus:ring-2 focus:ring-primary/15"
           />
           <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden select-none rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-text-muted md:inline-flex">
             /

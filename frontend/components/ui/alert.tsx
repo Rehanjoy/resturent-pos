@@ -9,16 +9,16 @@ import { cn } from "cn"
  * brand kit's own contrast notes call out white-on-warning as sub-AA.
  */
 const alertVariants = cva(
-  "group/alert relative grid w-full gap-0.5 rounded-2xl border px-4 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
+  "group/alert relative grid w-full gap-1 rounded-2xl border px-4 py-3.5 text-left text-sm shadow-[0_10px_28px_rgba(86,43,25,.06)] backdrop-blur-xl has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-surface text-text border-border",
+        default: "border-white/85 bg-white/72 text-text",
         destructive:
-          "bg-destructive/5 text-destructive border-destructive/20 *:data-[slot=alert-description]:text-destructive/90",
-        warning: "bg-warning/10 text-text border-warning/30 *:data-[slot=alert-description]:text-text/80",
-        success: "bg-success/10 text-success border-success/20 *:data-[slot=alert-description]:text-success/90",
-        info: "bg-info/10 text-info border-info/20 *:data-[slot=alert-description]:text-info/90",
+          "border-destructive/20 bg-white/82 text-destructive *:data-[slot=alert-description]:text-destructive/90",
+        warning: "border-warning/30 bg-white/82 text-text *:data-[slot=alert-description]:text-text/80",
+        success: "border-success/20 bg-white/82 text-success *:data-[slot=alert-description]:text-success/90",
+        info: "border-info/20 bg-white/82 text-info *:data-[slot=alert-description]:text-info/90",
       },
     },
     defaultVariants: {

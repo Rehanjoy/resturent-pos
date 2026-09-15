@@ -37,21 +37,23 @@ export function LoginCard() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-sm">
+    <div className="glass-elevated w-full max-w-md rounded-[2rem] p-6 sm:p-8">
       <div className="mb-6 flex flex-col items-center">
-        <Image src="/logo-mark.svg" alt="" width={48} height={48} />
-        <p className="mt-2 font-heading text-xl font-semibold text-text">Saffron</p>
-        <p className="text-small text-text-muted">Restaurant POS &amp; Management</p>
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white bg-gradient-to-br from-white to-primary/10 shadow-[0_12px_28px_rgba(86,43,25,0.12)]">
+          <Image src="/logo-mark.svg" alt="" width={42} height={42} />
+        </span>
+        <p className="mt-4 font-heading text-2xl font-semibold tracking-tight text-text">Welcome to Saffron</p>
+        <p className="mt-1 text-center text-small text-text-muted">Secure access to your restaurant workspace</p>
       </div>
 
       {step.kind === "credentials" ? (
         <>
-          <div className="mb-6 flex overflow-hidden rounded-md border border-border">
+          <div className="mb-6 grid grid-cols-2 rounded-2xl border border-white/80 bg-white/50 p-1 shadow-inner">
             <button
               type="button"
               onClick={() => setMethod("password")}
               className={`flex-1 py-2 text-small font-medium ${
-                method === "password" ? "bg-background text-text" : "text-text-muted"
+                method === "password" ? "rounded-xl bg-white text-primary shadow-sm" : "rounded-xl text-text-muted hover:text-text"
               }`}
             >
               Password Login
@@ -60,7 +62,7 @@ export function LoginCard() {
               type="button"
               onClick={() => setMethod("pin")}
               className={`flex-1 py-2 text-small font-medium ${
-                method === "pin" ? "bg-background text-text" : "text-text-muted"
+                method === "pin" ? "rounded-xl bg-white text-primary shadow-sm" : "rounded-xl text-text-muted hover:text-text"
               }`}
             >
               PIN Quick Login

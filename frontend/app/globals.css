@@ -38,6 +38,15 @@
   --color-text-muted: #706b69;
   --color-border: #eee7e4;
 
+  /* Premium surface system: warm glass keeps the restaurant character
+   * while preserving strong contrast for operational screens. */
+  --color-canvas-deep: #f8e8e2;
+  --color-glass: rgba(255, 255, 255, 0.72);
+  --color-glass-strong: rgba(255, 255, 255, 0.9);
+  --color-glass-border: rgba(255, 255, 255, 0.82);
+  --shadow-soft: 0 12px 34px rgba(86, 43, 25, 0.08);
+  --shadow-float: 0 22px 60px rgba(86, 43, 25, 0.14);
+
   /* Semantic (also drives KDS ticket urgency: success -> warning -> error) */
   --color-success: #15803d;
   --color-warning: #d97706;
@@ -186,10 +195,53 @@
 }
 
 body {
-  background-color: var(--color-bg);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 8% -10%, rgba(255, 126, 86, 0.16), transparent 32rem),
+    radial-gradient(circle at 96% 2%, rgba(31, 122, 140, 0.09), transparent 28rem),
+    linear-gradient(155deg, var(--color-bg) 0%, #fffaf8 46%, var(--color-canvas-deep) 125%);
+  background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-inter), "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
 }
+
+::selection { background: color-mix(in srgb, var(--color-primary) 22%, white); color: var(--color-text); }
+
+/* Selective glass utilities. Use these for chrome, dialogs and priority
+ * surfaces; dense data rows intentionally remain opaque. */
+.glass-panel {
+  border: 1px solid var(--color-glass-border);
+  background: var(--color-glass);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+.glass-elevated {
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  background: var(--color-glass-strong);
+  box-shadow: var(--shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+.ambient-shell { position: relative; isolation: isolate; }
+.ambient-shell::before,
+.ambient-shell::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: .18;
+  pointer-events: none;
+}
+.ambient-shell::before { left: -9rem; top: 14%; background: var(--color-primary); }
+.ambient-shell::after { bottom: -10rem; right: -8rem; background: var(--color-secondary); }
+.interactive-lift { transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+.interactive-lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-soft); }
+.interactive-lift:active { transform: translateY(0); }
 
 button:not(:disabled), a, select { cursor: pointer; }
 button, input, select, textarea, a { -webkit-tap-highlight-color: transparent; }
@@ -201,6 +253,16 @@ input, select, textarea { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-panel, .glass-elevated {
+    background: var(--color-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-panel, .glass-elevated { background: rgba(255, 255, 255, 0.97); }
 }
 @layer base {
   * {
@@ -233,4 +295,4 @@ input, select, textarea { min-height: 44px; }
 .no-scrollbar {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
-}
+}

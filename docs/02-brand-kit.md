@@ -145,6 +145,22 @@ The audience is restaurant owners, cashiers, servers, and kitchen staff — most
 
 ---
 
+### Premium glass surface system
+
+Glass is a structural material for navigation, dialogs, notification drawers, toasts, and focused action surfaces. Operational rows and dense reports remain opaque for fast scanning.
+
+| Token | Value | Use |
+|---|---|---|
+| Canvas deep | `#F8E8E2` | Warm lower layer in the ambient page gradient. |
+| Glass | `rgba(255,255,255,0.72)` | Navigation and light floating controls. |
+| Glass strong | `rgba(255,255,255,0.90)` | Dialogs, drawers, login and priority overlays. |
+| Glass border | `rgba(255,255,255,0.82)` | Highlight edge that keeps translucent surfaces legible. |
+| Soft shadow | `0 12px 34px rgba(86,43,25,0.08)` | Cards and low elevation controls. |
+| Float shadow | `0 22px 60px rgba(86,43,25,0.14)` | Modals and attention surfaces. |
+
+Use `backdrop-filter` with a solid white fallback. Respect `prefers-reduced-transparency` and `prefers-reduced-motion`. Touch targets remain at least 44px and text continues to use the established contrast-safe palette.
+
+---
 ## 5. Traceability to source docs
 
 - Coral palette range, card UI, soft shadows, rounded corners: `01-product-brief.md` §2 (client-supplied reference screenshot).
