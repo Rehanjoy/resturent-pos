@@ -99,6 +99,7 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [customer, setCustomer] = useState<DiningCustomer | null>(null);
+  const [rememberedCustomer, setRememberedCustomer] = useState<DiningCustomer | null>(null);
   const [now, setNow] = useState(0);
   const clockOffset = useRef(0);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -107,6 +108,7 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
   const [view, setView] = useState<"menu" | "order">("menu");
   const orderKey = useRef<string | null>(null);
   const storageKey = `saffron-dining:${qrToken}`;
+  const guestKey = (restaurantId: string) => `saffron-dining:guest:${restaurantId}`;
 
   const syncClock = useCallback((serverNow: string) => {
     clockOffset.current = Date.parse(serverNow) - Date.now();
@@ -125,6 +127,16 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
       const nextContext = await diningApi.context(qrToken);
       setContext(nextContext);
       syncClock(nextContext.serverNow);
+
+      try {
+        const savedGuest = localStorage.getItem(guestKey(nextContext.restaurant.id));
+        if (savedGuest) {
+          const parsed = JSON.parse(savedGuest) as Partial<DiningCustomer>;
+          if (typeof parsed.name === "string" && typeof parsed.phone === "string") {
+            setRememberedCustomer({ name: parsed.name, phone: parsed.phone });
+          }
+        }
+      } catch { /* A returning guest just re-enters their details. */ }
 
       let savedToken: string | null = null;
       try { savedToken = localStorage.getItem(storageKey); } catch { /* Session remains usable when storage is unavailable. */ }
@@ -182,6 +194,13 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
     }, 5000);
     return () => { active = false; window.clearInterval(poll); };
   }, [qrToken, token, busy, syncClock]);
+
+  function confirmIdentity(value: DiningCustomer) {
+    setCustomer(value);
+    if (context) {
+      try { localStorage.setItem(guestKey(context.restaurant.id), JSON.stringify(value)); } catch { /* Next visit just asks again. */ }
+    }
+  }
 
   const reserve: Parameters<typeof SeatSelection>[0]["onReserve"] = async (partySize, seats, bookingMode) => {
     if (!customer) return;
@@ -384,7 +403,7 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
             <p className="mt-3 text-sm text-text-muted">Your reservation is saved on this device. Check your connection and tap Retry to reopen it.</p>
           </Card>
         ) : !session && !customer ? (
-          <GuestIdentity onContinue={setCustomer} />
+          <GuestIdentity onContinue={confirmIdentity} savedCustomer={rememberedCustomer} />
         ) : !session ? (
           <SeatSelection context={context} busy={busy} onReserve={reserve} />
         ) : (
@@ -441,13 +460,7 @@ export function CustomerDining({ qrToken }: { qrToken: string }) {
       </div>
 
       {footerVisible && token && (
-        <GuestService
-          qrToken={qrToken}
-          token={token}
-          active={!expired}
-          onAddItems={() => setView("menu")}
-          addItemsDisabled={addItemsDisabled}
-        />
+        <GuestService qrToken={qrToken} token={token} active={!expired} />
       )}
 
       {customize && !expired && (

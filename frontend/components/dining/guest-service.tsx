@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { diningApi } from "@/lib/dining/api";
 import type { ServiceRequest, ServiceRequestType } from "@/lib/dining/types";
-import { HelpIcon, PlusIcon, ReceiptIcon, WaterIcon, type IconProps } from "@/components/icons";
+import { HelpIcon, ReceiptIcon, WaterIcon, type IconProps } from "@/components/icons";
 
 const leadingServiceOptions: { type: ServiceRequestType; icon: (props: IconProps) => React.ReactElement; label: string; sentLabel: string }[] = [
   { type: "help", icon: HelpIcon, label: "Call Waiter", sentLabel: "Requested" },
@@ -40,11 +40,12 @@ function ServiceButton({ option, existing, active, busy, onRequest }: {
 
 /**
  * Fixed mobile-app-style bottom nav for the active dining visit: Call
- * Waiter, Water, Add Item, Bill. Replaces the earlier inline "Need
- * something?" card — same `diningApi.requestService` plumbing, restyled as
- * a persistent footer so it never scrolls out of reach.
+ * Waiter, Water, Bill. Replaces the earlier inline "Need something?" card —
+ * same `diningApi.requestService` plumbing, restyled as a persistent footer
+ * so it never scrolls out of reach. "Add Item" lives in the header instead,
+ * so it isn't duplicated here.
  */
-export function GuestService({ qrToken, token, active, onAddItems, addItemsDisabled }: { qrToken: string; token: string; active: boolean; onAddItems: () => void; addItemsDisabled: boolean }) {
+export function GuestService({ qrToken, token, active }: { qrToken: string; token: string; active: boolean }) {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [busy, setBusy] = useState<ServiceRequestType | null>(null);
 
@@ -87,16 +88,6 @@ export function GuestService({ qrToken, token, active, onAddItems, addItemsDisab
         {leadingServiceOptions.map((option) => (
           <ServiceButton key={option.type} option={option} existing={open.find((item) => item.type === option.type)} active={active} busy={busy} onRequest={(type, label) => void request(type, label)} />
         ))}
-
-        <button
-          type="button"
-          disabled={addItemsDisabled}
-          onClick={onAddItems}
-          className="flex min-h-16 flex-[1.15] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-accent px-1 py-2 text-[11px] font-semibold text-white shadow-[0_8px_20px_rgba(255,75,36,0.28)] transition-transform hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-40"
-        >
-          <PlusIcon className="h-5 w-5" />
-          <span className="leading-none">Add Item</span>
-        </button>
 
         <ServiceButton option={billOption} existing={open.find((item) => item.type === billOption.type)} active={active} busy={busy} onRequest={(type, label) => void request(type, label)} />
       </div>

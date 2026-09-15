@@ -8,10 +8,32 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export function GuestIdentity({ onContinue }: { onContinue: (customer: DiningCustomer) => void }) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+export function GuestIdentity({ onContinue, savedCustomer }: { onContinue: (customer: DiningCustomer) => void; savedCustomer?: DiningCustomer | null }) {
+  const [editing, setEditing] = useState(!savedCustomer);
+  const [name, setName] = useState(savedCustomer?.name ?? "");
+  const [phone, setPhone] = useState(savedCustomer?.phone ?? "");
   const [error, setError] = useState("");
+
+  if (savedCustomer && !editing) {
+    const firstName = savedCustomer.name.split(" ")[0];
+    return (
+      <Card className="mx-auto max-w-lg rounded-3xl p-6 text-center sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Welcome back</p>
+        <h1 className="mt-3 font-heading text-3xl font-semibold">Good to see you, {firstName}.</h1>
+        <p className="mt-3 text-sm leading-relaxed text-text-muted">We remembered your details from last time — no need to type them again.</p>
+        <Button type="button" variant="default" size="lg" className="mt-6 w-full" onClick={() => onContinue(savedCustomer)}>
+          Continue as {firstName} <span aria-hidden="true">→</span>
+        </Button>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-4 text-sm font-medium text-text-muted underline underline-offset-2 hover:text-primary"
+        >
+          Not you? Enter different details
+        </button>
+      </Card>
+    );
+  }
 
   return (
     <Card className="mx-auto max-w-lg rounded-3xl p-6 sm:p-8">
