@@ -4,7 +4,6 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { authApi } from "./api";
 import {
   getAccessToken,
-  getStoredUser,
   onSessionExpired,
   setAccessToken,
   setStoredUser,

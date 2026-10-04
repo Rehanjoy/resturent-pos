@@ -23,6 +23,14 @@ function userRoom(restaurantId: string, userId: string): string {
   return `user:${restaurantId}:${userId}`;
 }
 
+function roleRoom(restaurantId: string, role: string): string {
+  return `role:${restaurantId}:${role}`;
+}
+
+function userRoom(restaurantId: string, userId: string): string {
+  return `user:${restaurantId}:${userId}`;
+}
+
 /**
  * Socket.io setup attached to the shared HTTP server. Every client
  * authenticates with the same JWT access token used for REST calls (sent
@@ -93,12 +101,12 @@ export function emitToRestaurant(
   const roles = event.startsWith("inventory:")
     ? ["owner", "manager", "inventory_manager", "chef"]
     : event.startsWith("service:")
-    ? ["owner", "manager", "cashier", "server"]
-    : event.startsWith("whatsapp:")
-      ? ["owner", "manager"]
-      : event.startsWith("order:") || event.startsWith("kitchen:") || event.startsWith("dining:") || event.startsWith("table:")
-        ? operationalRoles
-        : null;
+      ? ["owner", "manager", "cashier", "server"]
+      : event.startsWith("whatsapp:")
+        ? ["owner", "manager"]
+        : event.startsWith("order:") || event.startsWith("kitchen:") || event.startsWith("dining:") || event.startsWith("table:")
+          ? operationalRoles
+          : null;
   if (roles) {
     ioInstance.to(roles.map((role) => roleRoom(restaurantId, role))).emit(event, payload);
     return;

@@ -36,6 +36,7 @@ const NAV_ITEMS: {
   roles: AuthUser["role"][] | null;
   icon: (props: IconProps) => React.ReactElement;
 }[] = [
+<<<<<<< HEAD
     { href: "/admin", label: "Dashboard", module: "dashboard", roles: ["owner", "manager", "cashier"], icon: DashboardIcon },
     { href: "/admin/customers", label: "Customers", module: "customers", roles: ["owner", "manager", "cashier", "server"], icon: StaffIcon },
     {
@@ -93,6 +94,65 @@ const NAV_ITEMS: {
     { href: "/admin/marketing", label: "Marketing", module: "marketing", roles: ["owner", "manager"], icon: MegaphoneIcon },
     { href: "/admin/settings", label: "Settings", module: "settings", roles: ["owner", "manager"], icon: SettingsIcon },
   ];
+=======
+  { href: "/admin", label: "Dashboard", module: "dashboard", roles: ["owner", "manager", "cashier"], icon: DashboardIcon },
+  { href: "/admin/customers", label: "Customers", module: "customers", roles: ["owner", "manager", "cashier", "server"], icon: StaffIcon },
+  {
+    href: "/admin/tables",
+    label: "Tables",
+    module: "tables",
+    roles: ["owner", "manager", "cashier", "server"],
+    icon: TableIcon,
+  },
+  {
+    href: "/admin/reservations",
+    label: "Reservations",
+    module: "reservations",
+    roles: ["owner", "manager", "cashier", "server"],
+    icon: CalendarIcon,
+  },
+  {
+    href: "/admin/orders/active",
+    label: "Orders",
+    module: "orders",
+    roles: ["owner", "manager", "cashier", "server", "chef"],
+    icon: OrdersIcon,
+  },
+  {
+    href: "/admin/kitchen",
+    label: "Kitchen",
+    module: "kitchen",
+    roles: ["owner", "manager", "cashier", "server", "chef"],
+    icon: KitchenIcon,
+  },
+  { href: "/admin/menu", label: "Menu", module: "menu", roles: null, icon: MenuBookIcon },
+  {
+    href: "/admin/inventory",
+    label: "Inventory",
+    module: "inventory",
+    roles: ["owner", "manager", "inventory_manager", "chef"],
+    icon: BoxIcon,
+  },
+  {
+    href: "/admin/invoices",
+    label: "Bills",
+    module: "bills",
+    roles: ["owner", "manager", "cashier"],
+    icon: ReceiptIcon,
+  },
+  {
+    href: "/admin/reports",
+    label: "Reports",
+    module: "reports",
+    roles: ["owner", "manager", "cashier"],
+    icon: ReportsIcon,
+  },
+  { href: "/admin/staff", label: "Staff", module: "staff", roles: ["owner", "manager"], icon: StaffIcon },
+  { href: "/admin/website", label: "Website", module: "website", roles: ["owner", "manager"], icon: GlobeIcon },
+  { href: "/admin/marketing", label: "Marketing", module: "marketing", roles: ["owner", "manager"], icon: MegaphoneIcon },
+  { href: "/admin/settings", label: "Settings", module: "settings", roles: ["owner", "manager"], icon: SettingsIcon },
+];
+>>>>>>> e32e8e8cc7857ca3904093728822431d90638348
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -135,8 +195,14 @@ export function Sidebar({
       )}
 
       <aside
+<<<<<<< HEAD
         className={`glass-elevated fixed inset-y-0 left-0 z-50 flex h-full w-72 shrink-0 flex-col border-r border-white/80 text-sidebar-foreground transition-transform duration-300 ease-out sm:w-80 lg:sticky lg:top-0 lg:z-auto lg:m-3 lg:mr-0 lg:h-[calc(100vh-1.5rem)] lg:w-60 lg:translate-x-0 xl:w-64 lg:rounded-[1.75rem] ${isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
           }`}
+=======
+        className={`glass-elevated fixed inset-y-0 left-0 z-50 flex h-full w-72 shrink-0 flex-col border-r border-white/80 text-sidebar-foreground transition-transform duration-300 ease-out sm:w-80 lg:sticky lg:top-0 lg:z-auto lg:m-3 lg:mr-0 lg:h-[calc(100vh-1.5rem)] lg:w-60 lg:translate-x-0 xl:w-64 lg:rounded-[1.75rem] ${
+          isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+>>>>>>> e32e8e8cc7857ca3904093728822431d90638348
       >
         {/* Brand Header */}
         <div className="flex items-center justify-between border-b border-sidebar-border/60 px-5 py-4 lg:px-4 lg:py-4">
@@ -147,7 +213,11 @@ export function Sidebar({
               <img src="/logo-mark.svg" alt="QRWIK-POS" width={28} height={28} className="h-7 w-7" />
             </div>
             <div className="min-w-0 leading-tight">
+<<<<<<< HEAD
               <p className="font-heading text-h4 font-bold tracking-tight text-sidebar-foreground">QRWIK-POS</p>
+=======
+              <p className="font-heading text-h4 font-bold tracking-tight text-sidebar-foreground">Saffron POS</p>
+>>>>>>> e32e8e8cc7857ca3904093728822431d90638348
               <p className="text-[11px] font-medium tracking-wide text-sidebar-muted">
                 Restaurant OS
               </p>
@@ -175,10 +245,18 @@ export function Sidebar({
                 title={item.label}
                 aria-current={isActive ? "page" : undefined}
                 onClick={closeMobileNav}
+<<<<<<< HEAD
                 className={`group flex min-h-12 items-center gap-3.5 rounded-xl px-3.5 py-3 text-body font-medium transition-all duration-200 lg:gap-3 lg:px-3 lg:py-2.5 lg:text-small ${isActive
                     ? "bg-gradient-to-br from-primary to-accent font-semibold text-white shadow-[0_10px_24px_rgba(229,62,21,0.25)]"
                     : "text-sidebar-muted hover:bg-white/70 hover:text-sidebar-foreground active:scale-[.98]"
                   }`}
+=======
+                className={`group flex min-h-12 items-center gap-3.5 rounded-xl px-3.5 py-3 text-body font-medium transition-all duration-200 lg:gap-3 lg:px-3 lg:py-2.5 lg:text-small ${
+                  isActive
+                    ? "bg-gradient-to-br from-primary to-accent font-semibold text-white shadow-[0_10px_24px_rgba(229,62,21,0.25)]"
+                    : "text-sidebar-muted hover:bg-white/70 hover:text-sidebar-foreground active:scale-[.98]"
+                }`}
+>>>>>>> e32e8e8cc7857ca3904093728822431d90638348
               >
                 <Icon className={`h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-105 ${isActive ? "text-white" : "text-sidebar-muted group-hover:text-primary"}`} />
                 <span className="min-w-0 truncate leading-tight">{item.label}</span>
