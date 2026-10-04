@@ -82,6 +82,45 @@ function ConnectionStatus() {
   );
 }
 
+function DemoTimer({ expiresAt, onExpire }: { expiresAt: number; onExpire: () => void }) {
+  const [timeLeft, setTimeLeft] = useState<number>(() => Math.max(0, Math.floor((expiresAt - Date.now()) / 1000)));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        onExpire();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt, onExpire]);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const isUrgent = timeLeft < 300;
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all ${
+        isUrgent
+          ? "border-red-500/40 bg-red-500/10 text-red-600 animate-pulse"
+          : "border-primary/40 bg-primary/10 text-primary"
+      }`}
+      title="Live Demo Session: auto-logouts when timer reaches 0"
+    >
+      <span className="relative flex h-2 w-2">
+        <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${isUrgent ? "bg-red-500" : "bg-primary"} opacity-75`} />
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${isUrgent ? "bg-red-500" : "bg-primary"}`} />
+      </span>
+      <span>
+        Demo: {minutes}:{seconds < 10 ? `0${seconds}` : seconds} left
+      </span>
+    </div>
+  );
+}
+
 /**
  * Shared top bar for the admin/POS shell: search, live clock, kitchen queue
  * notifications, and the primary "+ New Order" CTA.
@@ -91,6 +130,12 @@ export function Topbar({ user }: { user: AuthUser }) {
   const visibleModules = new Set(user.visibleModules?.length ? user.visibleModules : defaultModulesForRole(user.role));
   const canStartOrder = NEW_ORDER_ROLES.has(user.role) && visibleModules.has("tables") && visibleModules.has("orders");
   const toggleMobileNav = useUiStore((state) => state.toggleMobileNav);
+
+  const handleDemoExpired = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = "/login?demoExpired=1";
+  };
 
   return (
     <header className="glass-panel sticky top-0 z-30 mx-2 mt-2 flex h-16 shrink-0 items-center justify-between gap-2 rounded-2xl px-3 sm:mx-4 sm:mt-3 sm:gap-4 sm:px-5 lg:mx-5">
@@ -108,8 +153,8 @@ export function Topbar({ user }: { user: AuthUser }) {
           </button>
           <div className="flex items-center gap-1.5 sm:hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-mark.svg" alt="Saffron" width={22} height={22} className="h-5.5 w-5.5" />
-            <span className="font-heading text-small font-bold tracking-tight text-text">Saffron</span>
+            <img src="/logo-mark.svg" alt="QRWIK-POS" width={22} height={22} className="h-5.5 w-5.5" />
+            <span className="font-heading text-small font-bold tracking-tight text-text">QRWIK-POS</span>
           </div>
         </div>
 
@@ -129,8 +174,12 @@ export function Topbar({ user }: { user: AuthUser }) {
         </form>
       </div>
 
-      {/* Right side: Status, Clock, Kitchen Bell, New Order CTA */}
+      {/* Right side: Demo Countdown, Status, Clock, Kitchen Bell, New Order CTA */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {user.isDemo && user.demoExpiresAt ? (
+          <DemoTimer expiresAt={user.demoExpiresAt} onExpire={handleDemoExpired} />
+        ) : null}
+
         <ConnectionStatus />
 
         <div className="hidden items-center gap-1.5 rounded-xl border border-border/80 bg-background/70 px-3 py-1.5 text-small font-medium tabular-nums text-text-muted md:flex">
@@ -154,3 +203,4 @@ export function Topbar({ user }: { user: AuthUser }) {
     </header>
   );
 }
+

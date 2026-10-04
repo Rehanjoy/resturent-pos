@@ -1,6 +1,6 @@
-import { Types } from "mongoose";
+import { Types, type PipelineStage } from "mongoose";
 import { Contact } from "../models/contact.model";
-import { CustomerVisit } from "../models/customer-visit.model";
+import { CustomerVisit, type CustomerVisitDocument } from "../models/customer-visit.model";
 import type { DiningSession } from "../models/dining-floor.model";
 import { Payment } from "../models/payment.model";
 import { AppError } from "../utils/app-error";
@@ -46,43 +46,69 @@ export async function recordVisitPayment(restaurantId: string, orderId: string, 
   } });
 }
 
-/** Repairs visits created after checkout and any historic payment-sync miss.
- * Payment rows are the immutable source of truth, so replaying this is safe
- * and cannot double-count customer spend. */
-async function reconcileVisitPayments(restaurantId: string) {
-  const totals = await Payment.aggregate<{ _id: Types.ObjectId; amountPaid: number; paidAt: Date }>([
-    { $match: { restaurantId: new Types.ObjectId(restaurantId) } },
-    { $lookup: { from: "invoices", localField: "invoiceId", foreignField: "_id", as: "invoice" } },
-    { $unwind: "$invoice" },
-    { $group: { _id: "$invoice.orderId", amountPaid: { $sum: "$amount" }, paidAt: { $max: "$createdAt" } } },
-  ]);
-  if (!totals.length) return;
-  await CustomerVisit.bulkWrite(totals.map((total) => ({ updateOne: {
-    filter: { restaurantId: new Types.ObjectId(restaurantId), orderId: total._id },
-    update: { $set: { amountPaid: total.amountPaid, paidAt: total.paidAt } },
-  } })), { ordered: false });
-}
-async function expireVisits(restaurantId: string) {
-  await CustomerVisit.updateMany({ restaurantId, status: "held", expiresAt: { $lte: new Date(), $ne: null } }, [
-    { $set: { status: "expired", endedAt: "$expiresAt" } },
-  ], { updatePipeline: true });
+/** Read the ledger only for visits selected by the caller. Each equality lookup
+ * uses its foreign-key index, stays tenant-scoped, and deduplicates order IDs.
+ * Historical visits missing orderId are recovered through diningSessionId.
+ * Reads never rewrite visit/payment records or scan the restaurant's ledger. */
+function visitPaymentStages(restaurantId: Types.ObjectId): PipelineStage[] {
+  return [
+    { $lookup: {
+      from: "orders", localField: "sessionId", foreignField: "diningSessionId",
+      pipeline: [{ $match: { restaurantId } }, { $project: { _id: 1 } }], as: "sessionOrders",
+    } },
+    { $set: { linkedOrderIds: { $setUnion: ["$sessionOrders._id", {
+      $cond: [{ $ifNull: ["$orderId", false] }, ["$orderId"], []],
+    }] } } },
+    { $lookup: {
+      from: "invoices", localField: "linkedOrderIds", foreignField: "orderId",
+      pipeline: [{ $match: { restaurantId } }, { $project: { _id: 1 } }], as: "visitInvoices",
+    } },
+    { $lookup: {
+      from: "payments", localField: "visitInvoices._id", foreignField: "invoiceId",
+      pipeline: [{ $match: { restaurantId } }, {
+        $group: { _id: null, amountPaid: { $sum: "$amount" }, paidAt: { $max: "$createdAt" } },
+      }], as: "ledgerTotal",
+    } },
+    { $set: {
+      amountPaid: { $ifNull: [{ $arrayElemAt: ["$ledgerTotal.amountPaid", 0] }, "$amountPaid"] },
+      paidAt: { $ifNull: [{ $arrayElemAt: ["$ledgerTotal.paidAt", 0] }, "$paidAt"] },
+      orderId: { $ifNull: ["$orderId", { $arrayElemAt: ["$linkedOrderIds", 0] }] },
+    } },
+    { $unset: ["sessionOrders", "linkedOrderIds", "visitInvoices", "ledgerTotal"] },
+  ];
 }
 export async function listCustomers(restaurantId: string, search = "", page = 1) {
-  await Promise.all([expireVisits(restaurantId), reconcileVisitPayments(restaurantId)]);
   const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const filter = { restaurantId, ...(search ? { $or: [{ name: { $regex: escaped, $options: "i" } }, { phone: { $regex: escaped } }] } : {}) };
   const [contacts, total] = await Promise.all([Contact.find(filter).sort({ updatedAt: -1 }).skip((page - 1) * 30).limit(30).lean(), Contact.countDocuments(filter)]);
-  const summaries = await CustomerVisit.aggregate([{ $match: { restaurantId: new Types.ObjectId(restaurantId), contactId: { $in: contacts.map(c => c._id) } } }, { $group: { _id: "$contactId", visitCount: { $sum: 1 }, amountPaid: { $sum: "$amountPaid" }, lastVisitAt: { $max: "$startedAt" } } }]);
+  const summaries = contacts.length ? await CustomerVisit.aggregate<{
+    _id: Types.ObjectId; visitCount: number; amountPaid: number; lastVisitAt: Date;
+  }>([
+    { $match: { restaurantId: new Types.ObjectId(restaurantId), contactId: { $in: contacts.map(c => c._id) } } },
+    ...visitPaymentStages(new Types.ObjectId(restaurantId)),
+    { $group: { _id: "$contactId", visitCount: { $sum: 1 }, amountPaid: { $sum: "$amountPaid" }, lastVisitAt: { $max: "$startedAt" } } },
+  ]) : [];
   return { customers: contacts.map(c => {
     const summary = summaries.find(s => s._id.equals(c._id));
     return { id: c._id.toString(), name: c.name, phone: c.phone, serviceTag: c.serviceTag ?? "normal", serviceNotes: c.serviceNotes ?? "", visitCount: summary?.visitCount ?? 0, amountPaid: summary?.amountPaid ?? 0, lastVisitAt: summary?.lastVisitAt ?? null };
   }), total, page, totalPages: Math.max(1, Math.ceil(total / 30)) };
 }
 export async function customerDetail(restaurantId: string, id: string) {
-  await Promise.all([expireVisits(restaurantId), reconcileVisitPayments(restaurantId)]);
   const contact = await Contact.findOne({ _id: id, restaurantId }).lean();
   if (!contact) throw new AppError("Customer not found.", 404, "NOT_FOUND");
-  const visits = await CustomerVisit.find({ restaurantId, contactId: id }).sort({ startedAt: -1 }).limit(100).lean();
+  const now = new Date();
+  const visits = await CustomerVisit.aggregate<CustomerVisitDocument & { _id: Types.ObjectId }>([
+    { $match: { restaurantId: new Types.ObjectId(restaurantId), contactId: new Types.ObjectId(id) } },
+    { $sort: { startedAt: -1 } }, { $limit: 100 },
+    ...visitPaymentStages(new Types.ObjectId(restaurantId)),
+  ]);
+  // Expiry is projected for the requested visits; the seating lifecycle owns writes.
+  for (const visit of visits) {
+    if (visit.status === "held" && visit.expiresAt && visit.expiresAt <= now) {
+      visit.status = "expired";
+      visit.endedAt = visit.expiresAt;
+    }
+  }
   return { customer: { id, name: contact.name, phone: contact.phone, serviceTag: contact.serviceTag ?? "normal", serviceNotes: contact.serviceNotes ?? "" },
     visits: visits.map(v => ({ id: v._id.toString(), name: v.nameSnapshot, partySize: v.partySize, seats: v.seats, status: v.status, source: v.source, startedAt: v.startedAt, endedAt: v.endedAt ?? null, durationMinutes: Math.max(0, Math.floor(((v.endedAt?.getTime() ?? Date.now()) - v.startedAt.getTime()) / 60000)), orderId: v.orderId?.toString(), amountPaid: v.amountPaid, paidAt: v.paidAt ?? null })), serverNow: new Date().toISOString() };
 }

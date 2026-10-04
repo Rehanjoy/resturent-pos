@@ -63,12 +63,10 @@ export function NotificationCenter() {
   const listQuery = useQuery({ queryKey: ["notifications", category], queryFn: () => notificationsApi.list({ category: category === "all" ? undefined : category }), enabled: open, refetchInterval: open ? 30_000 : false, retry: false });
 
   const refreshNotifications = useCallback(async (notificationId?: string) => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["notification-counts"] }), queryClient.invalidateQueries({ queryKey: ["notifications"] }),
-      queryClient.invalidateQueries({ queryKey: ["kitchenTickets"] }), queryClient.invalidateQueries({ queryKey: ["orders-overview"] }),
-      queryClient.invalidateQueries({ queryKey: ["order"] }), queryClient.invalidateQueries({ queryKey: ["tables"] }),
-      queryClient.invalidateQueries({ queryKey: ["dining-floor"] }), queryClient.invalidateQueries({ queryKey: ["service-requests"] }),
-    ]);
+    // Notification delivery must not wait for unrelated screen requests.
+    // Domain events update their own screens through the shared live sync.
+    void queryClient.invalidateQueries({ queryKey: ["notification-counts"] }, { cancelRefetch: false });
+    void queryClient.invalidateQueries({ queryKey: ["notifications"] }, { cancelRefetch: false });
     if (!notificationId) return;
     const latest = await notificationsApi.list({ limit: 10 }).catch(() => null);
     const notification = latest?.notifications.find((item) => item.id === notificationId);

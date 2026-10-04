@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { connectSocket, disconnectSocket } from "@/lib/socket";
+import { subscribeLiveUpdates } from "@/lib/live-updates";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useUiStore } from "@/lib/store/ui-store";
@@ -28,6 +31,14 @@ import { Toaster } from "@/components/ui/sonner";
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   const { status, user, clearSession } = useAuth();
   const router = useRouter();
+  const cache = useQueryClient();
+  const liveUserId = user?.id;
+  const livePasswordReset = user?.mustResetPassword;
+  useEffect(() => {
+    if (status !== "authenticated" || !liveUserId || livePasswordReset) return;
+    const unsubscribe = subscribeLiveUpdates(connectSocket(), cache);
+    return () => { unsubscribe(); disconnectSocket(); };
+  }, [cache, status, liveUserId, livePasswordReset]);
   const isMobileNavOpen = useUiStore((state) => state.isMobileNavOpen);
   const closeMobileNav = useUiStore((state) => state.closeMobileNav);
 

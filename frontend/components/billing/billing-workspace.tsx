@@ -102,6 +102,11 @@ export function BillingWorkspace({ orderId }: { orderId: string }) {
     onSuccess: (result) => {
       setSettleError(null);
       setSettledPayments(result.payments);
+      // The successful response already contains the authoritative result.
+      queryClient.setQueryData(["order", orderId], result.order);
+      queryClient.setQueryData(["invoice-by-order", orderId], result.invoice);
+      const affected = new Set(["customers", "customer", "invoice-history", "invoice-detail", "dashboard-summary", "orders-overview", "tables", "dining-floor"]);
+      void queryClient.invalidateQueries({ predicate: (query) => affected.has(String(query.queryKey[0])) });
     },
     onError: (error) => setSettleError(errorMessageOf(error, "Could not settle this bill.")),
   });

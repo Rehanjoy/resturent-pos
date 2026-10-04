@@ -17,4 +17,6 @@ export interface AuthUser {
   mustResetPassword: boolean;
   twoFactorEnabled: boolean;
   lastLoginAt: string | null;
+  isDemo?: boolean;
+  demoExpiresAt?: number;
 }

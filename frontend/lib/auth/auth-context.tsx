@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { authApi } from "./api";
 import {
   getAccessToken,
+  getStoredUser,
   onSessionExpired,
   setAccessToken,
   setStoredUser,
@@ -76,6 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     const token = getAccessToken();
+    const stored = getStoredUser<AuthUser>();
+    if (stored) {
+      setUser(stored);
+      setStatus("authenticated");
+    }
     if (token) {
       // Valid token is already present in storage (valid for 1 day).
       // Background verify current user state:

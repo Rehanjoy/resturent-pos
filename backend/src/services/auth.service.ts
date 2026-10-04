@@ -47,6 +47,8 @@ export interface SanitizedUser {
   mustResetPassword: boolean;
   twoFactorEnabled: boolean;
   lastLoginAt: Date | null;
+  isDemo?: boolean;
+  demoExpiresAt?: number;
 }
 
 interface SessionTokens {
@@ -59,6 +61,7 @@ const INCORRECT_PIN_MESSAGE = "Incorrect PIN. Try again.";
 const DEACTIVATED_MESSAGE = "This account has been deactivated. Contact your admin.";
 
 function sanitizeUser(user: UserDocument): SanitizedUser {
+  const isDemo = Boolean(user.email?.toLowerCase().includes("demo") || user.name?.toLowerCase().includes("demo"));
   return {
     id: user._id.toString(),
     restaurantId: user.restaurantId.toString(),
@@ -70,6 +73,8 @@ function sanitizeUser(user: UserDocument): SanitizedUser {
     mustResetPassword: user.mustResetPassword,
     twoFactorEnabled: user.twoFactorEnabled,
     lastLoginAt: user.lastLoginAt ?? null,
+    isDemo,
+    demoExpiresAt: isDemo ? Date.now() + 3600 * 1000 : undefined,
   };
 }
 
@@ -514,4 +519,66 @@ export async function resetPassword(userId: string, newPassword: string): Promis
     entityType: "User",
     entityId: user._id.toString(),
   });
+}
+
+export async function createDemoSession(
+  email?: string,
+  name?: string,
+  meta: RequestMeta = {},
+): Promise<{ accessToken: string; refreshToken: string; user: SanitizedUser }> {
+  let restaurant = await Restaurant.findOne();
+  if (!restaurant) {
+    restaurant = await Restaurant.create({
+      name: "QRWIK Demo Bistro",
+      slug: "qrwik-demo-bistro",
+      address: {
+        line1: "100 Grand Avenue",
+        city: "San Francisco",
+        state: "CA",
+        postalCode: "94105",
+        country: "USA",
+      },
+      taxConfig: [
+        { name: "CGST", ratePercent: 2.5, type: "CGST" },
+        { name: "SGST", ratePercent: 2.5, type: "SGST" },
+      ],
+      settings: {
+        discountApprovalThreshold: { type: "percent", value: 10 },
+        enabledPaymentModes: ["cash", "card", "upi"],
+      },
+    });
+  }
+
+  const demoEmail = email && email.trim().length > 0 ? email.toLowerCase().trim() : "demo@qrwikpos.com";
+  const demoName = name?.trim() || "Live Demo Manager";
+
+  let user = await User.findOne({ email: demoEmail });
+  if (!user) {
+    const passwordHash = await hashPassword("DemoPass123!");
+    user = await User.create({
+      restaurantId: restaurant._id,
+      name: demoName,
+      email: demoEmail,
+      passwordHash,
+      role: "owner",
+      isActive: true,
+      mustResetPassword: false,
+      twoFactorEnabled: false,
+    });
+  } else {
+    user.isActive = true;
+    user.role = "owner";
+    await user.save();
+  }
+
+  const oneHourInSeconds = 3600;
+  const demoExpiresAt = Date.now() + oneHourInSeconds * 1000;
+
+  const tokens = await issueTokensForUser(user, meta);
+
+  const sanitized = sanitizeUser(user);
+  sanitized.isDemo = true;
+  sanitized.demoExpiresAt = demoExpiresAt;
+
+  return { ...tokens, user: sanitized };
 }

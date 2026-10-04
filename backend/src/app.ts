@@ -26,6 +26,7 @@ export function createApp(): Express {
     cors({
       origin: env.corsOrigins,
       credentials: true,
+      maxAge: 600,
     }),
   );
   app.use(

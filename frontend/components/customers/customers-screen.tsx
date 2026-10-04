@@ -12,8 +12,8 @@ function duration(value: number) { return value < 60 ? `${value} min` : `${Math.
 export function CustomersScreen() {
   const { user } = useAuth(); const cache = useQueryClient(); const [search, setSearch] = useState(""); const [query, setQuery] = useState(""); const [selected, setSelected] = useState<CustomerSummary | null>(null); const [tag, setTag] = useState<ServiceTag>("normal"); const [notes, setNotes] = useState("");
   useEffect(() => { const timer = window.setTimeout(() => setQuery(search.trim()), 250); return () => window.clearTimeout(timer); }, [search]);
-  const list = useQuery({ queryKey: ["customers", query], queryFn: () => customersApi.list(query) });
-  const detail = useQuery({ queryKey: ["customer", selected?.id], queryFn: () => customersApi.detail(selected!.id), enabled: Boolean(selected) });
+  const list = useQuery({ queryKey: ["customers", query], queryFn: () => customersApi.list(query), refetchInterval: 30_000 });
+  const detail = useQuery({ queryKey: ["customer", selected?.id], queryFn: () => customersApi.detail(selected!.id), enabled: Boolean(selected), refetchInterval: 30_000 });
   const save = useMutation({ mutationFn: () => customersApi.update(selected!.id, tag, notes), onSuccess: data => { cache.invalidateQueries({ queryKey: ["customers"] }); cache.setQueryData(["customer", selected!.id], data); } });
   const canEdit = user?.role === "owner" || user?.role === "manager";
   return <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8"><PageHeader title="Customers" subtitle="Recognise returning guests from completed visits, paid spend and staff service notes." />

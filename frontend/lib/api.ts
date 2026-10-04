@@ -69,7 +69,7 @@ async function request<TResponse>(
       // Content-Type — the browser sets `multipart/form-data` with the
       // correct boundary itself; overriding it here would break parsing on
       // the server (see `api.postForm` / the Marketing Contacts CSV import).
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(isFormData || options.body === undefined ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },

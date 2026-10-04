@@ -1,3 +1,4 @@
+import { emitToRestaurant } from "../sockets";
 import { recipeRequirementMicros, quantityFromMicros, stockMovementPipeline } from "./inventory-quantity.service";
 import { createHash } from "node:crypto";
 import { InventoryDeductionBatch } from "../models/inventory-deduction-batch.model";
@@ -68,6 +69,7 @@ export async function deductInventoryForSentItems(
   items: SentItemForDeduction[],
   batchKey?: string,
 ): Promise<void> {
+  let stockChanged = false;
   try {
     const menuItemIds = [...new Set(items.map((item) => item.menuItemId))].filter(Types.ObjectId.isValid);
     const menuItems = await MenuItem.find({ _id: { $in: menuItemIds }, restaurantId }).select("ingredientMapping recipeYield").lean();
@@ -98,6 +100,7 @@ export async function deductInventoryForSentItems(
         stockMovementPipeline(-recipeRequirementMicros(quantity, 1), deductionKey),
         { returnDocument: "after", updatePipeline: true },
       );
+      if (updated) stockChanged = true;
       if (!updated && (!deductionKey || !await InventoryItem.exists({ _id: itemId, restaurantId, processedDeductionKeys: deductionKey }))) continue;
       if (updated && updated.currentStock < 0) console.error(`[inventory] ${updated.name}: ${updated.currentStock} ${updated.unit} remaining after order ${orderId}.`);
       const transaction = { restaurantId, itemId, type: "deduction" as const, quantityDelta: -quantity, staffId, relatedOrderId: orderId };
@@ -111,5 +114,7 @@ export async function deductInventoryForSentItems(
   } catch (error) {
     if (batchKey) throw error; // QR request can recover by replaying its saved batch.
     console.error(`[inventory] Ingredient stock deduction failed for order ${orderId} (restaurant ${restaurantId}).`, error);
+  } finally {
+    if (stockChanged) emitToRestaurant(restaurantId, "inventory:changed", {});
   }
 }

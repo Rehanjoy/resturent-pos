@@ -52,18 +52,16 @@ export function LoginCard() {
             <button
               type="button"
               onClick={() => setMethod("password")}
-              className={`flex-1 py-2 text-small font-medium ${
-                method === "password" ? "rounded-xl bg-white text-primary shadow-sm" : "rounded-xl text-text-muted hover:text-text"
-              }`}
+              className={`flex-1 py-2 text-small font-medium ${method === "password" ? "rounded-xl bg-white text-primary shadow-sm" : "rounded-xl text-text-muted hover:text-text"
+                }`}
             >
               Password Login
             </button>
             <button
               type="button"
               onClick={() => setMethod("pin")}
-              className={`flex-1 py-2 text-small font-medium ${
-                method === "pin" ? "rounded-xl bg-white text-primary shadow-sm" : "rounded-xl text-text-muted hover:text-text"
-              }`}
+              className={`flex-1 py-2 text-small font-medium ${method === "pin" ? "rounded-xl bg-white text-primary shadow-sm" : "rounded-xl text-text-muted hover:text-text"
+                }`}
             >
               PIN Quick Login
             </button>

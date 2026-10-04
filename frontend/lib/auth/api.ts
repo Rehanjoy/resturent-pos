@@ -45,8 +45,7 @@ export const authApi = {
 
   pinLoginStaff: (restaurantId?: string) =>
     api.get<PinLoginStaffListResult>(
-      `/api/auth/pin-login/staff${
-        restaurantId ? `?restaurantId=${encodeURIComponent(restaurantId)}` : ""
+      `/api/auth/pin-login/staff${restaurantId ? `?restaurantId=${encodeURIComponent(restaurantId)}` : ""
       }`,
     ),
 
@@ -71,4 +70,8 @@ export const authApi = {
 
   enableTwoFactor: (code: string) =>
     api.post<{ message: string }>("/api/auth/2fa/enable", { code }),
+
+  startDemo: (email?: string, name?: string) =>
+    api.post<SessionResult>("/api/auth/demo", { email, name }),
 };
+

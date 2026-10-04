@@ -37,6 +37,7 @@ router.post(
 );
 router.post("/refresh", authController.refresh);
 router.post("/logout", authController.logout);
+router.post("/demo", authController.startDemo);
 
 // Authenticated routes.
 router.get("/me", authenticate, authController.me);

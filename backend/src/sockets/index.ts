@@ -90,7 +90,9 @@ export function emitToRestaurant(
 ): void {
   if (!ioInstance) return;
   const operationalRoles = ["owner", "manager", "cashier", "server", "chef"];
-  const roles = event.startsWith("service:")
+  const roles = event.startsWith("inventory:")
+    ? ["owner", "manager", "inventory_manager", "chef"]
+    : event.startsWith("service:")
     ? ["owner", "manager", "cashier", "server"]
     : event.startsWith("whatsapp:")
       ? ["owner", "manager"]

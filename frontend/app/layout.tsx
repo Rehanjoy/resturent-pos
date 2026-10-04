@@ -12,13 +12,12 @@ const poppins = Poppins({
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Saffron — Restaurant POS & Management",
+  title: "QRWIK-POS — Next-Gen Restaurant POS & Management System",
   description:
-    "Saffron is a self-hostable, real-time restaurant management platform covering order taking, kitchen display, billing, staff, and reporting.",
+    "QRWIK-POS is a real-time, lightning-fast restaurant management platform covering order taking, kitchen display, billing, staff, and reporting.",
   icons: {
     icon: "/logo-mark.svg",
   },

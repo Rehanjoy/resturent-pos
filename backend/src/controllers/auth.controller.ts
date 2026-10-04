@@ -124,3 +124,21 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
   await authService.resetPassword(req.user!.userId, req.body.newPassword);
   res.status(200).json({ message: "Password updated." });
 });
+
+export const startDemo = asyncHandler(async (req: Request, res: Response) => {
+  const { email, name } = req.body || {};
+  const meta = {
+    userAgent: req.headers["user-agent"],
+    ipAddress: req.ip,
+  };
+
+  const { accessToken, refreshToken, user } = await authService.createDemoSession(
+    email,
+    name,
+    meta,
+  );
+
+  setRefreshCookie(res, refreshToken);
+  res.status(200).json({ accessToken, user });
+});
+
