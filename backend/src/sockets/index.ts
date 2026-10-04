@@ -23,13 +23,6 @@ function userRoom(restaurantId: string, userId: string): string {
   return `user:${restaurantId}:${userId}`;
 }
 
-function roleRoom(restaurantId: string, role: string): string {
-  return `role:${restaurantId}:${role}`;
-}
-
-function userRoom(restaurantId: string, userId: string): string {
-  return `user:${restaurantId}:${userId}`;
-}
 
 /**
  * Socket.io setup attached to the shared HTTP server. Every client
